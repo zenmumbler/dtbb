@@ -1,5 +1,8 @@
 import { loadAndAnalyze } from "analyze";
 import { catalog } from "catalog";
+import TextIndex from "textindex";
+
+var plasticSurge = new TextIndex();
 
 var grid = document.querySelector(".entries");
 var entryTemplate = <HTMLTemplateElement>document.querySelector("#entry");
@@ -40,10 +43,17 @@ var allSet = new Set<number>();
 var activeSet = new Set<number>();
 var activeFilter: catalog.EntryFeatures = 0;
 var activeCategory = "";
+var activeQuery = "";
 
 
 function updateActiveSet() {
 	var count = entryElems.length;
+
+	var searchSet: Set<number> = null;
+	if (activeQuery.length > 0) {
+		searchSet = plasticSurge.query(activeQuery);
+	}
+
 	for (var ix = 0; ix < count; ++ix) {
 		var entry = entryData[ix];
 		var hasNow = activeSet.has(ix);
@@ -51,6 +61,9 @@ function updateActiveSet() {
 		var shouldHave = (entry.features & activeFilter) == activeFilter;
 		if (activeCategory.length > 0) {
 			shouldHave = shouldHave && (entry.category == activeCategory);
+		}
+		if (searchSet) {
+			shouldHave = shouldHave && (searchSet.has(ix));
 		}
 
 		if (hasNow !== shouldHave) {
@@ -72,6 +85,7 @@ function makeEntryTile(entry: catalog.Entry, entryIndex: number) {
 	(<HTMLImageElement>elem.querySelector("img")).src = entry.thumbnail_url;
 	elem.querySelector("h2").textContent = entry.title;
 	elem.querySelector("p.author span").textContent = entry.author.name;
+	elem.dataset["eix"] = ""+entryIndex;
 	var pills = elem.querySelector(".pills");
 
 	var featMask = 1;
@@ -94,6 +108,8 @@ function makeEntryTile(entry: catalog.Entry, entryIndex: number) {
 loadAndAnalyze().then(data => {
 	entryData = data;
 	var count = entryData.length;
+
+	var t0 = performance.now();
 	for (var x = 0; x < count; ++x) {
 		var entry = entryData[x];
 		entryElems[x] = makeEntryTile(entry, x);
@@ -102,6 +118,40 @@ loadAndAnalyze().then(data => {
 		allSet.add(x);
 		activeSet.add(x);
 	}
+	var t1 = performance.now();
+
+	// index all text
+	for (var x = 0; x < count; ++x) {
+		var entry = entryData[x];
+		plasticSurge.indexRawString(entry.title, x);
+		plasticSurge.indexRawString(entry.author.name, x);
+		plasticSurge.indexRawString(entry.description, x);
+	}
+
+	var t2 = performance.now();
+
+	console.info("Elems / Index", (t1 - t0).toFixed(1), (t2 - t1).toFixed(1));
+	(<any>window).ps = plasticSurge;
+
+	// click to go to LD
+	grid.addEventListener("click", (evt: MouseEvent) => {
+		var tgt = <HTMLElement>evt.target;
+		while (tgt && (tgt.dataset["eix"] == null)) {
+			tgt = tgt.parentElement;
+		}
+		if (tgt && tgt.dataset["eix"] != null) {
+			var eix = parseInt(tgt.dataset["eix"]);
+			var ldURL = entryData[eix].entry_url;
+			window.open(ldURL, "_blank");
+		}
+	});
+
+	// full text search
+	var searchControl = <HTMLInputElement>(document.querySelector("#terms"));
+	searchControl.oninput = (evt: Event) => {
+		activeQuery = searchControl.value;
+		updateActiveSet();
+	};
 
 	// category radios
 	var categoryControls = <HTMLInputElement[]>([].slice.call(document.querySelectorAll("input[name=category]"), 0));

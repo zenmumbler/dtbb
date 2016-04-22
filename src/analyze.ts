@@ -93,7 +93,7 @@ function detectFeatures(entry: catalog.Entry) {
 		}
 	}
 	else {
-		console.info("Empty", entry);
+		// console.info("Empty", entry);
 	}
 
 	entry.features = feat;
