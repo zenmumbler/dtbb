@@ -39,13 +39,20 @@ filterSets.set(catalog.EntryFeatures.Source, new Set<number>());
 var allSet = new Set<number>();
 var activeSet = new Set<number>();
 var activeFilter: catalog.EntryFeatures = 0;
+var activeCategory = "";
 
 
-function updateActiveSet(newActiveSet: Set<number>) {
+function updateActiveSet() {
 	var count = entryElems.length;
 	for (var ix = 0; ix < count; ++ix) {
+		var entry = entryData[ix];
 		var hasNow = activeSet.has(ix);
-		var shouldHave = newActiveSet.has(ix);
+
+		var shouldHave = (entry.features & activeFilter) == activeFilter;
+		if (activeCategory.length > 0) {
+			shouldHave = shouldHave && (entry.category == activeCategory);
+		}
+
 		if (hasNow !== shouldHave) {
 			if (shouldHave) {
 				activeSet.add(ix);
@@ -57,53 +64,6 @@ function updateActiveSet(newActiveSet: Set<number>) {
 			}
 		}
 	}
-
-	console.info(activeFilter);
-}
-
-
-function enableFilterSet(feat: catalog.EntryFeatures) {
-	if ((activeFilter & feat) === feat) {
-		return;
-	}
-
-	var newActiveSet: Set<number>;
-	if (activeFilter == 0) {
-		newActiveSet = new Set(filterSets.get(feat));
-	}
-	else {
-		newActiveSet = new Set(filterSets.get(feat));
-		filterSets.get(feat).forEach(ix => newActiveSet.add(ix));
-	}
-	activeFilter |= feat;
-
-	updateActiveSet(newActiveSet);
-}
-
-
-function disableFilterSet(feat: catalog.EntryFeatures) {
-	if ((activeFilter & feat) === 0) {
-		return;
-	}
-
-	activeFilter &= ~feat;
-
-	var newActiveSet: Set<number>;
-	if (activeFilter == 0) {
-		newActiveSet = new Set(allSet);
-	}
-	else {
-		newActiveSet = new Set<number>();
-		var featMask = 1;
-		while (featMask <= catalog.EntryFeatures.Source) {
-			if (activeFilter & featMask) {
-				filterSets.get(featMask).forEach(ix => newActiveSet.add(ix));
-			}
-			featMask <<= 1;
-		}
-	}
-
-	updateActiveSet(newActiveSet);
 }
 
 
@@ -143,19 +103,36 @@ loadAndAnalyze().then(data => {
 		activeSet.add(x);
 	}
 
+	// category radios
+	var categoryControls = <HTMLInputElement[]>([].slice.call(document.querySelectorAll("input[name=category]"), 0));
+	for (let cc of categoryControls) {
+		cc.onchange = (evt: Event) => {
+			var ctrl = <HTMLInputElement>evt.target;
+			var val = ctrl.value;
+
+			if (ctrl.checked) {
+				if (activeCategory !== val) {
+					activeCategory = val;
+					updateActiveSet();
+				}
+			}
+		};
+	}
+
+	// filter checkboxes
 	var filterControls = <HTMLInputElement[]>([].slice.call(document.querySelectorAll("input[name=feature]"), 0));
-	console.info("FC", filterControls)
-	for (var fc of filterControls) {
+	for (let fc of filterControls) {
 		fc.onchange = (evt: Event) => {
 			var ctrl = <HTMLInputElement>evt.target;
 			var val = parseInt(ctrl.value);
 
 			if (ctrl.checked) {
-				enableFilterSet(val);
+				activeFilter |= val;
 			}
 			else {
-				disableFilterSet(val);
+				activeFilter &= ~val;
 			}
+			updateActiveSet();
 		};
 	}
 });
