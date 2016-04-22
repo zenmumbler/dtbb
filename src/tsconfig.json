@@ -1,0 +1,20 @@
+{
+    "compilerOptions": {
+        "module": "amd",
+        "target": "es5",
+        "rootDir": ".",
+        "outDir": "../js",
+        "noEmitOnError": true,
+        "diagnostics": false,
+        "listFiles": false,
+
+        "noImplicitAny": true,
+        "suppressImplicitAnyIndexErrors": false,
+        "noImplicitReturns": true,
+        "forceConsistentCasingInFileNames": true,
+        "noFallthroughCasesInSwitch": false,
+
+        "removeComments": true,
+        "sourceMap": false
+    }
+}

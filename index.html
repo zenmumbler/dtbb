@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>LD35 AltBrowser</title>
+	<meta charset="utf-8">
+	<style>
+	html, body {
+		height: 100%;
+		margin: 0;
+		padding: 0;
+	}
+
+	body, input {
+		font-family: sans-serif;
+	}
+
+	body>section {
+		position: absolute;
+		margin: 0;
+		box-sizing: border-box;
+	}
+
+	p {
+		margin: 0 0 1em 0;
+		padding: 0;
+	}
+
+
+	.no-select {
+		-webkit-user-select: none;
+		user-select: none;
+	}
+
+	.no-text-wrap {
+		white-space: nowrap;
+		text-overflow: ellipsis;
+		overflow: hidden;
+	}
+
+
+	#preview {
+		left: 0;
+		right: 0;
+		top: 0;
+		height: 300px;
+		background-color: #333;
+	}
+
+	#grid {
+		left: 0;
+		right: 0;
+		top: 301px;
+		bottom: 0;
+		background-color: white;
+	}
+
+	#filters {
+		position: relative;
+		z-index: 2;
+		padding: 6px 12px;
+		background-color: #444;
+		line-height: 1.9em;
+	}
+
+	input[type=search] {
+		margin: 0 16px 0 0;
+		width: 240px;
+	}
+
+	input[type=checkbox], input[type=radio] {
+		position: relative;
+		top: -1px;
+	}
+
+	#filters span {
+		color: white;
+		display: inline-block;
+		padding-right: 16px;
+		font-weight: bold;
+	}
+
+	#filters label {
+		color: #aaa;
+		display: inline-block;
+		margin-right: 2px;
+	}
+
+	.entries {
+		padding: 90px 20px 20px 20px;
+		position: absolute;
+		left: 0;
+		top: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 1;
+		overflow-x: hidden;
+		overflow-y: auto;
+	}
+
+	.entry {
+		float: left;
+		position: relative;
+		box-sizing: border-box;
+		width: 400px;
+		height: 122px;
+		padding: 16px;
+		cursor: pointer;
+		margin: 0 16px 16px 0;
+		background-color: #eee;
+	}
+	.entry:hover {
+		background-color: #ddd;
+	}
+
+	.entry .imgholder {
+		display: inline-block;
+		width: 120px;
+		height: 90px;
+		float: left;
+		margin-right: 16px;
+	}
+
+	.entry h2 {
+		font-size: 18px;
+		margin: 0 0 .2em 0;
+		max-width: 275px;
+		color: #383838;
+	}
+	.entry .author {
+		font-size: 14px;
+		margin: 0 0 .8em 0;
+		color: #686868;
+	}
+
+	.pills {
+		max-width: 232px;
+		position: absolute;
+		bottom: 16px;
+		left: 152px;
+		margin: 0;
+		padding: 0;
+	}
+	.pill {
+		display: inline-block;
+		font-size: 12px; padding: 2px 3px;
+		background-color: red;
+		border-radius: 3px;
+		margin-right: 2px;
+		color: white;
+	}
+
+	input, input+label { cursor: pointer; }
+	</style>
+
+	<script data-main="js/dtbb" src="js/require.js"></script>
+</head>
+<body>
+	<section id="preview">
+	</section>
+
+	<section id="grid" class="no-select">
+		<section id="filters">
+			<input type="search" id="terms" placeholder="Search Terms">
+
+			<span>Category</span>
+			<input type="radio" name="category" id="cat_all" checked value=""><label for="cat_all">&nbsp;All</label>
+			<input type="radio" name="category" id="cat_compo" value="compo"><label for="cat_compo">&nbsp;Compo</label>
+			<input type="radio" name="category" id="cat_jam" value="jam"><label for="cat_jam">&nbsp;Jam</label>
+
+			<br>
+
+			<span>Filter</span>
+			<input type="checkbox" name="feature" id="f_win" value="1"><label for="f_win">&nbsp;Win</label>
+			<input type="checkbox" name="feature" id="f_mac" value="2"><label for="f_mac">&nbsp;Mac</label>
+			<input type="checkbox" name="feature" id="f_linux" value="4"><label for="f_linux">&nbsp;Linux</label>
+			<input type="checkbox" name="feature" id="f_html5" value="8"><label for="f_html5">&nbsp;HTML5</label>
+			<input type="checkbox" name="feature" id="f_webgl" value="16"><label for="f_webgl">&nbsp;WebGL</label>
+			<input type="checkbox" name="feature" id="f_unity" value="32"><label for="f_unity">&nbsp;Unity</label>
+			<input type="checkbox" name="feature" id="f_java" value="64"><label for="f_java">&nbsp;Java</label>
+			<input type="checkbox" name="feature" id="f_love" value="128"><label for="f_love">&nbsp;Löve</label>
+			<input type="checkbox" name="feature" id="f_flash" value="256"><label for="f_flash">&nbsp;Flash</label>
+			<input type="checkbox" name="feature" id="f_vr" value="512"><label for="f_vr">&nbsp;VR</label>
+			<input type="checkbox" name="feature" id="f_mobile" value="1024"><label for="f_mobile">&nbsp;Mobile</label>
+			<input type="checkbox" name="feature" id="f_source" value="2048"><label for="f_source">&nbsp;Source</label>
+		</section>
+
+		<div class="entries">
+			<template id="entry">
+				<div class="entry">
+					<div class="imgholder">
+						<img src="" alt="">
+					</div>
+					<h2 class="no-text-wrap"></h2>
+					<p class="author no-text-wrap">by <span></span></p>
+
+					<p class="pills no-text-wrap">
+					</p>
+				</div>
+			</template>
+		</div>
+	</section>
+</body>
+</html>
