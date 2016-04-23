@@ -52,22 +52,24 @@
 		padding: 6px 12px;
 		background-color: #444;
 		line-height: 1.9em;
+		cursor: default;
 	}
 
 	input[type=search] {
 		margin: 0 16px 0 0;
 		width: 240px;
 	}
-
 	input[type=checkbox], input[type=radio] {
 		position: relative;
 		top: -1px;
+		cursor: pointer;
 	}
+	input+label { cursor: pointer; }
 
 	#filters span {
 		color: white;
 		display: inline-block;
-		padding-right: 16px;
+		padding-right: 8px;
 		font-weight: bold;
 	}
 
@@ -174,8 +176,6 @@
 		margin-right: 2px;
 		color: white;
 	}
-
-	input, input+label { cursor: pointer; }
 	</style>
 
 	<script data-main="js/dtbb" src="js/require.js"></script>
@@ -185,24 +185,24 @@
 		<section id="filters">
 			<input type="search" id="terms" autocomplete="off" placeholder="Search Terms">
 
-			<span>Category</span>
+			<span>Category:</span>
 			<input type="radio" name="category" id="cat_all" checked value=""><label for="cat_all">&nbsp;All</label>
 			<input type="radio" name="category" id="cat_compo" value="compo"><label for="cat_compo">&nbsp;Compo</label>
 			<input type="radio" name="category" id="cat_jam" value="jam"><label for="cat_jam">&nbsp;Jam</label>
 
 			<br>
 
-			<span>Filter</span>
+			<span>Restrict to:</span>
 			<input type="checkbox" name="feature" id="f_win" value="1"><label for="f_win">&nbsp;Win</label>
 			<input type="checkbox" name="feature" id="f_mac" value="2"><label for="f_mac">&nbsp;Mac</label>
 			<input type="checkbox" name="feature" id="f_linux" value="4"><label for="f_linux">&nbsp;Linux</label>
 			<input type="checkbox" name="feature" id="f_html5" value="8"><label for="f_html5">&nbsp;HTML5</label>
-			<input type="checkbox" name="feature" id="f_webgl" value="16"><label for="f_webgl">&nbsp;WebGL</label>
-			<input type="checkbox" name="feature" id="f_unity" value="32"><label for="f_unity">&nbsp;Unity</label>
+			<!-- input type="checkbox" name="feature" id="f_webgl" value="16"><label for="f_webgl">&nbsp;WebGL</label -->
+			<!-- input type="checkbox" name="feature" id="f_unity" value="32"><label for="f_unity">&nbsp;Unity</label -->
 			<input type="checkbox" name="feature" id="f_java" value="64"><label for="f_java">&nbsp;Java</label>
 			<input type="checkbox" name="feature" id="f_love" value="128"><label for="f_love">&nbsp;Löve</label>
 			<input type="checkbox" name="feature" id="f_flash" value="256"><label for="f_flash">&nbsp;Flash</label>
-			<input type="checkbox" name="feature" id="f_vr" value="512"><label for="f_vr">&nbsp;VR</label>
+			<!-- input type="checkbox" name="feature" id="f_vr" value="512"><label for="f_vr">&nbsp;VR</label -->
 			<input type="checkbox" name="feature" id="f_mobile" value="1024"><label for="f_mobile">&nbsp;Mobile</label>
 			<input type="checkbox" name="feature" id="f_source" value="2048"><label for="f_source">&nbsp;Source</label>
 		</section>
