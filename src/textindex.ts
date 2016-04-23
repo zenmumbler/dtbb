@@ -1,6 +1,9 @@
 // textindex.ts - english script
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
+import { unionSet } from "util";
+
+
 export default class TextIndex {
 	private data_ = new Map<string, Set<number>>();
 	private wordNGramCache_ = new Map<string, Set<string>>();
@@ -60,16 +63,6 @@ export default class TextIndex {
 		});
 	}
 
-	unionSet(dest: Set<number>, other: Set<number>) {
-		var union = new Set<number>();
-		dest.forEach(index => {
-			if (other.has(index)) {
-				union.add(index);
-			}
-		});
-		return union;
-	}
-
 	query(qs: string): Set<number> {
 		var qt = this.tokenizeString(qs);
 		var termIndexSets: Set<number>[] = [];
@@ -103,7 +96,7 @@ export default class TextIndex {
 		termIndexSets.sort((a, b) => { return a.size < b.size ? -1 : 1 });
 		var result = new Set(termIndexSets[0]);
 		for (var tisix = 1; tisix < termIndexSets.length; ++tisix) {
-			result = this.unionSet(result, termIndexSets[tisix]);
+			result = unionSet(result, termIndexSets[tisix]);
 		}
 
 		return result;
