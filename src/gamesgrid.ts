@@ -17,6 +17,21 @@ interface GameCell {
 }
 
 
+var featLabel: { [f: number]: string } = {};
+featLabel[catalog.EntryFeatures.Win] = "Win";
+featLabel[catalog.EntryFeatures.Mac] = "Mac";
+featLabel[catalog.EntryFeatures.Linux] = "Linux";
+featLabel[catalog.EntryFeatures.HTML5] = "HTML5";
+featLabel[catalog.EntryFeatures.WebGL] = "WebGL";
+featLabel[catalog.EntryFeatures.Unity] = "Unity";
+featLabel[catalog.EntryFeatures.Java] = "Java";
+featLabel[catalog.EntryFeatures.Love] = "Löve";
+featLabel[catalog.EntryFeatures.Flash] = "Flash";
+featLabel[catalog.EntryFeatures.VR] = "VR";
+featLabel[catalog.EntryFeatures.Mobile] = "Mobile";
+featLabel[catalog.EntryFeatures.Source] = "Source";
+
+
 export class GamesGrid {
 	private rows_ = 0;
 	private cols_ = 0;
@@ -29,7 +44,7 @@ export class GamesGrid {
 	private cellMargin_ = 16;
 
 	private entryCount_ = 0;
-	private activeSet_ = new Set<number>();
+	private activeList_: number[] = [];
 
 	private cells_: GameCell[] = [];
 	private entryTemplate_ = <HTMLTemplateElement>document.querySelector("#entry");
@@ -40,9 +55,9 @@ export class GamesGrid {
 
 
 	constructor(private containerElem_: HTMLElement, private catalog_: catalog.Catalog) {
-		this.entryCount_ = catalog_.length;
+		this.entryCount_ = this.catalog_.length;
 		for (var x = 0; x < this.entryCount_; ++x) {
-			this.activeSet_.add(x);
+			this.activeList_.push(x);
 		}
 
 		this.scrollingElem_ = containerElem_.parentElement;
@@ -51,6 +66,17 @@ export class GamesGrid {
 		};
 
 		this.resized();
+	}
+
+
+	activeSetChanged(newActiveSet: Set<number>) {
+		this.entryCount_ = newActiveSet.size;
+		this.activeList_ = [];
+		newActiveSet.forEach(index => {
+			this.activeList_.push(index);
+		});
+
+		this.relayout();
 	}
 
 
@@ -69,18 +95,6 @@ export class GamesGrid {
 		};
 
 		this.containerElem_.appendChild(tile);
-
-		// var featMask = 1;
-		// while (featMask <= catalog.EntryFeatures.Source) {
-		// 	if (entry.features & featMask) {
-		// 		var pill = document.createElement("span");
-		// 		pill.className = "pill";
-		// 		pill.textContent = featLabel[featMask];
-		// 		pills.appendChild(pill);
-		// 		filterSets.get(featMask).add(entryIndex);
-		// 	}
-		// 	featMask <<= 1;
-		// }
 
 		return cell;
 	}
@@ -137,11 +151,11 @@ export class GamesGrid {
 			cell.tile.style.display = "";
 		}
 
-		var cellPixelPos = this.pixelPositionForCellPosition(cell.position);
+		var cellPixelPos = this.pixelPositionForCellPosition(newPosition);
 		cell.tile.style.left = cellPixelPos.left + "px";
 		cell.tile.style.top = cellPixelPos.top + "px";
 
-		var contentIndex = newPosition;
+		var contentIndex = this.activeList_[newPosition];
 		if (cell.contentIndex != contentIndex) {
 			cell.contentIndex = contentIndex;
 			var entry = this.catalog_[contentIndex];
@@ -150,12 +164,24 @@ export class GamesGrid {
 			cell.thumb.src = entry.thumbnail_url;
 			cell.title.textContent = entry.title;
 			cell.author.textContent = entry.author.name;
-			// cell.pills
+
+			// var featMask = 1;
+			// while (featMask <= catalog.EntryFeatures.Source) {
+			// 	if (entry.features & featMask) {
+			// 		var pill = document.createElement("span");
+			// 		pill.className = "pill";
+			// 		pill.textContent = featLabel[featMask];
+			// 		pills.appendChild(pill);
+			// 	}
+			// 	featMask <<= 1;
+			// }
 		}
 	}
 
 
 	private relayout() {
+		this.containerElem_.style.height = (this.gridOffsetY * 2) + (Math.ceil(this.entryCount_ / this.cols_) * (this.cellHeight_ + this.cellMargin_)) + "px";
+
 		this.scrollOffset_ = this.scrollingElem_.scrollTop;
 		var effectiveOffset = Math.max(0, this.scrollOffset_ - this.gridOffsetY);
 		var effectiveCellHeight = this.cellHeight_ + this.cellMargin_;
@@ -225,7 +251,6 @@ export class GamesGrid {
 			this.rows_ = newRows;
 
 			this.ensureCellCount(this.rows_ * this.cols_);
-			this.containerElem_.style.height = (this.gridOffsetY * 2) + (Math.ceil(this.entryCount_ / this.cols_) * (this.cellHeight_ + this.cellMargin_)) + "px";
 
 			this.relayout();
 		}
