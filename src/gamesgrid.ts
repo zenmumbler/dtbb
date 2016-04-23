@@ -94,33 +94,62 @@ export class GamesGrid {
 	}
 
 
-	private ensureCells(minCells: number) {
-		var position = this.cells_.length ? (this.cells_[this.cells_.length - 1].position) : -1;
-		while (this.cells_.length < minCells) {
+	private ensureCellCount(cellCount: number) {
+		if (cellCount < this.cells_.length) {
+			var doomed = this.cells_.splice(cellCount);
+			for (var c of doomed) {
+				this.containerElem_.removeChild(c.tile);
+				c.tile = null;
+				c.thumb = null;
+				c.title = null;
+				c.author = null;
+				c.pills = null;
+
+				c.position = -1;
+				c.contentIndex = -1;
+			}
+		}
+		else {
+			var position = this.cells_.length ? (this.cells_[this.cells_.length - 1].position) : -1;
+
+			while (this.cells_.length < cellCount) {
+				position += 1;
+				var cell = this.makeCell();
+				cell.position = position;
+				this.cells_.push(cell);
+			}
+		}
+	}
+
+
+	private setCellPosition(cell: GameCell, newPosition: number) {
+		cell.position = newPosition;
+		var cellPixelPos = this.pixelPositionForCellPosition(cell.position);
+		cell.tile.style.left = cellPixelPos.left + "px";
+		cell.tile.style.top = cellPixelPos.top + "px";
+
+		cell.title.textContent = "" + cell.position;
+	}
+
+
+	private relayout() {
+		this.scrollOffset_ = this.scrollingElem_.scrollTop;
+		var effectiveOffset = this.scrollOffset_ - this.gridOffsetY;
+		var effectiveCellHeight = this.cellHeight_ + this.cellMargin_;
+		var firstViewRow = Math.floor(effectiveOffset / effectiveCellHeight);
+		var position = firstViewRow * this.cols_;
+
+		for (var cell of this.cells_) {
+			this.setCellPosition(cell, position);
 			position += 1;
-			var cell = this.makeCell();
-			cell.position = position;
-			var cellPixelPos = this.pixelPositionForCellPosition(position);
-			cell.tile.style.left = cellPixelPos.left + "px";
-			cell.tile.style.top = cellPixelPos.top + "px";
-			this.cells_.push(cell);
 		}
 	}
 
 
 	private moveCells(cellsToMove: GameCell[], positionOffset: number) {
-		var crossColumnMove = positionOffset % this.cols_ !== 0;
-
 		for (var c = 0; c < cellsToMove.length; ++c) {
 			var cell = cellsToMove[c];
-			cell.position += positionOffset;
-			var cellPixelPos = this.pixelPositionForCellPosition(cell.position);
-			if (crossColumnMove) {
-				cell.tile.style.left = cellPixelPos.left + "px";
-			}
-			cell.tile.style.top = cellPixelPos.top + "px";
-
-			cell.title.textContent = "" + cell.position;
+			this.setCellPosition(cell, cell.position + positionOffset);
 		}
 	}
 
@@ -168,18 +197,20 @@ export class GamesGrid {
 
 
 	private dimensionsChanged(newCols: number, newRows: number) {
-		var newScrollOffset = this.scrollingElem_.scrollTop;
-
 		if (this.cols_ != newCols || this.rows_ != newRows) {
 			this.cols_ = newCols;
 			this.rows_ = newRows;
 
-			this.ensureCells(this.rows_ * this.cols_);
+			this.ensureCellCount(this.rows_ * this.cols_);
 			this.containerElem_.style.height = (this.gridOffsetY * 2) + (Math.ceil(this.cellCount_ / this.cols_) * (this.cellHeight_ + this.cellMargin_)) + "px";
+
+			this.relayout();
 		}
-		
-		if (newScrollOffset != this.scrollOffset_) {
-			this.scrollPosChanged(newScrollOffset);
+		else {
+			var newScrollOffset = this.scrollingElem_.scrollTop;
+			if (newScrollOffset != this.scrollOffset_) {
+				this.scrollPosChanged(newScrollOffset);
+			}
 		}
 	}
 
