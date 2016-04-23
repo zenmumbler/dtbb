@@ -88,7 +88,7 @@ if (! INDEX_ON_THE_FLY) {
 		plasticSurge.load(sti);
 		var t1 = performance.now();
 		console.info("STI load took " + (t1 - t0).toFixed(1) + "ms");
-		// (<HTMLElement>document.querySelector(".pleasehold")).style.display = "none";
+		(<HTMLElement>document.querySelector(".pleasehold")).style.display = "none";
 	});
 }
 

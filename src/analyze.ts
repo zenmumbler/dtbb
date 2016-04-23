@@ -18,7 +18,7 @@ var termFeatureMapping: { [key: string]: catalog.EntryFeatures } = {
 	chrome: catalog.EntryFeatures.HTML5,
 	browser: catalog.EntryFeatures.HTML5,
 
-	webgl: catalog.EntryFeatures.WebGL,
+	webgl: catalog.EntryFeatures.WebGL | catalog.EntryFeatures.HTML5,
 
 	unity: catalog.EntryFeatures.Unity,
 
@@ -33,6 +33,7 @@ var termFeatureMapping: { [key: string]: catalog.EntryFeatures } = {
 	vr: catalog.EntryFeatures.VR,
 	oculus: catalog.EntryFeatures.VR,
 	vive: catalog.EntryFeatures.VR,
+	cardboard: catalog.EntryFeatures.VR,
 
 	android: catalog.EntryFeatures.Mobile,
 	apk: catalog.EntryFeatures.Mobile,
