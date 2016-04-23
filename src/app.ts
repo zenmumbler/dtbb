@@ -2,96 +2,108 @@ import { loadAndAnalyze } from "analyze";
 import { catalog } from "catalog";
 import TextIndex from "textindex";
 import { GamesGrid } from "gamesgrid";
+import { unionSet } from "util";
 
-var plasticSurge = new TextIndex();
-var gamesGrid: GamesGrid;
-
+// -- the model, view and fulltext engine
 var entryData: catalog.Entry[] = null;
+var gamesGrid: GamesGrid;
+var plasticSurge = new TextIndex();
 
-var featLabel: { [f: number]: string } = {};
-featLabel[catalog.EntryFeatures.Win] = "Win";
-featLabel[catalog.EntryFeatures.Mac] = "Mac";
-featLabel[catalog.EntryFeatures.Linux] = "Linux";
-featLabel[catalog.EntryFeatures.HTML5] = "HTML5";
-featLabel[catalog.EntryFeatures.WebGL] = "WebGL";
-featLabel[catalog.EntryFeatures.Unity] = "Unity";
-featLabel[catalog.EntryFeatures.Java] = "Java";
-featLabel[catalog.EntryFeatures.Love] = "Löve";
-featLabel[catalog.EntryFeatures.Flash] = "Flash";
-featLabel[catalog.EntryFeatures.VR] = "VR";
-featLabel[catalog.EntryFeatures.Mobile] = "Mobile";
-featLabel[catalog.EntryFeatures.Source] = "Source";
+
+// -- initialize the static filter sets
+var compoFilter = new Set<number>();
+var jamFilter = new Set<number>();
 
 var filterSets = new Map<catalog.EntryFeatures, Set<number>>();
-filterSets.set(catalog.EntryFeatures.Win, new Set<number>());
-filterSets.set(catalog.EntryFeatures.Mac, new Set<number>());
-filterSets.set(catalog.EntryFeatures.Linux, new Set<number>());
-filterSets.set(catalog.EntryFeatures.HTML5, new Set<number>());
-filterSets.set(catalog.EntryFeatures.WebGL, new Set<number>());
-filterSets.set(catalog.EntryFeatures.Unity, new Set<number>());
-filterSets.set(catalog.EntryFeatures.Java, new Set<number>());
-filterSets.set(catalog.EntryFeatures.Love, new Set<number>());
-filterSets.set(catalog.EntryFeatures.Flash, new Set<number>());
-filterSets.set(catalog.EntryFeatures.VR, new Set<number>());
-filterSets.set(catalog.EntryFeatures.Mobile, new Set<number>());
-filterSets.set(catalog.EntryFeatures.Source, new Set<number>());
+(() => {
+	var featMask = 1;
+	while (featMask <= catalog.EntryFeatures.Source) {
+		filterSets.set(featMask, new Set<number>());
+		featMask <<= 1;
+	}
+})();
 
 
 var allSet = new Set<number>();
-var activeSet = new Set<number>();
 var activeFilter: catalog.EntryFeatures = 0;
 var activeCategory = "";
 var activeQuery = "";
 
 
 function updateActiveSet() {
-/*
-	var count = entryElems.length;
+	var restrictionSets: Set<number>[] = [];
 
-	var searchSet: Set<number> = null;
+	// -- get list of active filter sets
 	if (activeQuery.length > 0) {
-		searchSet = plasticSurge.query(activeQuery);
-	}
-
-	for (var ix = 0; ix < count; ++ix) {
-		var entry = entryData[ix];
-		var hasNow = activeSet.has(ix);
-
-		var shouldHave = (entry.features & activeFilter) == activeFilter;
-		if (activeCategory.length > 0) {
-			shouldHave = shouldHave && (entry.category == activeCategory);
-		}
-		if (searchSet) {
-			shouldHave = shouldHave && (searchSet.has(ix));
-		}
-
-		if (hasNow !== shouldHave) {
-			if (shouldHave) {
-				activeSet.add(ix);
-				entryElems[ix].style.display = "";
-			}
-			else {
-				activeSet.delete(ix);
-				entryElems[ix].style.display = "none";
-			}
+		var textFilter = plasticSurge.query(activeQuery);
+		if (textFilter) {
+			restrictionSets.push(textFilter);
 		}
 	}
-*/
+
+	if (activeCategory == "compo") {
+		restrictionSets.push(compoFilter);
+	}
+	else if (activeCategory == "jam") {
+		restrictionSets.push(jamFilter);
+	}
+
+	var featMask = 1;
+	while (featMask <= catalog.EntryFeatures.Source) {
+		if (activeFilter & featMask) {
+			restrictionSets.push(filterSets.get(featMask));
+		}
+		featMask <<= 1;
+	}
+
+	// -- combine all filters
+	var resultSet: Set<number>;
+
+	if (restrictionSets.length == 0) {
+		resultSet = allSet;
+	}
+	else {
+		restrictionSets.sort((a, b) => { return a.size < b.size ? -1 : 1 });
+
+		resultSet = new Set(restrictionSets[0]);
+		for (var tisix = 1; tisix < restrictionSets.length; ++tisix) {
+			resultSet = unionSet(resultSet, restrictionSets[tisix]);
+		}
+	}
+
+	// -- apply
+	gamesGrid.activeSetChanged(resultSet);
 }
 
 
 loadAndAnalyze().then(data => {
 	entryData = data;
-	var count = entryData.length;
 
 	var grid = <HTMLElement>document.querySelector(".entries");
 	gamesGrid = new GamesGrid(grid, entryData);
 
-	// index all text
+	// index all text and populate filter sets
+	var count = entryData.length;
 	for (var x = 0; x < count; ++x) {
 		allSet.add(x);
 
 		var entry = entryData[x];
+
+		var featMask = 1;
+		while (featMask <= catalog.EntryFeatures.Source) {
+			if (entry.features & featMask) {
+				filterSets.get(featMask).add(x);
+			}
+			featMask <<= 1;
+		}
+
+		if (entry.category == "compo") {
+			compoFilter.add(x);
+		}
+		else {
+			jamFilter.add(x);	
+		}
+
 		plasticSurge.indexRawString(entry.title, x);
 		plasticSurge.indexRawString(entry.author.name, x);
 		plasticSurge.indexRawString(entry.description, x);
@@ -120,7 +132,7 @@ loadAndAnalyze().then(data => {
 	// full text search
 	var searchControl = <HTMLInputElement>(document.querySelector("#terms"));
 	searchControl.oninput = (evt: Event) => {
-		activeQuery = searchControl.value;
+		activeQuery = searchControl.value.trim();
 		updateActiveSet();
 	};
 
