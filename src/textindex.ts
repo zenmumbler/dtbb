@@ -1,17 +1,41 @@
-// textindex.ts - english script
+// textindex.ts - english script - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
 import { unionSet } from "util";
 
+export type SerializedTextIndex = { [key: string]: number[] };
 
-export default class TextIndex {
+export class TextIndex {
 	private data_ = new Map<string, Set<number>>();
 	private wordNGramCache_ = new Map<string, Set<string>>();
 
 	private MIN_NGRAM_LENGTH = 2;
-	private MAX_NGRAM_LENGTH = 10;
+	private MAX_NGRAM_LENGTH = 12;
 
 	constructor() {
+	}
+
+	save() {
+		var json: SerializedTextIndex = {};
+
+		this.data_.forEach((indexes, key) => {
+			var flatIndexes: number[] = [];
+			indexes.forEach(index => flatIndexes.push(index));
+			json[key] = flatIndexes;
+		});
+
+		return json;
+	}
+
+	load(sti: SerializedTextIndex) {
+		this.data_ = new Map<string, Set<number>>();
+		for (var key in sti) {
+			this.data_.set(key, new Set<number>(sti[key]));
+		}
+	}
+
+	get ngramCount() {
+		return this.data_.size;
 	}
 
 	wordNGrams(word: string) {
