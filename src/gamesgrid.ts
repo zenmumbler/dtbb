@@ -1,4 +1,4 @@
-// gamesgrid.ts
+// gamesgrid.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
 import { catalog } from "catalog";

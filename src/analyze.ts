@@ -1,4 +1,5 @@
-// analyze.ts
+// analyze.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
+// (c) 2016 by Arthur Langereis (@zenmumbler)
 
 import { catalog } from "catalog";
 
@@ -104,6 +105,6 @@ export function loadAndAnalyze() {
 		for (var entry of data) {
 			detectFeatures(entry);
 		}
-		return data;{}
+		return data;
 	});
 }

@@ -88,36 +88,41 @@
 		overflow-y: auto;
 	}
 
-	/* 2 to 6 columns with padding centered */
+	.pleasehold {
+		position: absolute;
+		top: 100px;
+		left: 0;
+		right: 0;
+		min-height: 100px;
+		z-index: 1;
+		background: rgba(255,255,255, 0.8);
+	}
+
+	.pleasehold h1 {
+		font-size: 40px;
+		font-weight: normal;
+		font-style: italic;
+		text-align: center;
+	}
+
+	/* 2 to 6 columns with padding centered for that responsive vibe */
 	.entries {
 		padding: 20px 4px 20px 20px;
 		width: 832px;
 		margin: 0 auto;
 		position: relative;
 	}
-
 	@media (min-width:1272px) {
-		.entries {
-			width: 1248px;
-		}
+		.entries { width: 1248px; }
 	}
-
 	@media (min-width:1688px) {
-		.entries {
-			width: 1664px;
-		}
+		.entries { width: 1664px; }
 	}
-
 	@media (min-width:2104px) {
-		.entries {
-			width: 2080px;
-		}
+		.entries { width: 2080px; }
 	}
-
 	@media (min-width:2520px) {
-		.entries {
-			width: 2496px;
-		}
+		.entries { width: 2496px; }
 	}
 
 	.entry {
@@ -203,6 +208,9 @@
 		</section>
 
 		<section class="entriesholder">
+			<div class="pleasehold">
+				<h1>Loading Index&hellip;</h1>
+			</div>
 			<div class="entries">
 				<template id="entry">
 					<div class="entry" data-eix="0">
