@@ -13,6 +13,7 @@ interface GameCell {
 
 	position: number;
 	contentIndex: number;
+	hidden: boolean;
 }
 
 
@@ -27,7 +28,7 @@ export class GamesGrid {
 	private cellHeight_ = 122;
 	private cellMargin_ = 16;
 
-	private cellCount_ = 0;
+	private entryCount_ = 0;
 	private activeSet_ = new Set<number>();
 
 	private cells_: GameCell[] = [];
@@ -39,8 +40,8 @@ export class GamesGrid {
 
 
 	constructor(private containerElem_: HTMLElement, private catalog_: catalog.Catalog) {
-		this.cellCount_ = catalog_.length;
-		for (var x = 0; x < this.cellCount_; ++x) {
+		this.entryCount_ = catalog_.length;
+		for (var x = 0; x < this.entryCount_; ++x) {
 			this.activeSet_.add(x);
 		}
 
@@ -63,7 +64,8 @@ export class GamesGrid {
 			author: <HTMLElement>tile.querySelector("p.author span"),
 			pills: <HTMLElement>tile.querySelector(".pills"),
 			position: -1,
-			contentIndex: -1
+			contentIndex: -1,
+			hidden: false
 		};
 
 		this.containerElem_.appendChild(tile);
@@ -124,17 +126,38 @@ export class GamesGrid {
 
 	private setCellPosition(cell: GameCell, newPosition: number) {
 		cell.position = newPosition;
+		
+		if (newPosition >= this.entryCount_) {
+			cell.tile.style.display = "none";
+			cell.hidden = true;
+			return;
+		}
+		if (cell.hidden) {
+			cell.hidden = false;
+			cell.tile.style.display = "";
+		}
+
 		var cellPixelPos = this.pixelPositionForCellPosition(cell.position);
 		cell.tile.style.left = cellPixelPos.left + "px";
 		cell.tile.style.top = cellPixelPos.top + "px";
 
-		cell.title.textContent = "" + cell.position;
+		var contentIndex = newPosition;
+		if (cell.contentIndex != contentIndex) {
+			cell.contentIndex = contentIndex;
+			var entry = this.catalog_[contentIndex];
+
+			cell.tile.dataset["eix"] = "" + contentIndex;
+			cell.thumb.src = entry.thumbnail_url;
+			cell.title.textContent = entry.title;
+			cell.author.textContent = entry.author.name;
+			// cell.pills
+		}
 	}
 
 
 	private relayout() {
 		this.scrollOffset_ = this.scrollingElem_.scrollTop;
-		var effectiveOffset = this.scrollOffset_ - this.gridOffsetY;
+		var effectiveOffset = Math.max(0, this.scrollOffset_ - this.gridOffsetY);
 		var effectiveCellHeight = this.cellHeight_ + this.cellMargin_;
 		var firstViewRow = Math.floor(effectiveOffset / effectiveCellHeight);
 		var position = firstViewRow * this.cols_;
@@ -178,7 +201,7 @@ export class GamesGrid {
 
 	private scrollPosChanged(newScrollPos: number) {
 		this.scrollOffset_ = newScrollPos;
-		var effectiveOffset = newScrollPos - this.gridOffsetY;
+		var effectiveOffset = Math.max(0, this.scrollOffset_ - this.gridOffsetY);
 		var effectiveCellHeight = this.cellHeight_ + this.cellMargin_;
 		var firstViewRow = Math.floor(effectiveOffset / effectiveCellHeight);
 		var rowDiff = Math.abs(firstViewRow - this.firstVisibleRow_);
@@ -202,7 +225,7 @@ export class GamesGrid {
 			this.rows_ = newRows;
 
 			this.ensureCellCount(this.rows_ * this.cols_);
-			this.containerElem_.style.height = (this.gridOffsetY * 2) + (Math.ceil(this.cellCount_ / this.cols_) * (this.cellHeight_ + this.cellMargin_)) + "px";
+			this.containerElem_.style.height = (this.gridOffsetY * 2) + (Math.ceil(this.entryCount_ / this.cols_) * (this.cellHeight_ + this.cellMargin_)) + "px";
 
 			this.relayout();
 		}

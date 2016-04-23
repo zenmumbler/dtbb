@@ -82,7 +82,7 @@ function updateActiveSet() {
 
 loadAndAnalyze().then(data => {
 	entryData = data;
-	var count = 200;// entryData.length;
+	var count = entryData.length;
 
 	var grid = <HTMLElement>document.querySelector(".entries");
 	gamesGrid = new GamesGrid(grid, entryData);
