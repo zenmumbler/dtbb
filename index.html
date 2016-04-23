@@ -2,6 +2,7 @@
 <html>
 <head>
 	<title>LD35 AltBrowser</title>
+	<meta name="author" content="Arthur Langereis">
 	<meta charset="utf-8">
 	<style>
 	html, body {
@@ -25,6 +26,10 @@
 		padding: 0;
 	}
 
+	a {
+		color: currentColor;
+	}
+
 
 	.no-select {
 		-webkit-user-select: none;
@@ -42,17 +47,40 @@
 		right: 0;
 		top: 0;
 		bottom: 0;
-		min-width: 900px;
+		min-width: 960px;
 		background-color: white;
 	}
 
-	#filters {
+	#controls {
 		position: relative;
 		z-index: 2;
 		padding: 6px 12px;
 		background-color: #444;
-		line-height: 1.9em;
 		cursor: default;
+	}
+
+	.about {
+		float: right;
+		text-align: right;
+	}
+
+	.about h3 {
+		color: white;
+		padding: 4px 0;
+		margin: 0;
+		font-size: 22px;
+	}
+
+	.about p {
+		color: white;
+		margin: 0;
+		padding: 0;
+		font-size: 12px;
+	}
+
+	.filters {
+		line-height: 1.9em;
+		float: left;
 	}
 
 	input[type=search] {
@@ -66,14 +94,14 @@
 	}
 	input+label { cursor: pointer; }
 
-	#filters span {
+	.filters span {
 		color: white;
 		display: inline-block;
 		padding-right: 8px;
 		font-weight: bold;
 	}
 
-	#filters label {
+	.filters label {
 		color: #aaa;
 		display: inline-block;
 		margin-right: 2px;
@@ -182,29 +210,41 @@
 </head>
 <body>
 	<section id="grid" class="no-select">
-		<section id="filters">
-			<input type="search" id="terms" autocomplete="off" placeholder="Search Terms">
+		<section id="controls">
+			<div class="about">
+				<h3>LD35 Browser</h3>
+				<p>
+					by <a href="https://twitter.com/zenmumbler" target="_blank">@zenmumbler</a>
+					(<a href="https://github.com/zenmumbler/dtbb" target="_blank">source</a>)
+				</p>
+			</div>
 
-			<span>Category:</span>
-			<input type="radio" name="category" id="cat_all" checked value=""><label for="cat_all">&nbsp;All</label>
-			<input type="radio" name="category" id="cat_compo" value="compo"><label for="cat_compo">&nbsp;Compo</label>
-			<input type="radio" name="category" id="cat_jam" value="jam"><label for="cat_jam">&nbsp;Jam</label>
+			<div class="filters">
+				<input type="search" id="terms" autocomplete="off" placeholder="Search Terms">
 
-			<br>
+				<span>Category:</span>
+				<input type="radio" name="category" id="cat_all" checked value=""><label for="cat_all">&nbsp;All</label>
+				<input type="radio" name="category" id="cat_compo" value="compo"><label for="cat_compo">&nbsp;Compo</label>
+				<input type="radio" name="category" id="cat_jam" value="jam"><label for="cat_jam">&nbsp;Jam</label>
 
-			<span>Restrict to:</span>
-			<input type="checkbox" name="feature" id="f_win" value="1"><label for="f_win">&nbsp;Win</label>
-			<input type="checkbox" name="feature" id="f_mac" value="2"><label for="f_mac">&nbsp;Mac</label>
-			<input type="checkbox" name="feature" id="f_linux" value="4"><label for="f_linux">&nbsp;Linux</label>
-			<input type="checkbox" name="feature" id="f_html5" value="8"><label for="f_html5">&nbsp;HTML5</label>
-			<!-- input type="checkbox" name="feature" id="f_webgl" value="16"><label for="f_webgl">&nbsp;WebGL</label -->
-			<input type="checkbox" name="feature" id="f_unity" value="32"><label for="f_unity">&nbsp;Unity</label>
-			<input type="checkbox" name="feature" id="f_java" value="64"><label for="f_java">&nbsp;Java</label>
-			<input type="checkbox" name="feature" id="f_love" value="128"><label for="f_love">&nbsp;Löve</label>
-			<input type="checkbox" name="feature" id="f_flash" value="256"><label for="f_flash">&nbsp;Flash</label>
-			<!-- input type="checkbox" name="feature" id="f_vr" value="512"><label for="f_vr">&nbsp;VR</label -->
-			<input type="checkbox" name="feature" id="f_mobile" value="1024"><label for="f_mobile">&nbsp;Mobile</label>
-			<input type="checkbox" name="feature" id="f_source" value="2048"><label for="f_source">&nbsp;Source</label>
+				<br>
+
+				<span>Restrict to:</span>
+				<input type="checkbox" name="feature" id="f_win" value="1"><label for="f_win">&nbsp;Win</label>
+				<input type="checkbox" name="feature" id="f_mac" value="2"><label for="f_mac">&nbsp;Mac</label>
+				<input type="checkbox" name="feature" id="f_linux" value="4"><label for="f_linux">&nbsp;Linux</label>
+				<input type="checkbox" name="feature" id="f_html5" value="8"><label for="f_html5">&nbsp;HTML5</label>
+				<!-- input type="checkbox" name="feature" id="f_webgl" value="16"><label for="f_webgl">&nbsp;WebGL</label -->
+				<input type="checkbox" name="feature" id="f_unity" value="32"><label for="f_unity">&nbsp;Unity</label>
+				<input type="checkbox" name="feature" id="f_java" value="64"><label for="f_java">&nbsp;Java</label>
+				<input type="checkbox" name="feature" id="f_love" value="128"><label for="f_love">&nbsp;Löve</label>
+				<input type="checkbox" name="feature" id="f_flash" value="256"><label for="f_flash">&nbsp;Flash</label>
+				<!-- input type="checkbox" name="feature" id="f_vr" value="512"><label for="f_vr">&nbsp;VR</label -->
+				<input type="checkbox" name="feature" id="f_mobile" value="1024"><label for="f_mobile">&nbsp;Mobile</label>
+				<input type="checkbox" name="feature" id="f_source" value="2048"><label for="f_source">&nbsp;Source</label>
+			</div>
+
+			<br clear="both">
 		</section>
 
 		<section class="entriesholder">
