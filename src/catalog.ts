@@ -1,8 +1,10 @@
 // catalog.ts
 
+import { loadTypedJSON } from "util";
+
 export module catalog {
 
-	const FILE_PATH = "data/ld35-entries.json";
+	const FILE_PATH = location.host.toLowerCase() !== "zenmumbler.net" ? "data/ld35-entries.json" : "data/ld35-entries.gzjson";
 
 	export const enum EntryFeatures {
 		Win = 1,
@@ -49,15 +51,6 @@ export module catalog {
 	export type Catalog = Entry[];
 
 	export function load() {
-		return new Promise<Catalog>((resolve, reject) => {
-			var xhr = new XMLHttpRequest();
-			xhr.responseType = "json";
-			xhr.open("GET", FILE_PATH);
-			xhr.onload = function() {
-				resolve(<Catalog>(xhr.response));
-			};
-			xhr.onerror = reject;
-			xhr.send(null);
-		});
+		return loadTypedJSON<Catalog>(FILE_PATH);
 	}
 }

@@ -1,14 +1,20 @@
+// app.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
+// (c) 2016 by Arthur Langereis (@zenmumbler)
+
 import { loadAndAnalyze } from "analyze";
 import { catalog } from "catalog";
-import TextIndex from "textindex";
+import { TextIndex, SerializedTextIndex } from "textindex";
 import { GamesGrid } from "gamesgrid";
-import { unionSet } from "util";
+import { unionSet, loadTypedJSON } from "util";
 
-// -- the model, view and fulltext engine
+// -- the model and view
 var entryData: catalog.Entry[] = null;
 var gamesGrid: GamesGrid;
-var plasticSurge = new TextIndex();
 
+// -- fulltext search engine and config
+var plasticSurge = new TextIndex();
+const INDEX_ON_THE_FLY = false;
+const TEXT_INDEX_URL = location.host.toLowerCase() !== "zenmumbler.net" ? "data/ld35-entries-index.json" : "data/ld35-entries-index.gzjson";
 
 // -- initialize the static filter sets
 var compoFilter = new Set<number>();
@@ -76,6 +82,17 @@ function updateActiveSet() {
 }
 
 
+if (! INDEX_ON_THE_FLY) {
+	loadTypedJSON<SerializedTextIndex>(TEXT_INDEX_URL).then(sti => {
+		var t0 = performance.now();
+		plasticSurge.load(sti);
+		var t1 = performance.now();
+		console.info("STI load took " + (t1 - t0).toFixed(1) + "ms");
+		// (<HTMLElement>document.querySelector(".pleasehold")).style.display = "none";
+	});
+}
+
+
 loadAndAnalyze().then(data => {
 	entryData = data;
 
@@ -84,6 +101,7 @@ loadAndAnalyze().then(data => {
 
 	// index all text and populate filter sets
 	var count = entryData.length;
+	var t0 = performance.now();
 	for (var x = 0; x < count; ++x) {
 		allSet.add(x);
 
@@ -104,9 +122,21 @@ loadAndAnalyze().then(data => {
 			jamFilter.add(x);	
 		}
 
-		plasticSurge.indexRawString(entry.title, x);
-		plasticSurge.indexRawString(entry.author.name, x);
-		plasticSurge.indexRawString(entry.description, x);
+		if (INDEX_ON_THE_FLY) {
+			// build fulltext index on-the-fly
+			plasticSurge.indexRawString(entry.title, x);
+			plasticSurge.indexRawString(entry.author.name, x);
+			plasticSurge.indexRawString(entry.description, x);
+			for (var link of entry.links) {
+				plasticSurge.indexRawString(link.title, x);
+			}
+		}
+	}
+	var t1 = performance.now();
+
+	if (INDEX_ON_THE_FLY) {
+		console.info("Text Indexing took " + (t1 - t0).toFixed(1) + "ms");
+		(<HTMLElement>document.querySelector(".pleasehold")).style.display = "none";
 	}
 
 
