@@ -1,14 +1,12 @@
 import { loadAndAnalyze } from "analyze";
 import { catalog } from "catalog";
 import TextIndex from "textindex";
+import { GamesGrid } from "gamesgrid";
 
 var plasticSurge = new TextIndex();
-
-var grid = document.querySelector(".entries");
-var entryTemplate = <HTMLTemplateElement>document.querySelector("#entry");
+var gamesGrid: GamesGrid;
 
 var entryData: catalog.Entry[] = null;
-var entryElems: HTMLDivElement[] = [];
 
 var featLabel: { [f: number]: string } = {};
 featLabel[catalog.EntryFeatures.Win] = "Win";
@@ -47,6 +45,7 @@ var activeQuery = "";
 
 
 function updateActiveSet() {
+/*
 	var count = entryElems.length;
 
 	var searchSet: Set<number> = null;
@@ -77,61 +76,32 @@ function updateActiveSet() {
 			}
 		}
 	}
-}
-
-
-function makeEntryTile(entry: catalog.Entry, entryIndex: number) {
-	var elem = <HTMLDivElement>(<Element>entryTemplate.content.cloneNode(true)).firstElementChild;
-	(<HTMLImageElement>elem.querySelector("img")).src = entry.thumbnail_url;
-	elem.querySelector("h2").textContent = entry.title;
-	elem.querySelector("p.author span").textContent = entry.author.name;
-	elem.dataset["eix"] = ""+entryIndex;
-	var pills = elem.querySelector(".pills");
-
-	var featMask = 1;
-	while (featMask <= catalog.EntryFeatures.Source) {
-		if (entry.features & featMask) {
-			var pill = document.createElement("span");
-			pill.className = "pill";
-			pill.textContent = featLabel[featMask];
-			pills.appendChild(pill);
-
-			filterSets.get(featMask).add(entryIndex);
-		}
-		featMask <<= 1;
-	}
-
-	return elem;
+*/
 }
 
 
 loadAndAnalyze().then(data => {
 	entryData = data;
-	var count = entryData.length;
+	var count = 200;// entryData.length;
 
-	var t0 = performance.now();
-	for (var x = 0; x < count; ++x) {
-		var entry = entryData[x];
-		entryElems[x] = makeEntryTile(entry, x);
-		grid.appendChild(entryElems[x]);
-
-		allSet.add(x);
-		activeSet.add(x);
-	}
-	var t1 = performance.now();
+	var grid = <HTMLElement>document.querySelector(".entries");
+	gamesGrid = new GamesGrid(grid, entryData);
 
 	// index all text
 	for (var x = 0; x < count; ++x) {
+		allSet.add(x);
+
 		var entry = entryData[x];
 		plasticSurge.indexRawString(entry.title, x);
 		plasticSurge.indexRawString(entry.author.name, x);
 		plasticSurge.indexRawString(entry.description, x);
 	}
 
-	var t2 = performance.now();
 
-	console.info("Elems / Index", (t1 - t0).toFixed(1), (t2 - t1).toFixed(1));
-	(<any>window).ps = plasticSurge;
+	window.onresize = () => {
+		gamesGrid.resized();
+	};
+
 
 	// click to go to LD
 	grid.addEventListener("click", (evt: MouseEvent) => {
@@ -146,12 +116,14 @@ loadAndAnalyze().then(data => {
 		}
 	});
 
+
 	// full text search
 	var searchControl = <HTMLInputElement>(document.querySelector("#terms"));
 	searchControl.oninput = (evt: Event) => {
 		activeQuery = searchControl.value;
 		updateActiveSet();
 	};
+
 
 	// category radios
 	var categoryControls = <HTMLInputElement[]>([].slice.call(document.querySelectorAll("input[name=category]"), 0));
@@ -168,6 +140,7 @@ loadAndAnalyze().then(data => {
 			}
 		};
 	}
+
 
 	// filter checkboxes
 	var filterControls = <HTMLInputElement[]>([].slice.call(document.querySelectorAll("input[name=feature]"), 0));
