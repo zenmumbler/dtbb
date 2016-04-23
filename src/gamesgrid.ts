@@ -164,17 +164,18 @@ export class GamesGrid {
 			cell.thumb.src = entry.thumbnail_url;
 			cell.title.textContent = entry.title;
 			cell.author.textContent = entry.author.name;
+			cell.pills.innerHTML = "";
 
-			// var featMask = 1;
-			// while (featMask <= catalog.EntryFeatures.Source) {
-			// 	if (entry.features & featMask) {
-			// 		var pill = document.createElement("span");
-			// 		pill.className = "pill";
-			// 		pill.textContent = featLabel[featMask];
-			// 		pills.appendChild(pill);
-			// 	}
-			// 	featMask <<= 1;
-			// }
+			var featMask = 1;
+			while (featMask <= catalog.EntryFeatures.Source) {
+				if (entry.features & featMask) {
+					var pill = document.createElement("span");
+					pill.className = "pill";
+					pill.textContent = featLabel[featMask];
+					cell.pills.appendChild(pill);
+				}
+				featMask <<= 1;
+			}
 		}
 	}
 
