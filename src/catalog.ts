@@ -1,10 +1,12 @@
-// catalog.ts
+// catalog.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
+// (c) 2016 by Arthur Langereis (@zenmumbler)
 
 import { loadTypedJSON } from "util";
 
 export module catalog {
 
-	const FILE_PATH = location.host.toLowerCase() !== "zenmumbler.net" ? "data/ld35-entries.json" : "data/ld35-entries.gzjson";
+	const FILE_REVISION = 2;
+	const FILE_PATH = location.host.toLowerCase() !== "zenmumbler.net" ? `data/ld35-entries-${FILE_REVISION}.json` : `data/ld35-entries-${FILE_REVISION}.gzjson`; // `
 
 	export const enum EntryFeatures {
 		Win = 1,
