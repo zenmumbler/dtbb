@@ -31,6 +31,10 @@ function createEntry(url, uid, thumbImg, doc) {
 	const eventBaseURL = ldBaseURL + "ludum-dare-35/";
 
 	var base = doc.querySelector("#compo2");
+	if (! base) {
+		console.error("no base for uid", uid);
+		return null;
+	}
 	var titleElem = base.querySelector("h2");
 	var avatarImg = base.querySelector("img.avatar");
 	var authorLink = titleElem.parentElement.querySelector("a");
@@ -86,7 +90,10 @@ window.addEventListener("load", () => {
 
 			var p = entryDoc(uid).then(
 				(doc) => {
-					entries.set(uid, createEntry(link, uid, thumb, doc));
+					var entry = createEntry(link, uid, thumb, doc);
+					if (entry) {
+						entries.set(uid, entry);
+					}
 				}
 			);//.catch((err) => { console.info("ERROR ", uid); });
 			allP.push(p);

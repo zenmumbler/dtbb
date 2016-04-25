@@ -1,3 +1,5 @@
 entry_pages
 node_modules
+old/
 js
+!js/require.js
