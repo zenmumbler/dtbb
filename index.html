@@ -3,6 +3,7 @@
 <head>
 	<title>LD35 AltBrowser</title>
 	<meta name="author" content="Arthur Langereis">
+	<meta name="viewport" content="width=960">
 	<meta charset="utf-8">
 	<style>
 	html, body {
@@ -54,68 +55,96 @@
 	#controls {
 		position: relative;
 		z-index: 2;
-		padding: 6px 12px;
-		background-color: #444;
+		padding: 20px 12px;
+		background: linear-gradient(to bottom, #18181c 0%, #171a22 100%);
+		border-bottom: 1px solid #333;
 		cursor: default;
 	}
 
-	.about {
-		float: right;
-		text-align: right;
-	}
-
-	.about h3 {
-		color: white;
-		padding: 4px 0;
-		margin: 0;
-		font-size: 22px;
-	}
-
-	.about p {
-		color: white;
-		margin: 0;
-		padding: 0;
-		font-size: 12px;
-	}
-
 	.filters {
-		line-height: 1.9em;
-		float: left;
+		line-height: 18px;
+		text-align: center;
 	}
 
-	input[type=search] {
-		margin: 0 16px 0 0;
-		width: 240px;
+	input[type=text] {
+		margin: 0 16px;
+		width: 320px;
+		font-size: 15px;
+		padding: 4px 8px;
+		border: 1px solid rgb(182,182,182);
+		line-height: 18px;
+		border-radius: 3px;
 	}
-	input[type=checkbox], input[type=radio] {
-		position: relative;
-		top: -1px;
+
+	select {
+		font-size: 16px;
+		margin: 0;
+		min-width: 210px;
+	}
+
+	input[type=radio] {
+		display: none;
+	}
+	label {
+		display: inline-block;
+		box-sizing: border-box;
+		font-size: 14px;
+		padding: 3px 12px;
 		cursor: pointer;
+		border-top-color: rgb(200,200,200);
+		border-left-color: rgb(164,164,164);
+		border-right-color: rgb(182,182,182);
+		border-bottom-color: rgb(164,164,164);
+		border-style: solid;
+		border-left-width: 0;
+		border-right-width: 0;
+		border-top-width: 1px;
+		border-bottom-width: 1px;
+		background-color: #fff;
+		min-width: 70px;
+		line-height: 17px;
 	}
-	input+label { cursor: pointer; }
-
-	.filters span {
+	label.left, label.right {
+		border-left-width: 1px;
+		border-right-width: 1px;
+	}
+	label.left {
+		border-top-left-radius: 4px;
+		border-bottom-left-radius: 4px;
+		
+	}
+	label.right {
+		border-top-right-radius: 4px;
+		border-bottom-right-radius: 4px;
+		
+	}
+	input:checked+label {
+		background-color: #45B236;
+		border-color: #45B236;
 		color: white;
-		display: inline-block;
-		padding-right: 8px;
-		font-weight: bold;
 	}
-
-	.filters label {
-		color: #aaa;
-		display: inline-block;
-		margin-right: 2px;
+	input:checked+label.left {
+		background-color: #CC5B13;
+		border-color: #CC5B13;
+		color: white;
+	}
+	input:checked+label.right {
+		background-color: #3C4CFF;
+		border-color: #3C4CFF;
+		color: white;
 	}
 
 	.entriesholder {
 		position: absolute;
-		top: 72px;
+		top: 68px;
 		left: 0;
 		right: 0;
 		bottom: 0;
 		z-index: 1;
 		overflow-x: hidden;
-		overflow-y: auto;
+		overflow-y: scroll;
+		-webkit-overflow-scrolling: touch;
+		background-color: #373d44;
 	}
 
 	.pleasehold {
@@ -158,9 +187,10 @@
 	.entry {
 		position: absolute;
 		box-sizing: border-box;
-		width: 400px;
+		width: 392px;
 		height: 122px;
 		cursor: pointer;
+		background-color: white;
 	}
 	.entry>a {
 		display: block;
@@ -171,47 +201,63 @@
 		margin: 0;
 		color: currentColor;
 		text-decoration: none;
-		background-color: #eee;
+	}
+	.entry>a.compo {
+		border-right: 8px solid rgb(69, 178, 54);
+	}
+	.entry>a.jam {
+		border-right: 8px solid rgb(92, 76, 255); 
 	}
 	.entry>a:hover {
-		background-color: #ddd;
+		border-right-width: 12px;
 	}
 
-	.entry .imgholder {
+	.entry .thumb {
 		display: inline-block;
-		width: 120px;
-		height: 90px;
+		width: 122px;
+		height: 122px;
 		float: left;
-		margin-right: 16px;
+		margin-right: 0;
+		position: relative;
+		left: -16px;
+		top: -16px;
+		background-position: center center;
+		background-size: cover;
 	}
 
 	.entry h2 {
 		font-size: 18px;
 		margin: 0 0 .2em 0;
 		max-width: 275px;
-		color: #383838;
+		color: #585858;
 	}
 	.entry .author {
 		font-size: 14px;
 		margin: 0 0 .8em 0;
+		color: #888;
+	}
+	.entry>a:hover h2 {
+		color: #383838;
+	}
+	.entry>a:hover .author {
 		color: #686868;
 	}
 
 	.pills {
-		max-width: 232px;
+		max-width: 248px;
 		position: absolute;
 		bottom: 16px;
-		left: 152px;
+		left: 136px;
 		margin: 0;
 		padding: 0;
 	}
 	.pill {
 		display: inline-block;
-		font-size: 12px; padding: 2px 3px;
-		background-color: red;
+		font-size: 11px; padding: 2px 4px;
+		background-color: #eee;
 		border-radius: 3px;
 		margin-right: 2px;
-		color: white;
+		color: #777;
 	}
 	</style>
 
@@ -220,36 +266,27 @@
 <body>
 	<section id="grid" class="no-select">
 		<section id="controls">
-			<div class="about">
-				<h3>LD35 Browser</h3>
-				<p>
-					by <a href="https://twitter.com/zenmumbler" target="_blank">@zenmumbler</a>
-					(<a href="https://github.com/zenmumbler/dtbb" target="_blank">source</a>)
-				</p>
-			</div>
-
 			<div class="filters">
-				<input type="search" id="terms" autocomplete="off" placeholder="Search Terms (2 char minimum)">
+				<input type="radio" name="category" id="cat_all" checked value=""><label class="left" for="cat_all">Both</label><!--
+			 --><input type="radio" name="category" id="cat_compo" value="compo"><label for="cat_compo">Compo</label><!--
+			 --><input type="radio" name="category" id="cat_jam" value="jam"><label class="right" for="cat_jam">Jam</label>
 
-				<span>Category:</span>
-				<input type="radio" name="category" id="cat_all" checked value=""><label for="cat_all">&nbsp;All</label>
-				<input type="radio" name="category" id="cat_compo" value="compo"><label for="cat_compo">&nbsp;Compo</label>
-				<input type="radio" name="category" id="cat_jam" value="jam"><label for="cat_jam">&nbsp;Jam</label>
+				<input tabindex="1" accesskey="f" type="text" id="terms" autocomplete="off" placeholder="Search Terms (2 char minimum)">
 
-				<br>
-
-				<span>Restrict to:</span>
-				<input type="checkbox" name="feature" id="f_desktop" value="1"><label for="f_desktop">&nbsp;Desktop</label>
-				<input type="checkbox" name="feature" id="f_win" value="2"><label for="f_win">&nbsp;Win</label>
-				<input type="checkbox" name="feature" id="f_mac" value="4"><label for="f_mac">&nbsp;Mac</label>
-				<input type="checkbox" name="feature" id="f_linux" value="8"><label for="f_linux">&nbsp;Linux</label>
-				<input type="checkbox" name="feature" id="f_web" value="16"><label for="f_web">&nbsp;Web</label>
-				<input type="checkbox" name="feature" id="f_java" value="32"><label for="f_java">&nbsp;Java</label>
-				<input type="checkbox" name="feature" id="f_vr" value="64"><label for="f_vr">&nbsp;VR</label>
-				<input type="checkbox" name="feature" id="f_mobile" value="128"><label for="f_mobile">&nbsp;Mobile</label>
+				<select tabindex="2">
+					<option value="0">All Platforms</option>
+					<option value="1">Desktop Applications</option>
+					<optgroup label="by Platform">
+						<option value="2">Windows</option>
+						<option value="4">Mac OS X</option>
+						<option value="8">Linux</option>
+					</optgroup>
+					<option value="16">Web-based</option>
+					<option value="32">Java</option>
+					<option value="64">VR</option>
+					<option value="128">Mobile</option>
+				</select>
 			</div>
-
-			<br clear="both">
 		</section>
 
 		<section class="entriesholder">
@@ -259,9 +296,7 @@
 			<div class="entries">
 				<template id="entry">
 					<div class="entry" data-eix="0"><a href="#" target="_blank">
-						<div class="imgholder">
-							<img src="" alt="">
-						</div>
+						<div class="thumb"></div>
 						<h2 class="no-text-wrap"></h2>
 						<p class="author no-text-wrap">by <span></span></p>
 

@@ -10,6 +10,9 @@ export function loadTypedJSON<T>(url: string): Promise<T> {
 		xhr.open("GET", url);
 		xhr.onload = function() {
 			var txt = xhr.responseText;
+			var sigh = txt.indexOf("nther's Abduction");
+			var xx = txt.substring(sigh - 10, sigh + 40);
+			console.info(xx);
 			var json = JSON.parse(txt);
 			resolve(<T>json);
 		};

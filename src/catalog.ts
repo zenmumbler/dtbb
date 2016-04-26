@@ -9,7 +9,7 @@ export module catalog {
 	const FILE_PATH = location.host.toLowerCase() !== "zenmumbler.net" ? `data/ld35-entries-${FILE_REVISION}.json` : `data/ld35-entries-${FILE_REVISION}.gzjson`; // `
 
 	export const enum EntryFeatures {
-		Desktop = 1,
+		App = 1,
 		Win = 2,
 		Mac = 4,
 		Linux = 8,

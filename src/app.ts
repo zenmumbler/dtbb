@@ -113,6 +113,10 @@ loadAndAnalyze().then(data => {
 
 		var entry = entryData[x];
 
+		if (entry.author.uid == 12358) {
+			console.info(x, entry);
+		}
+
 		var featMask = 1;
 		while (featMask <= catalog.EntryFeatures.Last) {
 			if (entry.features & featMask) {
@@ -158,6 +162,8 @@ loadAndAnalyze().then(data => {
 		updateActiveSet();
 	};
 
+	searchControl.focus();
+
 
 	// category radios
 	var categoryControls = <HTMLInputElement[]>([].slice.call(document.querySelectorAll("input[name=category]"), 0));
@@ -176,20 +182,11 @@ loadAndAnalyze().then(data => {
 	}
 
 
-	// filter checkboxes
-	var filterControls = <HTMLInputElement[]>([].slice.call(document.querySelectorAll("input[name=feature]"), 0));
-	for (let fc of filterControls) {
-		fc.onchange = (evt: Event) => {
-			var ctrl = <HTMLInputElement>evt.target;
-			var val = parseInt(ctrl.value);
-
-			if (ctrl.checked) {
-				activeFilter |= val;
-			}
-			else {
-				activeFilter &= ~val;
-			}
-			updateActiveSet();
-		};
-	}
+	// platform selector
+	var platformSelect = <HTMLSelectElement>(document.querySelector("select"));
+	platformSelect.onchange = (evt: Event) => {
+		var ctrl = <HTMLSelectElement>evt.target;
+		activeFilter = parseInt(ctrl.value);
+		updateActiveSet();
+	};
 });

@@ -10,24 +10,24 @@ function termify(text: string) {
 }
 
 var linkFeatureMapping: { [key: string]: catalog.EntryFeatures } = {
-	download: catalog.EntryFeatures.Desktop,
-	love: catalog.EntryFeatures.Win | catalog.EntryFeatures.Mac | catalog.EntryFeatures.Linux | catalog.EntryFeatures.Desktop,
-	love2d: catalog.EntryFeatures.Win | catalog.EntryFeatures.Mac | catalog.EntryFeatures.Linux | catalog.EntryFeatures.Desktop,
-	standalone: catalog.EntryFeatures.Desktop,
+	download: catalog.EntryFeatures.App,
+	love: catalog.EntryFeatures.Win | catalog.EntryFeatures.Mac | catalog.EntryFeatures.Linux | catalog.EntryFeatures.App,
+	love2d: catalog.EntryFeatures.Win | catalog.EntryFeatures.Mac | catalog.EntryFeatures.Linux | catalog.EntryFeatures.App,
+	standalone: catalog.EntryFeatures.App,
 
-	win: catalog.EntryFeatures.Win | catalog.EntryFeatures.Desktop,
-	win32: catalog.EntryFeatures.Win | catalog.EntryFeatures.Desktop,
-	windows32: catalog.EntryFeatures.Win | catalog.EntryFeatures.Desktop,
-	win64: catalog.EntryFeatures.Win | catalog.EntryFeatures.Desktop,
-	windows64: catalog.EntryFeatures.Win | catalog.EntryFeatures.Desktop,
-	windows: catalog.EntryFeatures.Win | catalog.EntryFeatures.Desktop,
-	exe: catalog.EntryFeatures.Win | catalog.EntryFeatures.Desktop,
+	win: catalog.EntryFeatures.Win | catalog.EntryFeatures.App,
+	win32: catalog.EntryFeatures.Win | catalog.EntryFeatures.App,
+	windows32: catalog.EntryFeatures.Win | catalog.EntryFeatures.App,
+	win64: catalog.EntryFeatures.Win | catalog.EntryFeatures.App,
+	windows64: catalog.EntryFeatures.Win | catalog.EntryFeatures.App,
+	windows: catalog.EntryFeatures.Win | catalog.EntryFeatures.App,
+	exe: catalog.EntryFeatures.Win | catalog.EntryFeatures.App,
 
-	osx: catalog.EntryFeatures.Mac | catalog.EntryFeatures.Desktop,
-	macos: catalog.EntryFeatures.Mac | catalog.EntryFeatures.Desktop,
+	osx: catalog.EntryFeatures.Mac | catalog.EntryFeatures.App,
+	macos: catalog.EntryFeatures.Mac | catalog.EntryFeatures.App,
 	
-	linux: catalog.EntryFeatures.Linux | catalog.EntryFeatures.Desktop,
-	ubuntu: catalog.EntryFeatures.Linux | catalog.EntryFeatures.Desktop,
+	linux: catalog.EntryFeatures.Linux | catalog.EntryFeatures.App,
+	ubuntu: catalog.EntryFeatures.Linux | catalog.EntryFeatures.App,
 
 	web: catalog.EntryFeatures.Web,
 	html5: catalog.EntryFeatures.Web,
@@ -41,10 +41,10 @@ var linkFeatureMapping: { [key: string]: catalog.EntryFeatures } = {
 	newgrounds: catalog.EntryFeatures.Web,
 	gamejolt: catalog.EntryFeatures.Web,
 
-	java: catalog.EntryFeatures.Java | catalog.EntryFeatures.Desktop,
-	java7: catalog.EntryFeatures.Java | catalog.EntryFeatures.Desktop,
-	java8: catalog.EntryFeatures.Java | catalog.EntryFeatures.Desktop,
-	jar: catalog.EntryFeatures.Java | catalog.EntryFeatures.Desktop,
+	java: catalog.EntryFeatures.Java,
+	java7: catalog.EntryFeatures.Java,
+	java8: catalog.EntryFeatures.Java,
+	jar: catalog.EntryFeatures.Java,
 
 	flash: catalog.EntryFeatures.Web,
 	swf: catalog.EntryFeatures.Web,
@@ -56,24 +56,24 @@ var linkFeatureMapping: { [key: string]: catalog.EntryFeatures } = {
 
 	android: catalog.EntryFeatures.Mobile,
 	apk: catalog.EntryFeatures.Mobile,
-	google: catalog.EntryFeatures.Mobile,
-	ios: catalog.EntryFeatures.Mobile
+	// google: catalog.EntryFeatures.Mobile,
+	ios: catalog.EntryFeatures.Mobile,
 };
 
 var descriptionFeatureMapping: { [key: string]: catalog.EntryFeatures } = {
-	exe: catalog.EntryFeatures.Win | catalog.EntryFeatures.Desktop,
-	wasd: catalog.EntryFeatures.Desktop,
-	awsd: catalog.EntryFeatures.Desktop,
-	aswd: catalog.EntryFeatures.Desktop,
-	love2d: catalog.EntryFeatures.Win | catalog.EntryFeatures.Mac | catalog.EntryFeatures.Linux | catalog.EntryFeatures.Desktop,
+	exe: catalog.EntryFeatures.Win | catalog.EntryFeatures.App,
+	wasd: catalog.EntryFeatures.App,
+	awsd: catalog.EntryFeatures.App,
+	aswd: catalog.EntryFeatures.App,
+	love2d: catalog.EntryFeatures.Win | catalog.EntryFeatures.Mac | catalog.EntryFeatures.Linux | catalog.EntryFeatures.App,
 
 	html5: catalog.EntryFeatures.Web,
 	chrome: catalog.EntryFeatures.Web,
 	firefox: catalog.EntryFeatures.Web,
 	safari: catalog.EntryFeatures.Web,
 
-	java: catalog.EntryFeatures.Java | catalog.EntryFeatures.Desktop,
-	jar: catalog.EntryFeatures.Java | catalog.EntryFeatures.Desktop,
+	java: catalog.EntryFeatures.Java | catalog.EntryFeatures.App,
+	jar: catalog.EntryFeatures.Java | catalog.EntryFeatures.App,
 
 	flash: catalog.EntryFeatures.Web,
 	swf: catalog.EntryFeatures.Web,
@@ -91,10 +91,6 @@ function detectFeatures(entry: catalog.Entry) {
 	var descTerms = termify(entry.description);
 	var urlTerms = entry.links.map(link => termify(link.title).concat(termify(link.url))).reduce((ta, tn) => ta.concat(tn), []); // func prog style: SO much more legible!
 
-	// if (entry.author.uid == 54318) {
-	// 	console.info("FG", descTerms, urlTerms);
-	// }
-
 	for (var term of urlTerms) {
 		feat |= (linkFeatureMapping[term] | 0);
 	}
@@ -102,14 +98,13 @@ function detectFeatures(entry: catalog.Entry) {
 		feat |= (descriptionFeatureMapping[term] | 0);
 	}
 
-
 	if (feat == 0) {
 		// only use itch as indication for desktop if no other platform tags were applied
 		if (urlTerms.indexOf("itch") > -1) {
-			feat = catalog.EntryFeatures.Desktop;
+			feat = catalog.EntryFeatures.App;
 		}
 		else {
-			console.info("No platform features: ", entry);
+			// console.info("No platform features: ", entry);
 		}
 	}
 
@@ -118,9 +113,12 @@ function detectFeatures(entry: catalog.Entry) {
 
 export function loadAndAnalyze() {
 	return catalog.load().then(data => {
+		var t0 = performance.now();
 		for (var entry of data) {
 			detectFeatures(entry);
 		}
+		var t1 = performance.now();
+		console.info("Classification took " + (t1 - t0).toFixed(1) + "ms");
 		return data;
 	});
 }

@@ -7,7 +7,7 @@ import { catalog } from "catalog";
 interface GameCell {
 	tile: HTMLElement;
 	link: HTMLLinkElement;
-	thumb: HTMLImageElement;
+	thumb: HTMLDivElement;
 	title: HTMLElement;
 	author: HTMLElement;
 	pills: HTMLElement;
@@ -19,7 +19,7 @@ interface GameCell {
 
 
 var featLabel: { [f: number]: string } = {};
-featLabel[catalog.EntryFeatures.Desktop] = "Desktop";
+featLabel[catalog.EntryFeatures.App] = "Desktop";
 featLabel[catalog.EntryFeatures.Win] = "Win";
 featLabel[catalog.EntryFeatures.Mac] = "Mac";
 featLabel[catalog.EntryFeatures.Linux] = "Linux";
@@ -36,9 +36,9 @@ export class GamesGrid {
 	private gridOffsetX = 20;
 	private gridOffsetY = 20;
 
-	private cellWidth_ = 400;
+	private cellWidth_ = 392;
 	private cellHeight_ = 122;
-	private cellMargin_ = 16;
+	private cellMargin_ = 24;
 
 	private entryCount_ = 0;
 	private activeList_: number[] = [];
@@ -83,7 +83,7 @@ export class GamesGrid {
 		var cell: GameCell = {
 			tile: <HTMLElement>tile,
 			link: <HTMLLinkElement>tile.querySelector("a"),
-			thumb: <HTMLImageElement>tile.querySelector("img"),
+			thumb: <HTMLDivElement>tile.querySelector(".thumb"),
 			title: <HTMLElement>tile.querySelector("h2"),
 			author: <HTMLElement>tile.querySelector("p.author span"),
 			pills: <HTMLElement>tile.querySelector(".pills"),
@@ -160,12 +160,13 @@ export class GamesGrid {
 
 			cell.tile.dataset["eix"] = "" + contentIndex;
 			cell.link.href = entry.entry_url;
-			cell.thumb.src = entry.thumbnail_url;
+			cell.link.className = entry.category;
+			cell.thumb.style.backgroundImage = "url(" + entry.thumbnail_url + ")";
 			cell.title.textContent = entry.title;
 			cell.author.textContent = entry.author.name;
 			cell.pills.innerHTML = "";
 
-			var featMask = catalog.EntryFeatures.Desktop;
+			var featMask = catalog.EntryFeatures.App;
 			while (featMask <= catalog.EntryFeatures.Last) {
 				if (entry.features & featMask) {
 					var pill = document.createElement("span");
@@ -264,7 +265,7 @@ export class GamesGrid {
 
 
 	resized() {
-		var width = this.scrollingElem_.offsetWidth - this.gridOffsetX;
+		var width = this.scrollingElem_.offsetWidth - this.gridOffsetX - 4;
 		var height = this.scrollingElem_.offsetHeight - this.gridOffsetY;
 
 		var cols = Math.floor(width / (this.cellWidth_ + this.cellMargin_));
