@@ -79,6 +79,8 @@ const DiacriticCharMapping: { [ch: string]: string } = {
 	"ÿ": "y", // LATIN SMALL LETTER Y WITH DIAERESIS
 }
 
+const InvalidCharsMather = /[^a-z0-9ÀÁÂÃÄÅÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜÝßàáâãäåçèéêëìíîïñòóôõöøùúûüýÿ]/g;
+
 const DiacriticsMatcher = /[ÀÁÂÃÄÅÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜÝßàáâãäåçèéêëìíîïñòóôõöøùúûüýÿ]/;
 const DiacriticCharMatchers: { [c: string]: RegExp } = {};
 Object.keys(DiacriticCharMapping).forEach(c => DiacriticCharMatchers[c] = new RegExp(c, "g"));
@@ -154,8 +156,11 @@ export class TextIndex {
 		return term;
 	}
 
+	private collapsedPunctuationMatcher = /['-]/g;
+	private multipleSpacesMatcher = /['-]/g;
+
 	tokenizeString(s: string) {
-		var cs = s.toLowerCase().replace(/['-]/g, "").replace(/[^a-z0-9]/g, " ").replace(/ +/g, " ").trim();
+		var cs = s.toLowerCase().replace(this.collapsedPunctuationMatcher, "").replace(InvalidCharsMather, " ").replace(this.multipleSpacesMatcher, " ").trim();
 		var tokens = cs.split(" ");
 		return new Set<string>(tokens); // automatically deduplicates
 	}
@@ -164,6 +169,9 @@ export class TextIndex {
 		var boxedRef = [ref];
 		var tokenSet = this.tokenizeString(rs);
 		tokenSet.forEach(token => {
+			if (token == "Dlouhý") {
+				console.info(token, this.stripDiacritics(token));
+			}
 			token = this.stripDiacritics(token);
 			var ngrams = this.wordNGrams(token);
 			ngrams.forEach(ngram => {
