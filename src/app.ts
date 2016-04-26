@@ -81,7 +81,7 @@ function updateActiveSet() {
 	}
 
 	var t1 = performance.now();
-	console.info("Sets: " + (t1 - t0).toFixed(1) + "ms");
+	// console.info("Sets: " + (t1 - t0).toFixed(1) + "ms");
 
 	// -- apply
 	gamesGrid.activeSetChanged(resultSet);
@@ -112,10 +112,6 @@ loadAndAnalyze().then(data => {
 		allSet.add(x);
 
 		var entry = entryData[x];
-
-		if (entry.author.uid == 12358) {
-			console.info(x, entry);
-		}
 
 		var featMask = 1;
 		while (featMask <= catalog.EntryFeatures.Last) {

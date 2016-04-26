@@ -5,16 +5,11 @@
 export function loadTypedJSON<T>(url: string): Promise<T> {
 	return new Promise<T>((resolve, reject) => {
 		var xhr = new XMLHttpRequest();
-		xhr.overrideMimeType("application/json");
-		// xhr.responseType = "json";
+		xhr.overrideMimeType("application/json; charset=utf-8");
+		xhr.responseType = "json";
 		xhr.open("GET", url);
 		xhr.onload = function() {
-			var txt = xhr.responseText;
-			var sigh = txt.indexOf("nther's Abduction");
-			var xx = txt.substring(sigh - 10, sigh + 40);
-			console.info(xx);
-			var json = JSON.parse(txt);
-			resolve(<T>json);
+			resolve(<T>xhr.response);
 		};
 		xhr.onerror = reject;
 		xhr.send(null);
