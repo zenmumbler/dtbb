@@ -6,10 +6,12 @@ export function loadTypedJSON<T>(url: string): Promise<T> {
 	return new Promise<T>((resolve, reject) => {
 		var xhr = new XMLHttpRequest();
 		xhr.overrideMimeType("application/json");
-		xhr.responseType = "json";
+		// xhr.responseType = "json";
 		xhr.open("GET", url);
 		xhr.onload = function() {
-			resolve(<T>(xhr.response));
+			var txt = xhr.responseText;
+			var json = JSON.parse(txt);
+			resolve(<T>json);
 		};
 		xhr.onerror = reject;
 		xhr.send(null);

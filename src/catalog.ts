@@ -9,18 +9,16 @@ export module catalog {
 	const FILE_PATH = location.host.toLowerCase() !== "zenmumbler.net" ? `data/ld35-entries-${FILE_REVISION}.json` : `data/ld35-entries-${FILE_REVISION}.gzjson`; // `
 
 	export const enum EntryFeatures {
-		Win = 1,
-		Mac = 2,
-		Linux = 4,
-		HTML5 = 8,
-		WebGL = 16,
-		Unity = 32,
-		Java = 64,
-		Love = 128,
-		Flash = 256,
-		VR = 512,
-		Mobile = 1024,
-		Source = 2048
+		Desktop = 1,
+		Win = 2,
+		Mac = 4,
+		Linux = 8,
+		Web = 16,
+		Java = 32,
+		VR = 64,
+		Mobile = 128,
+
+		Last = 128
 	}
 
 	export interface Entry {

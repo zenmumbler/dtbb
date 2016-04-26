@@ -160,11 +160,20 @@
 		box-sizing: border-box;
 		width: 400px;
 		height: 122px;
-		padding: 16px;
 		cursor: pointer;
+	}
+	.entry>a {
+		display: block;
+		box-sizing: border-box;
+		width: 100%;
+		height: 100%;
+		padding: 16px;
+		margin: 0;
+		color: currentColor;
+		text-decoration: none;
 		background-color: #eee;
 	}
-	.entry:hover {
+	.entry>a:hover {
 		background-color: #ddd;
 	}
 
@@ -230,14 +239,14 @@
 				<br>
 
 				<span>Restrict to:</span>
-				<input type="checkbox" name="feature" id="f_win" value="1"><label for="f_win">&nbsp;Win</label>
-				<input type="checkbox" name="feature" id="f_mac" value="2"><label for="f_mac">&nbsp;Mac</label>
-				<input type="checkbox" name="feature" id="f_linux" value="4"><label for="f_linux">&nbsp;Linux</label>
-				<input type="checkbox" name="feature" id="f_web" value="8"><label for="f_web">&nbsp;Web</label>
-				<input type="checkbox" name="feature" id="f_java" value="64"><label for="f_java">&nbsp;Java</label>
-				<input type="checkbox" name="feature" id="f_love" value="128"><label for="f_love">&nbsp;Löve</label>
-				<input type="checkbox" name="feature" id="f_mobile" value="1024"><label for="f_mobile">&nbsp;Mobile</label>
-				<input type="checkbox" name="feature" id="f_source" value="2048"><label for="f_source">&nbsp;Source</label>
+				<input type="checkbox" name="feature" id="f_desktop" value="1"><label for="f_desktop">&nbsp;Desktop</label>
+				<input type="checkbox" name="feature" id="f_win" value="2"><label for="f_win">&nbsp;Win</label>
+				<input type="checkbox" name="feature" id="f_mac" value="4"><label for="f_mac">&nbsp;Mac</label>
+				<input type="checkbox" name="feature" id="f_linux" value="8"><label for="f_linux">&nbsp;Linux</label>
+				<input type="checkbox" name="feature" id="f_web" value="16"><label for="f_web">&nbsp;Web</label>
+				<input type="checkbox" name="feature" id="f_java" value="32"><label for="f_java">&nbsp;Java</label>
+				<input type="checkbox" name="feature" id="f_vr" value="64"><label for="f_vr">&nbsp;VR</label>
+				<input type="checkbox" name="feature" id="f_mobile" value="128"><label for="f_mobile">&nbsp;Mobile</label>
 			</div>
 
 			<br clear="both">
@@ -249,7 +258,7 @@
 			</div>
 			<div class="entries">
 				<template id="entry">
-					<div class="entry" data-eix="0">
+					<div class="entry" data-eix="0"><a href="#" target="_blank">
 						<div class="imgholder">
 							<img src="" alt="">
 						</div>
@@ -258,7 +267,7 @@
 
 						<p class="pills no-text-wrap">
 						</p>
-					</div>
+					</a></div>
 				</template>
 			</div>
 		</section>

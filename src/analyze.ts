@@ -3,32 +3,51 @@
 
 import { catalog } from "catalog";
 
-function cleanTitle(title: string) {
-	return title.replace(/[\(\)\/]/g, " ").replace(/ +/g, " ").replace(/\./g, "").trim();
+function termify(text: string) {
+	return text.toLowerCase().replace(/os.x/g, "osx").replace(/[\(\)\/\.\n\r\*\?\-]/g, " ").replace(/ +/g, " ").trim().split(" ").map(term => {
+		return term.replace("lve", "love").replace(",", "").replace(/^mac$/, "osx");
+	});
 }
 
-var termFeatureMapping: { [key: string]: catalog.EntryFeatures } = {
-	windows: catalog.EntryFeatures.Win,
-	exe: catalog.EntryFeatures.Win,
+var linkFeatureMapping: { [key: string]: catalog.EntryFeatures } = {
+	download: catalog.EntryFeatures.Desktop,
+	love: catalog.EntryFeatures.Win | catalog.EntryFeatures.Mac | catalog.EntryFeatures.Linux | catalog.EntryFeatures.Desktop,
+	love2d: catalog.EntryFeatures.Win | catalog.EntryFeatures.Mac | catalog.EntryFeatures.Linux | catalog.EntryFeatures.Desktop,
+	standalone: catalog.EntryFeatures.Desktop,
 
-	osx: catalog.EntryFeatures.Mac,
-	linux: catalog.EntryFeatures.Linux,
+	win: catalog.EntryFeatures.Win | catalog.EntryFeatures.Desktop,
+	win32: catalog.EntryFeatures.Win | catalog.EntryFeatures.Desktop,
+	windows32: catalog.EntryFeatures.Win | catalog.EntryFeatures.Desktop,
+	win64: catalog.EntryFeatures.Win | catalog.EntryFeatures.Desktop,
+	windows64: catalog.EntryFeatures.Win | catalog.EntryFeatures.Desktop,
+	windows: catalog.EntryFeatures.Win | catalog.EntryFeatures.Desktop,
+	exe: catalog.EntryFeatures.Win | catalog.EntryFeatures.Desktop,
 
-	html5: catalog.EntryFeatures.HTML5,
-	chrome: catalog.EntryFeatures.HTML5,
-	browser: catalog.EntryFeatures.HTML5,
+	osx: catalog.EntryFeatures.Mac | catalog.EntryFeatures.Desktop,
+	macos: catalog.EntryFeatures.Mac | catalog.EntryFeatures.Desktop,
+	
+	linux: catalog.EntryFeatures.Linux | catalog.EntryFeatures.Desktop,
+	ubuntu: catalog.EntryFeatures.Linux | catalog.EntryFeatures.Desktop,
 
-	webgl: catalog.EntryFeatures.WebGL | catalog.EntryFeatures.HTML5,
+	web: catalog.EntryFeatures.Web,
+	html5: catalog.EntryFeatures.Web,
+	chrome: catalog.EntryFeatures.Web,
+	browser: catalog.EntryFeatures.Web,
+	firefox: catalog.EntryFeatures.Web,
+	safari: catalog.EntryFeatures.Web,
+	webgl: catalog.EntryFeatures.Web,
+	online: catalog.EntryFeatures.Web,
+	webplayer: catalog.EntryFeatures.Web,
+	newgrounds: catalog.EntryFeatures.Web,
+	gamejolt: catalog.EntryFeatures.Web,
 
-	unity: catalog.EntryFeatures.Unity,
+	java: catalog.EntryFeatures.Java | catalog.EntryFeatures.Desktop,
+	java7: catalog.EntryFeatures.Java | catalog.EntryFeatures.Desktop,
+	java8: catalog.EntryFeatures.Java | catalog.EntryFeatures.Desktop,
+	jar: catalog.EntryFeatures.Java | catalog.EntryFeatures.Desktop,
 
-	java: catalog.EntryFeatures.Java,
-	jar: catalog.EntryFeatures.Java,
-
-	love: catalog.EntryFeatures.Love,
-
-	flash: catalog.EntryFeatures.Flash,
-	swf: catalog.EntryFeatures.Flash,
+	flash: catalog.EntryFeatures.Web,
+	swf: catalog.EntryFeatures.Web,
 
 	vr: catalog.EntryFeatures.VR,
 	oculus: catalog.EntryFeatures.VR,
@@ -37,65 +56,61 @@ var termFeatureMapping: { [key: string]: catalog.EntryFeatures } = {
 
 	android: catalog.EntryFeatures.Mobile,
 	apk: catalog.EntryFeatures.Mobile,
-	ios: catalog.EntryFeatures.Mobile,
+	google: catalog.EntryFeatures.Mobile,
+	ios: catalog.EntryFeatures.Mobile
+};
 
-	source: catalog.EntryFeatures.Source,
-	github: catalog.EntryFeatures.Source
+var descriptionFeatureMapping: { [key: string]: catalog.EntryFeatures } = {
+	exe: catalog.EntryFeatures.Win | catalog.EntryFeatures.Desktop,
+	wasd: catalog.EntryFeatures.Desktop,
+	awsd: catalog.EntryFeatures.Desktop,
+	aswd: catalog.EntryFeatures.Desktop,
+	love2d: catalog.EntryFeatures.Win | catalog.EntryFeatures.Mac | catalog.EntryFeatures.Linux | catalog.EntryFeatures.Desktop,
+
+	html5: catalog.EntryFeatures.Web,
+	chrome: catalog.EntryFeatures.Web,
+	firefox: catalog.EntryFeatures.Web,
+	safari: catalog.EntryFeatures.Web,
+
+	java: catalog.EntryFeatures.Java | catalog.EntryFeatures.Desktop,
+	jar: catalog.EntryFeatures.Java | catalog.EntryFeatures.Desktop,
+
+	flash: catalog.EntryFeatures.Web,
+	swf: catalog.EntryFeatures.Web,
+
+	vr: catalog.EntryFeatures.VR,
+	oculus: catalog.EntryFeatures.VR,
+	vive: catalog.EntryFeatures.VR,
+	cardboard: catalog.EntryFeatures.VR,
 };
 
 
 function detectFeatures(entry: catalog.Entry) {
 	var feat: catalog.EntryFeatures = 0;
-	var isDownload = false;
 
-	for (var link of entry.links) {
-		var clean = cleanTitle(link.title.toLowerCase().replace(/os.x/g, "osx"));
-		var terms = clean.split(" ");
-		var url = link.url.toLowerCase();
+	var descTerms = termify(entry.description);
+	var urlTerms = entry.links.map(link => termify(link.title).concat(termify(link.url))).reduce((ta, tn) => ta.concat(tn), []); // func prog style: SO much more legible!
 
-		// basic url-based detection
-		if (url.indexOf("webgl") > -1) {
-			feat |= catalog.EntryFeatures.WebGL | catalog.EntryFeatures.HTML5;
-		}
-		else if (url.indexOf("swf") > -1) {
-			feat |= catalog.EntryFeatures.Flash;
-		}
-		else if (url.indexOf(".jar") > -1) {
-			feat |= catalog.EntryFeatures.Java;
-		}
-		else if ((url.indexOf("unity") > -1) || (url.indexOf("webplayer") > -1)) {
-			feat |= catalog.EntryFeatures.Unity;
-		}
+	// if (entry.author.uid == 54318) {
+	// 	console.info("FG", descTerms, urlTerms);
+	// }
 
-		// try and map link terms to features
-		for (var term of terms) {
-			term = term.replace("lve", "love").replace(",", "").replace(/^mac$/, "osx").replace(/^win$/, "windows");
-
-			if (term == "web") {
-				if ((url.indexOf("?dl=") > -1) || (url.indexOf("github.com") > -1) || (url.indexOf("itch.io/") > -1)) {
-					isDownload = true;
-				}
-			}
-			else {
-				feat |= (termFeatureMapping[term] | 0);
-			}
-		}
+	for (var term of urlTerms) {
+		feat |= (linkFeatureMapping[term] | 0);
+	}
+	for (var term of descTerms) {
+		feat |= (descriptionFeatureMapping[term] | 0);
 	}
 
-	if (entry.links.length > 0) {
-		if (feat == 0 || feat == catalog.EntryFeatures.Source) {
-			if (isDownload) {
-				// assume windows
-				feat = catalog.EntryFeatures.Win;
-			}
-			else {
-				// assume html5
-				feat = catalog.EntryFeatures.HTML5;
-			}
+
+	if (feat == 0) {
+		// only use itch as indication for desktop if no other platform tags were applied
+		if (urlTerms.indexOf("itch") > -1) {
+			feat = catalog.EntryFeatures.Desktop;
 		}
-	}
-	else {
-		// console.info("Empty", entry);
+		else {
+			console.info("No platform features: ", entry);
+		}
 	}
 
 	entry.features = feat;

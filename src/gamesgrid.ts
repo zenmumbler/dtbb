@@ -6,6 +6,7 @@ import { catalog } from "catalog";
 
 interface GameCell {
 	tile: HTMLElement;
+	link: HTMLLinkElement;
 	thumb: HTMLImageElement;
 	title: HTMLElement;
 	author: HTMLElement;
@@ -18,18 +19,14 @@ interface GameCell {
 
 
 var featLabel: { [f: number]: string } = {};
+featLabel[catalog.EntryFeatures.Desktop] = "Desktop";
 featLabel[catalog.EntryFeatures.Win] = "Win";
 featLabel[catalog.EntryFeatures.Mac] = "Mac";
 featLabel[catalog.EntryFeatures.Linux] = "Linux";
-featLabel[catalog.EntryFeatures.HTML5] = "HTML5";
-featLabel[catalog.EntryFeatures.WebGL] = "WebGL";
-featLabel[catalog.EntryFeatures.Unity] = "Unity";
+featLabel[catalog.EntryFeatures.Web] = "Web";
 featLabel[catalog.EntryFeatures.Java] = "Java";
-featLabel[catalog.EntryFeatures.Love] = "Löve";
-featLabel[catalog.EntryFeatures.Flash] = "Flash";
 featLabel[catalog.EntryFeatures.VR] = "VR";
 featLabel[catalog.EntryFeatures.Mobile] = "Mobile";
-featLabel[catalog.EntryFeatures.Source] = "Source";
 
 
 export class GamesGrid {
@@ -85,6 +82,7 @@ export class GamesGrid {
 
 		var cell: GameCell = {
 			tile: <HTMLElement>tile,
+			link: <HTMLLinkElement>tile.querySelector("a"),
 			thumb: <HTMLImageElement>tile.querySelector("img"),
 			title: <HTMLElement>tile.querySelector("h2"),
 			author: <HTMLElement>tile.querySelector("p.author span"),
@@ -161,13 +159,14 @@ export class GamesGrid {
 			var entry = this.catalog_[contentIndex];
 
 			cell.tile.dataset["eix"] = "" + contentIndex;
+			cell.link.href = entry.entry_url;
 			cell.thumb.src = entry.thumbnail_url;
 			cell.title.textContent = entry.title;
 			cell.author.textContent = entry.author.name;
 			cell.pills.innerHTML = "";
 
-			var featMask = 1;
-			while (featMask <= catalog.EntryFeatures.Source) {
+			var featMask = catalog.EntryFeatures.Desktop;
+			while (featMask <= catalog.EntryFeatures.Last) {
 				if (entry.features & featMask) {
 					var pill = document.createElement("span");
 					pill.className = "pill";

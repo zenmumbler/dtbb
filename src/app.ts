@@ -25,7 +25,7 @@ var jamFilter = new Set<number>();
 var filterSets = new Map<catalog.EntryFeatures, Set<number>>();
 (() => {
 	var featMask = 1;
-	while (featMask <= catalog.EntryFeatures.Source) {
+	while (featMask <= catalog.EntryFeatures.Last) {
 		filterSets.set(featMask, new Set<number>());
 		featMask <<= 1;
 	}
@@ -39,6 +39,7 @@ var activeQuery = "";
 
 
 function updateActiveSet() {
+	var t0 = performance.now();
 	var restrictionSets: Set<number>[] = [];
 
 	// -- get list of active filter sets
@@ -57,7 +58,7 @@ function updateActiveSet() {
 	}
 
 	var featMask = 1;
-	while (featMask <= catalog.EntryFeatures.Source) {
+	while (featMask <= catalog.EntryFeatures.Last) {
 		if (activeFilter & featMask) {
 			restrictionSets.push(filterSets.get(featMask));
 		}
@@ -78,6 +79,9 @@ function updateActiveSet() {
 			resultSet = unionSet(resultSet, restrictionSets[tisix]);
 		}
 	}
+
+	var t1 = performance.now();
+	console.info("Sets: " + (t1 - t0).toFixed(1) + "ms");
 
 	// -- apply
 	gamesGrid.activeSetChanged(resultSet);
@@ -110,7 +114,7 @@ loadAndAnalyze().then(data => {
 		var entry = entryData[x];
 
 		var featMask = 1;
-		while (featMask <= catalog.EntryFeatures.Source) {
+		while (featMask <= catalog.EntryFeatures.Last) {
 			if (entry.features & featMask) {
 				filterSets.get(featMask).add(x);
 			}
@@ -145,20 +149,6 @@ loadAndAnalyze().then(data => {
 	window.onresize = () => {
 		gamesGrid.resized();
 	};
-
-
-	// click to go to LD
-	grid.addEventListener("click", (evt: MouseEvent) => {
-		var tgt = <HTMLElement>evt.target;
-		while (tgt && (tgt.dataset["eix"] == null)) {
-			tgt = tgt.parentElement;
-		}
-		if (tgt && tgt.dataset["eix"] != null) {
-			var eix = parseInt(tgt.dataset["eix"]);
-			var ldURL = entryData[eix].entry_url;
-			window.open(ldURL, "_blank");
-		}
-	});
 
 
 	// full text search
