@@ -5,7 +5,7 @@ import { loadAndAnalyze } from "analyze";
 import { catalog } from "catalog";
 import { TextIndex, SerializedTextIndex } from "textindex";
 import { GamesGrid } from "gamesgrid";
-import { unionSet, loadTypedJSON } from "util";
+import { intersectSet, loadTypedJSON } from "util";
 
 // -- the model and view
 var entryData: catalog.Entry[] = null;
@@ -76,7 +76,7 @@ function updateActiveSet() {
 
 		resultSet = new Set(restrictionSets[0]);
 		for (var tisix = 1; tisix < restrictionSets.length; ++tisix) {
-			resultSet = unionSet(resultSet, restrictionSets[tisix]);
+			resultSet = intersectSet(resultSet, restrictionSets[tisix]);
 		}
 	}
 

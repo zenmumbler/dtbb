@@ -3,7 +3,7 @@
 
 // Roman English script only
 
-import { unionSet } from "util";
+import { intersectSet } from "util";
 
 export type SerializedTextIndex = { [key: string]: number[] };
 
@@ -79,7 +79,7 @@ const DiacriticCharMapping: { [ch: string]: string } = {
 	"ÿ": "y", // LATIN SMALL LETTER Y WITH DIAERESIS
 }
 
-const InvalidCharsMather = /[^a-z0-9ÀÁÂÃÄÅÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜÝßàáâãäåçèéêëìíîïñòóôõöøùúûüýÿ]/g;
+const InvalidCharsMather = /[^a-zA-Z0-9ÀÁÂÃÄÅÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜÝßàáâãäåçèéêëìíîïñòóôõöøùúûüýÿ]/g;
 
 const DiacriticsMatcher = /[ÀÁÂÃÄÅÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜÝßàáâãäåçèéêëìíîïñòóôõöøùúûüýÿ]/;
 const DiacriticCharMatchers: { [c: string]: RegExp } = {};
@@ -169,9 +169,6 @@ export class TextIndex {
 		var boxedRef = [ref];
 		var tokenSet = this.tokenizeString(rs);
 		tokenSet.forEach(token => {
-			if (token == "Dlouhý") {
-				console.info(token, this.stripDiacritics(token));
-			}
 			token = this.stripDiacritics(token);
 			var ngrams = this.wordNGrams(token);
 			ngrams.forEach(ngram => {
@@ -220,7 +217,7 @@ export class TextIndex {
 		termIndexSets.sort((a, b) => { return a.size < b.size ? -1 : 1 });
 		var result = new Set(termIndexSets[0]);
 		for (var tisix = 1; tisix < termIndexSets.length; ++tisix) {
-			result = unionSet(result, termIndexSets[tisix]);
+			result = intersectSet(result, termIndexSets[tisix]);
 		}
 
 		return result;
