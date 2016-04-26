@@ -157,7 +157,7 @@ export class TextIndex {
 	}
 
 	private collapsedPunctuationMatcher = /['-]/g;
-	private multipleSpacesMatcher = /['-]/g;
+	private multipleSpacesMatcher = / +/g;
 
 	tokenizeString(s: string) {
 		var cs = s.toLowerCase().replace(this.collapsedPunctuationMatcher, "").replace(InvalidCharsMather, " ").replace(this.multipleSpacesMatcher, " ").trim();
