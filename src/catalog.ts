@@ -6,7 +6,9 @@ import { loadTypedJSON } from "util";
 export module catalog {
 
 	const FILE_REVISION = 2;
-	const FILE_PATH = location.host.toLowerCase() !== "zenmumbler.net" ? `data/ld35-entries-${FILE_REVISION}.json` : `data/ld35-entries-${FILE_REVISION}.gzjson`; // `
+	const FILE_NAME = "data/ld35-entries"
+	const FILE_EXT = location.host.toLowerCase() !== "zenmumbler.net" ? ".json" : ".gzjson";
+	const FILE_PATH = FILE_NAME + FILE_EXT + "?" + FILE_REVISION;
 
 	export const enum EntryFeatures {
 		App = 1,

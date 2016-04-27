@@ -13,10 +13,12 @@ var gamesGrid: GamesGrid;
 
 // -- fulltext search engine and config
 var plasticSurge = new TextIndex();
-const INDEX_ON_THE_FLY = true;
+const INDEX_ON_THE_FLY = false;
 const INDEX_REVISION = 2;
-const INDEX_EXTENSION = location.host.toLowerCase() !== "zenmumbler.net" ? ".json" : ".gzjson";
-const TEXT_INDEX_URL = `data/ld35-entries-index-${INDEX_REVISION}` + INDEX_EXTENSION;
+const INDEX_FILE_NAME = "data/ld35-entries-index";
+const INDEX_EXT = location.host.toLowerCase() !== "zenmumbler.net" ? ".json" : ".gzjson";
+const TEXT_INDEX_URL = INDEX_FILE_NAME + INDEX_EXT + "?" + INDEX_REVISION;
+
 
 // -- initialize the static filter sets
 var compoFilter = new Set<number>();

@@ -62,9 +62,6 @@ var linkFeatureMapping: { [key: string]: catalog.EntryFeatures } = {
 
 var descriptionFeatureMapping: { [key: string]: catalog.EntryFeatures } = {
 	exe: catalog.EntryFeatures.Win | catalog.EntryFeatures.App,
-	wasd: catalog.EntryFeatures.App,
-	awsd: catalog.EntryFeatures.App,
-	aswd: catalog.EntryFeatures.App,
 	love2d: catalog.EntryFeatures.Win | catalog.EntryFeatures.Mac | catalog.EntryFeatures.Linux | catalog.EntryFeatures.App,
 
 	html5: catalog.EntryFeatures.Web,
@@ -99,12 +96,17 @@ function detectFeatures(entry: catalog.Entry) {
 	}
 
 	if (feat == 0) {
-		// only use itch as indication for desktop if no other platform tags were applied
-		if (urlTerms.indexOf("itch") > -1) {
+		// last resort, try itch on url and keyboard refs in description to try and add some classification
+		if (
+			(urlTerms.indexOf("itch") > -1) ||
+			(descTerms.indexOf("wasd") > -1) ||
+			(descTerms.indexOf("awsd") > -1) ||
+			(descTerms.indexOf("aswd") > -1)
+		) {
 			feat = catalog.EntryFeatures.App;
 		}
 		else {
-			// console.info("No platform features: ", entry);
+			console.info("No platform features: ", entry);
 		}
 	}
 
