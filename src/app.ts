@@ -1,47 +1,43 @@
 // app.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
-import { loadAndAnalyze } from "analyze";
-import { catalog } from "catalog";
+import { classifyEntries } from "analyze";
+import { Catalog, Entry, Platform, PlatformList, loadCatalog } from "catalog";
 import { TextIndex, SerializedTextIndex } from "textindex";
 import { GamesGrid } from "gamesgrid";
-import { intersectSet, loadTypedJSON } from "util";
+import { intersectSet, loadTypedJSON, elem, elemList } from "util";
+
+var sti_t0 = performance.now();
 
 // -- the model and view
-var entryData: catalog.Entry[] = null;
+var entryData: Catalog = null;
 var gamesGrid: GamesGrid;
 
 // -- fulltext search engine and config
 var plasticSurge = new TextIndex();
 const INDEX_ON_THE_FLY = false;
-const INDEX_REVISION = 2;
-const INDEX_FILE_NAME = "data/ld35-entries-index";
-const INDEX_EXT = location.host.toLowerCase() !== "zenmumbler.net" ? ".json" : ".gzjson";
-const TEXT_INDEX_URL = INDEX_FILE_NAME + INDEX_EXT + "?" + INDEX_REVISION;
+const DATA_REVISION = 2;
+const DATA_EXTENSION = location.host.toLowerCase() !== "zenmumbler.net" ? ".json" : ".gzjson";
+const TEXT_INDEX_URL = "data/ld35-entries-index" + DATA_EXTENSION + "?" + DATA_REVISION;
+const ENTRIES_URL = "data/ld35-entries" + DATA_EXTENSION + "?" + DATA_REVISION;
 
 
 // -- initialize the static filter sets
 var compoFilter = new Set<number>();
 var jamFilter = new Set<number>();
-
-var filterSets = new Map<catalog.EntryFeatures, Set<number>>();
-(() => {
-	var featMask = 1;
-	while (featMask <= catalog.EntryFeatures.Last) {
-		filterSets.set(featMask, new Set<number>());
-		featMask <<= 1;
-	}
-})();
+var filterSets = new Map<Platform, Set<number>>();
+PlatformList.forEach(p => {
+	filterSets.set(p, new Set<number>());
+});
 
 
 var allSet = new Set<number>();
-var activeFilter: catalog.EntryFeatures = 0;
+var activeFilter: Platform = 0;
 var activeCategory = "";
 var activeQuery = "";
 
 
 function updateActiveSet() {
-	var t0 = performance.now();
 	var restrictionSets: Set<number>[] = [];
 
 	// -- get list of active filter sets
@@ -59,13 +55,11 @@ function updateActiveSet() {
 		restrictionSets.push(jamFilter);
 	}
 
-	var featMask = 1;
-	while (featMask <= catalog.EntryFeatures.Last) {
-		if (activeFilter & featMask) {
-			restrictionSets.push(filterSets.get(featMask));
+	PlatformList.forEach(plat => {
+		if (activeFilter & plat) {
+			restrictionSets.push(filterSets.get(plat));
 		}
-		featMask <<= 1;
-	}
+	});
 
 	// -- combine all filters
 	var resultSet: Set<number>;
@@ -82,26 +76,40 @@ function updateActiveSet() {
 		}
 	}
 
-	var t1 = performance.now();
-	// console.info("Sets: " + (t1 - t0).toFixed(1) + "ms");
-
 	// -- apply
 	gamesGrid.activeSetChanged(resultSet);
 }
 
-
+const WORKER = true;
 if (! INDEX_ON_THE_FLY) {
-	loadTypedJSON<SerializedTextIndex>(TEXT_INDEX_URL).then(sti => {
-		var t0 = performance.now();
-		plasticSurge.load(sti);
-		var t1 = performance.now();
-		console.info("STI load took " + (t1 - t0).toFixed(1) + "ms");
-		(<HTMLElement>document.querySelector(".pleasehold")).style.display = "none";
-	});
+	if (!WORKER) {
+		loadTypedJSON<SerializedTextIndex>(TEXT_INDEX_URL).then(sti => {
+			plasticSurge.load(sti);
+			var sti_t1 = performance.now();
+			console.info("Load until ready (DIRECT) " + (sti_t1 - sti_t0).toFixed(1) + "ms");
+			(<HTMLElement>document.querySelector(".pleasehold")).style.display = "none";
+		});
+	}
+	else {
+		var lww = new Worker("js/task_loader.js?task_loadindex");
+		lww.onmessage = (e: MessageEvent) => {
+			if (<string>e.data === "loaded") {
+				console.info("sending index data url");
+				lww.postMessage("../" + TEXT_INDEX_URL);
+			}
+			else {
+				var sti_t1 = performance.now();
+				plasticSurge = <TextIndex>e.data;
+				console.info("Load until ready (WORKER) " + (sti_t1 - sti_t0).toFixed(1) + "ms");
+				(<HTMLElement>document.querySelector(".pleasehold")).style.display = "none";
+			}
+		};
+		lww.postMessage("task_loadindex");
+	}
 }
 
 
-loadAndAnalyze().then(data => {
+loadCatalog(ENTRIES_URL).then(classifyEntries).then(data => {
 	entryData = data;
 
 	var grid = <HTMLElement>document.querySelector(".entries");
@@ -115,13 +123,11 @@ loadAndAnalyze().then(data => {
 
 		var entry = entryData[x];
 
-		var featMask = 1;
-		while (featMask <= catalog.EntryFeatures.Last) {
-			if (entry.features & featMask) {
-				filterSets.get(featMask).add(x);
+		PlatformList.forEach(plat => {
+			if (entry.platform & plat) {
+				filterSets.get(plat).add(x);
 			}
-			featMask <<= 1;
-		}
+		});
 
 		if (entry.category == "compo") {
 			compoFilter.add(x);
@@ -154,7 +160,7 @@ loadAndAnalyze().then(data => {
 
 
 	// full text search
-	var searchControl = <HTMLInputElement>(document.querySelector("#terms"));
+	var searchControl = elem<HTMLInputElement>("#terms");
 	searchControl.oninput = (evt: Event) => {
 		activeQuery = searchControl.value.trim();
 		updateActiveSet();
@@ -164,7 +170,7 @@ loadAndAnalyze().then(data => {
 
 
 	// category radios
-	var categoryControls = <HTMLInputElement[]>([].slice.call(document.querySelectorAll("input[name=category]"), 0));
+	var categoryControls = elemList<HTMLInputElement>("input[name=category]");
 	for (let cc of categoryControls) {
 		cc.onchange = (evt: Event) => {
 			var ctrl = <HTMLInputElement>evt.target;
@@ -181,7 +187,7 @@ loadAndAnalyze().then(data => {
 
 
 	// platform selector
-	var platformSelect = <HTMLSelectElement>(document.querySelector("select"));
+	var platformSelect = elem<HTMLSelectElement>("select");
 	platformSelect.onchange = (evt: Event) => {
 		var ctrl = <HTMLSelectElement>evt.target;
 		activeFilter = parseInt(ctrl.value);
