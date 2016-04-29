@@ -2,27 +2,28 @@
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
 import { classifyEntries } from "analyze";
-import { Catalog, Entry, Platform, PlatformList, loadCatalog } from "catalog";
+import { Category, Catalog, Entry, Platform, PlatformList, loadCatalog } from "catalog";
 import { TextIndex, SerializedTextIndex } from "textindex";
+import { GamesBrowserState } from "state";
 import { GamesGrid } from "gamesgrid";
 import { intersectSet, loadTypedJSON, elem, elemList } from "util";
 
-var sti_t0 = performance.now();
-
-// -- the model and view
-var entryData: Catalog = null;
-var gamesGrid: GamesGrid;
-
-// -- fulltext search engine and config
-var plasticSurge = new TextIndex();
+// -- config
 const INDEX_ON_THE_FLY = false;
 const DATA_REVISION = 2;
 const DATA_EXTENSION = location.host.toLowerCase() !== "zenmumbler.net" ? ".json" : ".gzjson";
 const TEXT_INDEX_URL = "data/ld35-entries-index" + DATA_EXTENSION + "?" + DATA_REVISION;
 const ENTRIES_URL = "data/ld35-entries" + DATA_EXTENSION + "?" + DATA_REVISION;
 
+// -- components
+var entryData: Catalog = null;
+var gamesGrid: GamesGrid;
+var state = new GamesBrowserState();
+var plasticSurge = new TextIndex();
 
-// -- initialize the static filter sets
+
+// -- filter sets
+var allSet = new Set<number>();
 var compoFilter = new Set<number>();
 var jamFilter = new Set<number>();
 var filterSets = new Map<Platform, Set<number>>();
@@ -31,32 +32,26 @@ PlatformList.forEach(p => {
 });
 
 
-var allSet = new Set<number>();
-var activeFilter: Platform = 0;
-var activeCategory = "";
-var activeQuery = "";
-
-
-function updateActiveSet() {
+state.onChange(function (state: GamesBrowserState) {
 	var restrictionSets: Set<number>[] = [];
 
 	// -- get list of active filter sets
-	if (activeQuery.length > 0) {
-		var textFilter = plasticSurge.query(activeQuery);
+	if (state.query.length > 0) {
+		var textFilter = plasticSurge.query(state.query);
 		if (textFilter) {
 			restrictionSets.push(textFilter);
 		}
 	}
 
-	if (activeCategory == "compo") {
+	if (state.category == "compo") {
 		restrictionSets.push(compoFilter);
 	}
-	else if (activeCategory == "jam") {
+	else if (state.category == "jam") {
 		restrictionSets.push(jamFilter);
 	}
 
 	PlatformList.forEach(plat => {
-		if (activeFilter & plat) {
+		if (state.platformMask & plat) {
 			restrictionSets.push(filterSets.get(plat));
 		}
 	});
@@ -78,42 +73,19 @@ function updateActiveSet() {
 
 	// -- apply
 	gamesGrid.activeSetChanged(resultSet);
-}
+});
 
-const WORKER = true;
+
 if (! INDEX_ON_THE_FLY) {
-	if (!WORKER) {
-		loadTypedJSON<SerializedTextIndex>(TEXT_INDEX_URL).then(sti => {
-			plasticSurge.load(sti);
-			var sti_t1 = performance.now();
-			console.info("Load until ready (DIRECT) " + (sti_t1 - sti_t0).toFixed(1) + "ms");
-			(<HTMLElement>document.querySelector(".pleasehold")).style.display = "none";
-		});
-	}
-	else {
-		var lww = new Worker("js/task_loader.js?task_loadindex");
-		lww.onmessage = (e: MessageEvent) => {
-			if (<string>e.data === "loaded") {
-				console.info("sending index data url");
-				lww.postMessage("../" + TEXT_INDEX_URL);
-			}
-			else {
-				var sti_t1 = performance.now();
-				plasticSurge = <TextIndex>e.data;
-				console.info("Load until ready (WORKER) " + (sti_t1 - sti_t0).toFixed(1) + "ms");
-				(<HTMLElement>document.querySelector(".pleasehold")).style.display = "none";
-			}
-		};
-		lww.postMessage("task_loadindex");
-	}
+	loadTypedJSON<SerializedTextIndex>(TEXT_INDEX_URL).then(sti => {
+		plasticSurge.load(sti);
+		(<HTMLElement>document.querySelector(".pleasehold")).style.display = "none";
+	});
 }
 
 
 loadCatalog(ENTRIES_URL).then(classifyEntries).then(data => {
 	entryData = data;
-
-	var grid = <HTMLElement>document.querySelector(".entries");
-	gamesGrid = new GamesGrid(grid, entryData);
 
 	// index all text and populate filter sets
 	var count = entryData.length;
@@ -154,6 +126,11 @@ loadCatalog(ENTRIES_URL).then(classifyEntries).then(data => {
 	}
 
 
+	// -- view
+
+	var grid = <HTMLElement>document.querySelector(".entries");
+	gamesGrid = new GamesGrid(grid, entryData);
+
 	window.onresize = () => {
 		gamesGrid.resized();
 	};
@@ -162,8 +139,7 @@ loadCatalog(ENTRIES_URL).then(classifyEntries).then(data => {
 	// full text search
 	var searchControl = elem<HTMLInputElement>("#terms");
 	searchControl.oninput = (evt: Event) => {
-		activeQuery = searchControl.value.trim();
-		updateActiveSet();
+		state.query = searchControl.value;
 	};
 
 	searchControl.focus();
@@ -174,13 +150,8 @@ loadCatalog(ENTRIES_URL).then(classifyEntries).then(data => {
 	for (let cc of categoryControls) {
 		cc.onchange = (evt: Event) => {
 			var ctrl = <HTMLInputElement>evt.target;
-			var val = ctrl.value;
-
 			if (ctrl.checked) {
-				if (activeCategory !== val) {
-					activeCategory = val;
-					updateActiveSet();
-				}
+				state.category = <Category>ctrl.value;
 			}
 		};
 	}
@@ -190,7 +161,6 @@ loadCatalog(ENTRIES_URL).then(classifyEntries).then(data => {
 	var platformSelect = elem<HTMLSelectElement>("select");
 	platformSelect.onchange = (evt: Event) => {
 		var ctrl = <HTMLSelectElement>evt.target;
-		activeFilter = parseInt(ctrl.value);
-		updateActiveSet();
+		state.platformMask = parseInt(ctrl.value);
 	};
 });
