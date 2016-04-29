@@ -39,7 +39,7 @@ var linkPlatformMapping: { [key: string]: Platform } = {
 	online: Platform.Web,
 	webplayer: Platform.Web,
 	newgrounds: Platform.Web,
-	gamejolt: Platform.Web,
+	// gamejolt: Platform.Web,
 
 	java: Platform.Java,
 	java7: Platform.Java,
