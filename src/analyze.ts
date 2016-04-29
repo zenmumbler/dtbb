@@ -1,7 +1,7 @@
 // analyze.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
-import { catalog } from "catalog";
+import { Entry, Platform, Catalog } from "catalog";
 
 function termify(text: string) {
 	return text.toLowerCase().replace(/os.x/g, "osx").replace(/[\(\)\/\.\n\r\*\?\-]/g, " ").replace(/ +/g, " ").trim().split(" ").map(term => {
@@ -9,118 +9,115 @@ function termify(text: string) {
 	});
 }
 
-var linkFeatureMapping: { [key: string]: catalog.EntryFeatures } = {
-	download: catalog.EntryFeatures.App,
-	love: catalog.EntryFeatures.Win | catalog.EntryFeatures.Mac | catalog.EntryFeatures.Linux | catalog.EntryFeatures.App,
-	love2d: catalog.EntryFeatures.Win | catalog.EntryFeatures.Mac | catalog.EntryFeatures.Linux | catalog.EntryFeatures.App,
-	standalone: catalog.EntryFeatures.App,
+var linkPlatformMapping: { [key: string]: Platform } = {
+	download: Platform.Desktop,
+	love: Platform.Win | Platform.Mac | Platform.Linux | Platform.Desktop,
+	love2d: Platform.Win | Platform.Mac | Platform.Linux | Platform.Desktop,
+	standalone: Platform.Desktop,
 
-	win: catalog.EntryFeatures.Win | catalog.EntryFeatures.App,
-	win32: catalog.EntryFeatures.Win | catalog.EntryFeatures.App,
-	windows32: catalog.EntryFeatures.Win | catalog.EntryFeatures.App,
-	win64: catalog.EntryFeatures.Win | catalog.EntryFeatures.App,
-	windows64: catalog.EntryFeatures.Win | catalog.EntryFeatures.App,
-	windows: catalog.EntryFeatures.Win | catalog.EntryFeatures.App,
-	exe: catalog.EntryFeatures.Win | catalog.EntryFeatures.App,
+	win: Platform.Win | Platform.Desktop,
+	win32: Platform.Win | Platform.Desktop,
+	windows32: Platform.Win | Platform.Desktop,
+	win64: Platform.Win | Platform.Desktop,
+	windows64: Platform.Win | Platform.Desktop,
+	windows: Platform.Win | Platform.Desktop,
+	exe: Platform.Win | Platform.Desktop,
 
-	osx: catalog.EntryFeatures.Mac | catalog.EntryFeatures.App,
-	macos: catalog.EntryFeatures.Mac | catalog.EntryFeatures.App,
+	osx: Platform.Mac | Platform.Desktop,
+	macos: Platform.Mac | Platform.Desktop,
 	
-	linux: catalog.EntryFeatures.Linux | catalog.EntryFeatures.App,
-	ubuntu: catalog.EntryFeatures.Linux | catalog.EntryFeatures.App,
+	linux: Platform.Linux | Platform.Desktop,
+	ubuntu: Platform.Linux | Platform.Desktop,
 
-	web: catalog.EntryFeatures.Web,
-	html5: catalog.EntryFeatures.Web,
-	chrome: catalog.EntryFeatures.Web,
-	browser: catalog.EntryFeatures.Web,
-	firefox: catalog.EntryFeatures.Web,
-	safari: catalog.EntryFeatures.Web,
-	webgl: catalog.EntryFeatures.Web,
-	online: catalog.EntryFeatures.Web,
-	webplayer: catalog.EntryFeatures.Web,
-	newgrounds: catalog.EntryFeatures.Web,
-	gamejolt: catalog.EntryFeatures.Web,
+	web: Platform.Web,
+	html5: Platform.Web,
+	chrome: Platform.Web,
+	browser: Platform.Web,
+	firefox: Platform.Web,
+	safari: Platform.Web,
+	webgl: Platform.Web,
+	online: Platform.Web,
+	webplayer: Platform.Web,
+	newgrounds: Platform.Web,
+	gamejolt: Platform.Web,
 
-	java: catalog.EntryFeatures.Java,
-	java7: catalog.EntryFeatures.Java,
-	java8: catalog.EntryFeatures.Java,
-	jar: catalog.EntryFeatures.Java,
+	java: Platform.Java,
+	java7: Platform.Java,
+	java8: Platform.Java,
+	jar: Platform.Java,
 
-	flash: catalog.EntryFeatures.Web,
-	swf: catalog.EntryFeatures.Web,
+	flash: Platform.Web,
+	swf: Platform.Web,
 
-	vr: catalog.EntryFeatures.VR,
-	oculus: catalog.EntryFeatures.VR,
-	vive: catalog.EntryFeatures.VR,
-	cardboard: catalog.EntryFeatures.VR,
+	vr: Platform.VR,
+	oculus: Platform.VR,
+	vive: Platform.VR,
+	cardboard: Platform.VR,
 
-	android: catalog.EntryFeatures.Mobile,
-	apk: catalog.EntryFeatures.Mobile,
-	// google: catalog.EntryFeatures.Mobile,
-	ios: catalog.EntryFeatures.Mobile,
+	android: Platform.Mobile,
+	apk: Platform.Mobile,
+	ios: Platform.Mobile,
 };
 
-var descriptionFeatureMapping: { [key: string]: catalog.EntryFeatures } = {
-	exe: catalog.EntryFeatures.Win | catalog.EntryFeatures.App,
-	love2d: catalog.EntryFeatures.Win | catalog.EntryFeatures.Mac | catalog.EntryFeatures.Linux | catalog.EntryFeatures.App,
+var descriptionPlatformMapping: { [key: string]: Platform } = {
+	exe: Platform.Win | Platform.Desktop,
+	love2d: Platform.Win | Platform.Mac | Platform.Linux | Platform.Desktop,
 
-	html5: catalog.EntryFeatures.Web,
-	chrome: catalog.EntryFeatures.Web,
-	firefox: catalog.EntryFeatures.Web,
-	safari: catalog.EntryFeatures.Web,
+	html5: Platform.Web,
+	chrome: Platform.Web,
+	firefox: Platform.Web,
+	safari: Platform.Web,
 
-	java: catalog.EntryFeatures.Java | catalog.EntryFeatures.App,
-	jar: catalog.EntryFeatures.Java | catalog.EntryFeatures.App,
+	java: Platform.Java | Platform.Desktop,
+	jar: Platform.Java | Platform.Desktop,
 
-	flash: catalog.EntryFeatures.Web,
-	swf: catalog.EntryFeatures.Web,
+	flash: Platform.Web,
+	swf: Platform.Web,
 
-	vr: catalog.EntryFeatures.VR,
-	oculus: catalog.EntryFeatures.VR,
-	vive: catalog.EntryFeatures.VR,
-	cardboard: catalog.EntryFeatures.VR,
+	vr: Platform.VR,
+	oculus: Platform.VR,
+	vive: Platform.VR,
+	cardboard: Platform.VR,
 };
 
 
-function detectFeatures(entry: catalog.Entry) {
-	var feat: catalog.EntryFeatures = 0;
+function detectPlatform(entry: Entry) {
+	var plat: Platform = 0;
 
 	var descTerms = termify(entry.description);
 	var urlTerms = entry.links.map(link => termify(link.title).concat(termify(link.url))).reduce((ta, tn) => ta.concat(tn), []); // func prog style: SO much more legible!
 
 	for (var term of urlTerms) {
-		feat |= (linkFeatureMapping[term] | 0);
+		plat |= (linkPlatformMapping[term] | 0);
 	}
 	for (var term of descTerms) {
-		feat |= (descriptionFeatureMapping[term] | 0);
+		plat |= (descriptionPlatformMapping[term] | 0);
 	}
 
-	if (feat == 0) {
-		// last resort, try itch on url and keyboard refs in description to try and add some classification
+	if (plat == 0) {
+		// last resort, try itch on url and keyboard refs in description to try and add a generic platform
 		if (
 			(urlTerms.indexOf("itch") > -1) ||
 			(descTerms.indexOf("wasd") > -1) ||
 			(descTerms.indexOf("awsd") > -1) ||
 			(descTerms.indexOf("aswd") > -1)
 		) {
-			feat = catalog.EntryFeatures.App;
+			plat = Platform.Desktop;
 		}
 		else {
-			console.info("No platform features: ", entry);
+			// console.info("No platform: ", entry);
 		}
 	}
 
-	entry.features = feat;
+	return plat;
 }
 
-export function loadAndAnalyze() {
-	return catalog.load().then(data => {
-		var t0 = performance.now();
-		for (var entry of data) {
-			detectFeatures(entry);
-		}
-		var t1 = performance.now();
-		console.info("Classification took " + (t1 - t0).toFixed(1) + "ms");
-		return data;
-	});
+export function classifyEntries(data: Catalog) {
+	var t0 = performance.now();
+	for (var entry of data) {
+		entry.platform = detectPlatform(entry);
+	}
+	var t1 = performance.now();
+	console.info("Classification took " + (t1 - t0).toFixed(1) + "ms");
+	return Promise.resolve(data);
 }

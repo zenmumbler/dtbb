@@ -3,56 +3,58 @@
 
 import { loadTypedJSON } from "util";
 
-export module catalog {
+export const enum Platform {
+	Desktop = 1,
+	Win = 2,
+	Mac = 4,
+	Linux = 8,
+	Web = 16,
+	Java = 32,
+	VR = 64,
+	Mobile = 128
+}
 
-	const FILE_REVISION = 2;
-	const FILE_NAME = "data/ld35-entries"
-	const FILE_EXT = location.host.toLowerCase() !== "zenmumbler.net" ? ".json" : ".gzjson";
-	const FILE_PATH = FILE_NAME + FILE_EXT + "?" + FILE_REVISION;
+export const PlatformList = (() => {
+	var platforms: Platform[] = [];
+	var platMask = Platform.Desktop;
+	while (platMask <= Platform.Mobile) {
+		platforms.push(platMask);
+		platMask <<= 1;
+	}
+	return Object.freeze(platforms);
+})();
 
-	export const enum EntryFeatures {
-		App = 1,
-		Win = 2,
-		Mac = 4,
-		Linux = 8,
-		Web = 16,
-		Java = 32,
-		VR = 64,
-		Mobile = 128,
+export type Category = "" | "compo" | "jam";
 
-		Last = 128
+export interface Entry {
+	title: string;
+	category: Category;
+	description: string;
+	thumbnail_url: string;
+	entry_url: string;
+
+	author: {
+		name: string;
+		uid: number;
+		avatar_url: string;
+		author_home_url: string;
 	}
 
-	export interface Entry {
-		title: string;
-		category: "compo" | "jam";
-		description: string;
+	screens: {
 		thumbnail_url: string;
-		entry_url: string;
+		full_url: string;
+	}[];
 
-		author: {
-			name: string;
-			uid: number;
-			avatar_url: string;
-			author_home_url: string;
-		}
+	links: {
+		title: string;
+		url: string;
+	}[];
 
-		screens: {
-			thumbnail_url: string;
-			full_url: string;
-		}[];
+	platform: Platform;
+}
 
-		links: {
-			title: string;
-			url: string;
-		}[];
+export type Catalog = Entry[];
 
-		features: EntryFeatures;
-	}
-
-	export type Catalog = Entry[];
-
-	export function load() {
-		return loadTypedJSON<Catalog>(FILE_PATH);
-	}
+export function loadCatalog(fileURL: string) {
+	return loadTypedJSON<Catalog>(fileURL);
 }

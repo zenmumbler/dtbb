@@ -1,7 +1,7 @@
 // gamesgrid.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
-import { catalog } from "catalog";
+import { Platform, PlatformList, Entry, Catalog } from "catalog";
 
 
 interface GameCell {
@@ -18,15 +18,15 @@ interface GameCell {
 }
 
 
-var featLabel: { [f: number]: string } = {};
-featLabel[catalog.EntryFeatures.App] = "Desktop";
-featLabel[catalog.EntryFeatures.Win] = "Win";
-featLabel[catalog.EntryFeatures.Mac] = "Mac";
-featLabel[catalog.EntryFeatures.Linux] = "Linux";
-featLabel[catalog.EntryFeatures.Web] = "Web";
-featLabel[catalog.EntryFeatures.Java] = "Java";
-featLabel[catalog.EntryFeatures.VR] = "VR";
-featLabel[catalog.EntryFeatures.Mobile] = "Mobile";
+var platLabel: { [f: number]: string } = {};
+platLabel[Platform.Desktop] = "Desktop";
+platLabel[Platform.Win] = "Win";
+platLabel[Platform.Mac] = "Mac";
+platLabel[Platform.Linux] = "Linux";
+platLabel[Platform.Web] = "Web";
+platLabel[Platform.Java] = "Java";
+platLabel[Platform.VR] = "VR";
+platLabel[Platform.Mobile] = "Mobile";
 
 
 export class GamesGrid {
@@ -51,7 +51,7 @@ export class GamesGrid {
 	private firstVisibleRow_ = 0;
 
 
-	constructor(private containerElem_: HTMLElement, private catalog_: catalog.Catalog) {
+	constructor(private containerElem_: HTMLElement, private catalog_: Catalog) {
 		this.entryCount_ = this.catalog_.length;
 		for (var x = 0; x < this.entryCount_; ++x) {
 			this.activeList_.push(x);
@@ -166,16 +166,14 @@ export class GamesGrid {
 			cell.author.textContent = entry.author.name;
 			cell.pills.innerHTML = "";
 
-			var featMask = catalog.EntryFeatures.App;
-			while (featMask <= catalog.EntryFeatures.Last) {
-				if (entry.features & featMask) {
+			PlatformList.forEach(plat => {
+				if (entry.platform & plat) {
 					var pill = document.createElement("span");
 					pill.className = "pill";
-					pill.textContent = featLabel[featMask];
+					pill.textContent = platLabel[plat];
 					cell.pills.appendChild(pill);
 				}
-				featMask <<= 1;
-			}
+			});
 		}
 	}
 

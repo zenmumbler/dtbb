@@ -119,7 +119,7 @@ export class TextIndex {
 		return this.data_.size;
 	}
 
-	wordNGrams(word: string) {
+	private wordNGrams(word: string) {
 		if (this.wordNGramCache_.has(word)) {
 			return this.wordNGramCache_.get(word);
 		}
@@ -146,7 +146,7 @@ export class TextIndex {
 		}
 	}
 
-	stripDiacritics(term: string) {
+	private stripDiacritics(term: string) {
 		var r: RegExpMatchArray;
 		// if a mapped character appears anywhere in the term, replace all occurances at once
 		while (r = term.match(DiacriticsMatcher)) {
@@ -159,7 +159,7 @@ export class TextIndex {
 	private collapsedPunctuationMatcher = /['-]/g;
 	private multipleSpacesMatcher = / +/g;
 
-	tokenizeString(s: string) {
+	private tokenizeString(s: string) {
 		var cs = s.toLowerCase().replace(this.collapsedPunctuationMatcher, "").replace(InvalidCharsMather, " ").replace(this.multipleSpacesMatcher, " ").trim();
 		var tokens = cs.split(" ");
 		return new Set<string>(tokens); // automatically deduplicates
@@ -222,6 +222,4 @@ export class TextIndex {
 
 		return result;
 	}
-
-	get data() { return this.data_; }
 }
