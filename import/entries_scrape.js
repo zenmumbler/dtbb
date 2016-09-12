@@ -6,11 +6,11 @@ var fs = require('fs');
 var request = require('request');
 
 
-const baseURL = "http://ludumdare.com/compo/ludum-dare-35/";
+const baseURL = "http://ludumdare.com/compo/ludum-dare-36/";
 const entriesDir = "entry_pages/";
 const entriesPrefix = "entry_";
 const entriesPostfix = ".html";
-const delayBetweenRequests = 250;
+const delayBetweenRequests = 150;
 
 
 function load(list, index) {

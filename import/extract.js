@@ -28,7 +28,7 @@ function loadCatalog() {
 
 function createEntry(url, uid, thumbImg, doc) {
 	const ldBaseURL = "http://ludumdare.com/compo/";
-	const eventBaseURL = ldBaseURL + "ludum-dare-35/";
+	const eventBaseURL = ldBaseURL + "ludum-dare-36/";
 
 	var base = doc.querySelector("#compo2");
 	if (! base) {
@@ -47,7 +47,7 @@ function createEntry(url, uid, thumbImg, doc) {
 
 	return {
 		title: titleElem.textContent,
-		category: categoryElem.textContent.split(" ")[0].toLowerCase(),
+		category: categoryElem.textContent.split(" ")[0].toLowerCase().replace("competition", "compo"),
 		description: description,
 
 		thumbnail_url: thumbImg,
