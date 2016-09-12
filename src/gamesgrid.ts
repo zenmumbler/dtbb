@@ -6,7 +6,7 @@ import { Platform, PlatformList, Entry, Catalog } from "catalog";
 
 interface GameCell {
 	tile: HTMLElement;
-	link: HTMLLinkElement;
+	link: HTMLAnchorElement;
 	thumb: HTMLDivElement;
 	title: HTMLElement;
 	author: HTMLElement;
@@ -82,7 +82,7 @@ export class GamesGrid {
 
 		var cell: GameCell = {
 			tile: <HTMLElement>tile,
-			link: <HTMLLinkElement>tile.querySelector("a"),
+			link: <HTMLAnchorElement>tile.querySelector("a"),
 			thumb: <HTMLDivElement>tile.querySelector(".thumb"),
 			title: <HTMLElement>tile.querySelector("h2"),
 			author: <HTMLElement>tile.querySelector("p.author span"),

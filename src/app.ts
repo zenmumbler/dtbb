@@ -10,10 +10,10 @@ import { intersectSet, loadTypedJSON, elem, elemList } from "util";
 
 // -- config
 const INDEX_ON_THE_FLY = false;
-const DATA_REVISION = 2;
+const DATA_REVISION = 1;
 const DATA_EXTENSION = location.host.toLowerCase() !== "zenmumbler.net" ? ".json" : ".gzjson";
-const TEXT_INDEX_URL = "data/ld35-entries-index" + DATA_EXTENSION + "?" + DATA_REVISION;
-const ENTRIES_URL = "data/ld35-entries" + DATA_EXTENSION + "?" + DATA_REVISION;
+const TEXT_INDEX_URL = "data/ld36-entries-index" + DATA_EXTENSION + "?" + DATA_REVISION;
+const ENTRIES_URL = "data/ld36-entries" + DATA_EXTENSION + "?" + DATA_REVISION;
 
 // -- components
 var entryData: Catalog = null;
