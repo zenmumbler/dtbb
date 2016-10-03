@@ -1,8 +1,7 @@
 // state.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
-import { Category, Platform, PlatformList } from "catalog";
-import { intersectSet } from "util";
+import { Category, Platform } from "catalog";
 
 export type StateListener = (state: GamesBrowserState) => void;
 

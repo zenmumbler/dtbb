@@ -22,7 +22,7 @@ export function elem<T extends HTMLElement>(sel: string, base: NodeSelector = do
 
 
 export function elemList<T extends HTMLElement>(sel: string, base: NodeSelector = document) {
-	return <T[]>([].slice.call(document.querySelectorAll(sel), 0));
+	return <T[]>([].slice.call(base.querySelectorAll(sel), 0));
 }
 
 

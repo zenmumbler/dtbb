@@ -2,7 +2,7 @@
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
 import { classifyEntries } from "analyze";
-import { Category, Catalog, Entry, Platform, PlatformList, loadCatalog } from "catalog";
+import { Category, Catalog, Platform, PlatformList, loadCatalog } from "catalog";
 import { TextIndex, SerializedTextIndex } from "textindex";
 import { GamesBrowserState } from "state";
 import { GamesGrid } from "gamesgrid";
@@ -16,7 +16,7 @@ const TEXT_INDEX_URL = "data/ld36-entries-index" + DATA_EXTENSION + "?" + DATA_R
 const ENTRIES_URL = "data/ld36-entries" + DATA_EXTENSION + "?" + DATA_REVISION;
 
 // -- components
-var entryData: Catalog = null;
+var entryData: Catalog | null = null;
 var gamesGrid: GamesGrid;
 var state = new GamesBrowserState();
 var plasticSurge = new TextIndex();
@@ -52,7 +52,7 @@ state.onChange(function (state: GamesBrowserState) {
 
 	PlatformList.forEach(plat => {
 		if (state.platformMask & plat) {
-			restrictionSets.push(filterSets.get(plat));
+			restrictionSets.push(filterSets.get(plat)!);
 		}
 	});
 
@@ -78,8 +78,11 @@ state.onChange(function (state: GamesBrowserState) {
 
 if (! INDEX_ON_THE_FLY) {
 	loadTypedJSON<SerializedTextIndex>(TEXT_INDEX_URL).then(sti => {
+		const t0 = performance.now();
 		plasticSurge.load(sti);
+		const t1 = performance.now();
 		(<HTMLElement>document.querySelector(".pleasehold")).style.display = "none";
+		console.info("Index load took: " + (t1 - t0).toFixed(1) + "ms")
 	});
 }
 
@@ -97,7 +100,7 @@ loadCatalog(ENTRIES_URL).then(classifyEntries).then(data => {
 
 		PlatformList.forEach(plat => {
 			if (entry.platform & plat) {
-				filterSets.get(plat).add(x);
+				filterSets.get(plat)!.add(x);
 			}
 		});
 
@@ -138,7 +141,7 @@ loadCatalog(ENTRIES_URL).then(classifyEntries).then(data => {
 
 	// full text search
 	var searchControl = elem<HTMLInputElement>("#terms");
-	searchControl.oninput = (evt: Event) => {
+	searchControl.oninput = _ => {
 		state.query = searchControl.value;
 	};
 

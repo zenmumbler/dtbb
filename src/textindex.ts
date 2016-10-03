@@ -79,7 +79,7 @@ const DiacriticCharMapping: { [ch: string]: string } = {
 	"ÿ": "y", // LATIN SMALL LETTER Y WITH DIAERESIS
 }
 
-const InvalidCharsMather = /[^a-zA-Z0-9ÀÁÂÃÄÅÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜÝßàáâãäåçèéêëìíîïñòóôõöøùúûüýÿ]/g;
+const InvalidCharsMatcher = /[^a-zA-Z0-9ÀÁÂÃÄÅÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜÝßàáâãäåçèéêëìíîïñòóôõöøùúûüýÿ]/g;
 
 const DiacriticsMatcher = /[ÀÁÂÃÄÅÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜÝßàáâãäåçèéêëìíîïñòóôõöøùúûüýÿ]/;
 const DiacriticCharMatchers: { [c: string]: RegExp } = {};
@@ -90,8 +90,8 @@ export class TextIndex {
 	private data_ = new Map<string, Set<number>>();
 	private wordNGramCache_ = new Map<string, Set<string>>();
 
-	private MIN_NGRAM_LENGTH = 2;
-	private MAX_NGRAM_LENGTH = 12;
+	private readonly MIN_NGRAM_LENGTH = 2;
+	private readonly MAX_NGRAM_LENGTH = 12;
 
 	constructor() {
 	}
@@ -121,7 +121,7 @@ export class TextIndex {
 
 	private wordNGrams(word: string) {
 		if (this.wordNGramCache_.has(word)) {
-			return this.wordNGramCache_.get(word);
+			return this.wordNGramCache_.get(word)!;
 		}
 		else {
 			var wordLen = word.length;
@@ -147,20 +147,20 @@ export class TextIndex {
 	}
 
 	private stripDiacritics(term: string) {
-		var r: RegExpMatchArray;
+		var r: RegExpMatchArray | null;
 		// if a mapped character appears anywhere in the term, replace all occurances at once
 		while (r = term.match(DiacriticsMatcher)) {
-			var mc = term[r.index];
+			var mc = term[r.index!];
 			term = term.replace(DiacriticCharMatchers[mc], DiacriticCharMapping[mc]);
 		}
 		return term;
 	}
 
-	private collapsedPunctuationMatcher = /['-]/g;
-	private multipleSpacesMatcher = / +/g;
+	private readonly collapsedPunctuationMatcher = /['-]/g;
+	private readonly multipleSpacesMatcher = / +/g;
 
 	private tokenizeString(s: string) {
-		var cs = s.toLowerCase().replace(this.collapsedPunctuationMatcher, "").replace(InvalidCharsMather, " ").replace(this.multipleSpacesMatcher, " ").trim();
+		var cs = s.toLowerCase().replace(this.collapsedPunctuationMatcher, "").replace(InvalidCharsMatcher, " ").replace(this.multipleSpacesMatcher, " ").trim();
 		var tokens = cs.split(" ");
 		return new Set<string>(tokens); // automatically deduplicates
 	}
@@ -176,13 +176,13 @@ export class TextIndex {
 					this.data_.set(ngram, new Set<number>(boxedRef));
 				}
 				else {
-					this.data_.get(ngram).add(ref);
+					this.data_.get(ngram)!.add(ref);
 				}
 			});
 		});
 	}
 
-	query(qs: string): Set<number> {
+	query(qs: string): Set<number> | null {
 		var qt = this.tokenizeString(qs);
 		var termIndexSets: Set<number>[] = [];
 		var hasEmptyResult = false;
@@ -196,7 +196,7 @@ export class TextIndex {
 
 			term = this.stripDiacritics(term);
 			if (this.data_.has(term)) {
-				termIndexSets.push(this.data_.get(term));
+				termIndexSets.push(this.data_.get(term)!);
 			}
 			else {
 				hasEmptyResult = true;

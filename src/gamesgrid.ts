@@ -1,7 +1,7 @@
 // gamesgrid.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
-import { Platform, PlatformList, Entry, Catalog } from "catalog";
+import { Platform, PlatformList, Catalog } from "catalog";
 
 
 interface GameCell {
@@ -110,21 +110,15 @@ export class GamesGrid {
 
 	private ensureCellCount(cellCount: number) {
 		if (cellCount < this.cells_.length) {
-			var doomed = this.cells_.splice(cellCount);
+			const doomed = this.cells_.splice(cellCount);
 			for (var c of doomed) {
 				this.containerElem_.removeChild(c.tile);
-				c.tile = null;
-				c.thumb = null;
-				c.title = null;
-				c.author = null;
-				c.pills = null;
-
 				c.position = -1;
 				c.contentIndex = -1;
 			}
 		}
 		else {
-			var position = this.cells_.length ? (this.cells_[this.cells_.length - 1].position) : -1;
+			let position = this.cells_.length ? (this.cells_[this.cells_.length - 1].position) : -1;
 
 			while (this.cells_.length < cellCount) {
 				position += 1;
