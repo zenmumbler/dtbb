@@ -18,7 +18,7 @@ interface GameCell {
 }
 
 
-var platLabel: { [f: number]: string } = {};
+const platLabel: { [f: number]: string } = {};
 platLabel[Platform.Desktop] = "Desktop";
 platLabel[Platform.Win] = "Win";
 platLabel[Platform.Mac] = "Mac";
@@ -53,7 +53,7 @@ export class GamesGrid {
 
 	constructor(private containerElem_: HTMLElement, private catalog_: Catalog) {
 		this.entryCount_ = this.catalog_.length;
-		for (var x = 0; x < this.entryCount_; ++x) {
+		for (let x = 0; x < this.entryCount_; ++x) {
 			this.activeList_.push(x);
 		}
 
@@ -78,9 +78,9 @@ export class GamesGrid {
 
 
 	private makeCell() {
-		var tile = <HTMLDivElement>(<Element>this.entryTemplate_.content.cloneNode(true)).firstElementChild;
+		const tile = <HTMLDivElement>(<Element>this.entryTemplate_.content.cloneNode(true)).firstElementChild;
 
-		var cell: GameCell = {
+		const cell: GameCell = {
 			tile: <HTMLElement>tile,
 			link: <HTMLAnchorElement>tile.querySelector("a"),
 			thumb: <HTMLDivElement>tile.querySelector(".thumb"),
@@ -99,8 +99,8 @@ export class GamesGrid {
 
 
 	private pixelPositionForCellPosition(cellPos: number) {
-		var cellRow = Math.floor(cellPos / this.cols_);
-		var cellCol = cellPos % this.cols_;
+		const cellRow = Math.floor(cellPos / this.cols_);
+		const cellCol = cellPos % this.cols_;
 		return {
 			left: this.gridOffsetX + (cellCol * (this.cellWidth_ + this.cellMargin_)),
 			top: this.gridOffsetY + (cellRow * (this.cellHeight_ + this.cellMargin_))
@@ -111,7 +111,7 @@ export class GamesGrid {
 	private ensureCellCount(cellCount: number) {
 		if (cellCount < this.cells_.length) {
 			const doomed = this.cells_.splice(cellCount);
-			for (var c of doomed) {
+			for (const c of doomed) {
 				this.containerElem_.removeChild(c.tile);
 				c.position = -1;
 				c.contentIndex = -1;
@@ -122,7 +122,7 @@ export class GamesGrid {
 
 			while (this.cells_.length < cellCount) {
 				position += 1;
-				var cell = this.makeCell();
+				const cell = this.makeCell();
 				cell.position = position;
 				this.cells_.push(cell);
 			}
@@ -132,7 +132,7 @@ export class GamesGrid {
 
 	private setCellPosition(cell: GameCell, newPosition: number) {
 		cell.position = newPosition;
-		
+
 		if (newPosition >= this.entryCount_) {
 			cell.tile.style.display = "none";
 			cell.hidden = true;
@@ -143,14 +143,14 @@ export class GamesGrid {
 			cell.tile.style.display = "";
 		}
 
-		var cellPixelPos = this.pixelPositionForCellPosition(newPosition);
+		const cellPixelPos = this.pixelPositionForCellPosition(newPosition);
 		cell.tile.style.left = cellPixelPos.left + "px";
 		cell.tile.style.top = cellPixelPos.top + "px";
 
-		var contentIndex = this.activeList_[newPosition];
+		const contentIndex = this.activeList_[newPosition];
 		if (cell.contentIndex != contentIndex) {
 			cell.contentIndex = contentIndex;
-			var entry = this.catalog_[contentIndex];
+			const entry = this.catalog_[contentIndex];
 
 			cell.tile.dataset["eix"] = "" + contentIndex;
 			cell.link.href = entry.entry_url;
@@ -162,7 +162,7 @@ export class GamesGrid {
 
 			PlatformList.forEach(plat => {
 				if (entry.platform & plat) {
-					var pill = document.createElement("span");
+					const pill = document.createElement("span");
 					pill.className = "pill";
 					pill.textContent = platLabel[plat];
 					cell.pills.appendChild(pill);
@@ -176,12 +176,12 @@ export class GamesGrid {
 		this.containerElem_.style.height = (this.gridOffsetY * 2) + (Math.ceil(this.entryCount_ / this.cols_) * (this.cellHeight_ + this.cellMargin_)) + "px";
 
 		this.scrollOffset_ = this.scrollingElem_.scrollTop;
-		var effectiveOffset = Math.max(0, this.scrollOffset_ - this.gridOffsetY);
-		var effectiveCellHeight = this.cellHeight_ + this.cellMargin_;
-		var firstViewRow = Math.floor(effectiveOffset / effectiveCellHeight);
+		const effectiveOffset = Math.max(0, this.scrollOffset_ - this.gridOffsetY);
+		const effectiveCellHeight = this.cellHeight_ + this.cellMargin_;
+		const firstViewRow = Math.floor(effectiveOffset / effectiveCellHeight);
 		var position = firstViewRow * this.cols_;
 
-		for (var cell of this.cells_) {
+		for (const cell of this.cells_) {
 			this.setCellPosition(cell, position);
 			position += 1;
 		}
@@ -189,16 +189,16 @@ export class GamesGrid {
 
 
 	private moveCells(cellsToMove: GameCell[], positionOffset: number) {
-		for (var c = 0; c < cellsToMove.length; ++c) {
-			var cell = cellsToMove[c];
+		for (let c = 0; c < cellsToMove.length; ++c) {
+			const cell = cellsToMove[c];
 			this.setCellPosition(cell, cell.position + positionOffset);
 		}
 	}
 
 
 	private moveRowsDown(rowCount: number) {
-		var positionOffset = this.cells_.length;
-		var cellsToMove = this.cells_.splice(0, rowCount * this.cols_);
+		const positionOffset = this.cells_.length;
+		const cellsToMove = this.cells_.splice(0, rowCount * this.cols_);
 
 		this.moveCells(cellsToMove, positionOffset);
 
@@ -208,8 +208,8 @@ export class GamesGrid {
 
 
 	private moveRowsUp(rowCount: number) {
-		var positionOffset = -this.cells_.length;
-		var cellsToMove = this.cells_.splice((this.rows_ - rowCount) * this.cols_);
+		const positionOffset = -this.cells_.length;
+		const cellsToMove = this.cells_.splice((this.rows_ - rowCount) * this.cols_);
 
 		this.moveCells(cellsToMove, positionOffset);
 
@@ -220,10 +220,10 @@ export class GamesGrid {
 
 	private scrollPosChanged(newScrollPos: number) {
 		this.scrollOffset_ = newScrollPos;
-		var effectiveOffset = Math.max(0, this.scrollOffset_ - this.gridOffsetY);
-		var effectiveCellHeight = this.cellHeight_ + this.cellMargin_;
-		var firstViewRow = Math.floor(effectiveOffset / effectiveCellHeight);
-		var rowDiff = Math.abs(firstViewRow - this.firstVisibleRow_);
+		const effectiveOffset = Math.max(0, this.scrollOffset_ - this.gridOffsetY);
+		const effectiveCellHeight = this.cellHeight_ + this.cellMargin_;
+		const firstViewRow = Math.floor(effectiveOffset / effectiveCellHeight);
+		const rowDiff = Math.abs(firstViewRow - this.firstVisibleRow_);
 
 		if (rowDiff >= this.rows_) {
 			this.moveCells(this.cells_, (firstViewRow - this.firstVisibleRow_) * this.cols_);
@@ -248,7 +248,7 @@ export class GamesGrid {
 			this.relayout();
 		}
 		else {
-			var newScrollOffset = this.scrollingElem_.scrollTop;
+			const newScrollOffset = this.scrollingElem_.scrollTop;
 			if (newScrollOffset != this.scrollOffset_) {
 				this.scrollPosChanged(newScrollOffset);
 			}
@@ -257,13 +257,13 @@ export class GamesGrid {
 
 
 	resized() {
-		var width = this.scrollingElem_.offsetWidth - this.gridOffsetX - 4;
-		var height = this.scrollingElem_.offsetHeight - this.gridOffsetY;
+		const OVERFLOW_ROWS = 1;
 
-		var cols = Math.floor(width / (this.cellWidth_ + this.cellMargin_));
-		var rows = Math.ceil(height / (this.cellHeight_ + this.cellMargin_));
+		const width = this.scrollingElem_.offsetWidth - this.gridOffsetX - 4;
+		const height = this.scrollingElem_.offsetHeight - this.gridOffsetY;
 
-		rows += 1;
+		const cols = Math.floor(width / (this.cellWidth_ + this.cellMargin_));
+		const rows = Math.ceil(height / (this.cellHeight_ + this.cellMargin_)) + OVERFLOW_ROWS;
 
 		this.dimensionsChanged(cols, rows);
 	}

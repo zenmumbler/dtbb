@@ -18,26 +18,26 @@ const ENTRIES_URL = "data/ld36-entries" + DATA_EXTENSION + "?" + DATA_REVISION;
 // -- components
 var entryData: Catalog | null = null;
 var gamesGrid: GamesGrid;
-var state = new GamesBrowserState();
-var plasticSurge = new TextIndex();
+const state = new GamesBrowserState();
+const plasticSurge = new TextIndex();
 
 
 // -- filter sets
-var allSet = new Set<number>();
-var compoFilter = new Set<number>();
-var jamFilter = new Set<number>();
-var filterSets = new Map<Platform, Set<number>>();
+const allSet = new Set<number>();
+const compoFilter = new Set<number>();
+const jamFilter = new Set<number>();
+const filterSets = new Map<Platform, Set<number>>();
 PlatformList.forEach(p => {
 	filterSets.set(p, new Set<number>());
 });
 
 
-state.onChange(function (state: GamesBrowserState) {
-	var restrictionSets: Set<number>[] = [];
+state.onChange(function() {
+	const restrictionSets: Set<number>[] = [];
 
 	// -- get list of active filter sets
 	if (state.query.length > 0) {
-		var textFilter = plasticSurge.query(state.query);
+		const textFilter = plasticSurge.query(state.query);
 		if (textFilter) {
 			restrictionSets.push(textFilter);
 		}
@@ -63,10 +63,10 @@ state.onChange(function (state: GamesBrowserState) {
 		resultSet = allSet;
 	}
 	else {
-		restrictionSets.sort((a, b) => { return a.size < b.size ? -1 : 1 });
+		restrictionSets.sort((a, b) => { return a.size < b.size ? -1 : 1; });
 
 		resultSet = new Set(restrictionSets[0]);
-		for (var tisix = 1; tisix < restrictionSets.length; ++tisix) {
+		for (let tisix = 1; tisix < restrictionSets.length; ++tisix) {
 			resultSet = intersectSet(resultSet, restrictionSets[tisix]);
 		}
 	}
@@ -82,7 +82,7 @@ if (! INDEX_ON_THE_FLY) {
 		plasticSurge.load(sti);
 		const t1 = performance.now();
 		(<HTMLElement>document.querySelector(".pleasehold")).style.display = "none";
-		console.info("Index load took: " + (t1 - t0).toFixed(1) + "ms")
+		console.info("Index load took: " + (t1 - t0).toFixed(1) + "ms");
 	});
 }
 
@@ -91,12 +91,12 @@ loadCatalog(ENTRIES_URL).then(classifyEntries).then(data => {
 	entryData = data;
 
 	// index all text and populate filter sets
-	var count = entryData.length;
-	var t0 = performance.now();
-	for (var x = 0; x < count; ++x) {
+	const count = entryData.length;
+	const t0 = performance.now();
+	for (let x = 0; x < count; ++x) {
 		allSet.add(x);
 
-		var entry = entryData[x];
+		const entry = entryData[x];
 
 		PlatformList.forEach(plat => {
 			if (entry.platform & plat) {
@@ -108,7 +108,7 @@ loadCatalog(ENTRIES_URL).then(classifyEntries).then(data => {
 			compoFilter.add(x);
 		}
 		else {
-			jamFilter.add(x);	
+			jamFilter.add(x);
 		}
 
 		if (INDEX_ON_THE_FLY) {
@@ -116,12 +116,12 @@ loadCatalog(ENTRIES_URL).then(classifyEntries).then(data => {
 			plasticSurge.indexRawString(entry.title, x);
 			plasticSurge.indexRawString(entry.author.name, x);
 			plasticSurge.indexRawString(entry.description, x);
-			for (var link of entry.links) {
+			for (const link of entry.links) {
 				plasticSurge.indexRawString(link.title, x);
 			}
 		}
 	}
-	var t1 = performance.now();
+	const t1 = performance.now();
 
 	if (INDEX_ON_THE_FLY) {
 		console.info("Text Indexing took " + (t1 - t0).toFixed(1) + "ms");
@@ -131,7 +131,7 @@ loadCatalog(ENTRIES_URL).then(classifyEntries).then(data => {
 
 	// -- view
 
-	var grid = <HTMLElement>document.querySelector(".entries");
+	const grid = <HTMLElement>document.querySelector(".entries");
 	gamesGrid = new GamesGrid(grid, entryData);
 
 	window.onresize = () => {
@@ -140,7 +140,7 @@ loadCatalog(ENTRIES_URL).then(classifyEntries).then(data => {
 
 
 	// full text search
-	var searchControl = elem<HTMLInputElement>("#terms");
+	const searchControl = elem<HTMLInputElement>("#terms");
 	searchControl.oninput = _ => {
 		state.query = searchControl.value;
 	};
@@ -149,10 +149,10 @@ loadCatalog(ENTRIES_URL).then(classifyEntries).then(data => {
 
 
 	// category radios
-	var categoryControls = elemList<HTMLInputElement>("input[name=category]");
+	const categoryControls = elemList<HTMLInputElement>("input[name=category]");
 	for (let cc of categoryControls) {
 		cc.onchange = (evt: Event) => {
-			var ctrl = <HTMLInputElement>evt.target;
+			const ctrl = <HTMLInputElement>evt.target;
 			if (ctrl.checked) {
 				state.category = <Category>ctrl.value;
 			}
@@ -161,9 +161,9 @@ loadCatalog(ENTRIES_URL).then(classifyEntries).then(data => {
 
 
 	// platform selector
-	var platformSelect = elem<HTMLSelectElement>("select");
+	const platformSelect = elem<HTMLSelectElement>("select");
 	platformSelect.onchange = (evt: Event) => {
-		var ctrl = <HTMLSelectElement>evt.target;
+		const ctrl = <HTMLSelectElement>evt.target;
 		state.platformMask = parseInt(ctrl.value);
 	};
 });

@@ -9,7 +9,7 @@ function termify(text: string) {
 	});
 }
 
-var linkPlatformMapping: { [key: string]: Platform } = {
+const linkPlatformMapping: { [key: string]: Platform } = {
 	download: Platform.Desktop,
 	love: Platform.Win | Platform.Mac | Platform.Linux | Platform.Desktop,
 	love2d: Platform.Win | Platform.Mac | Platform.Linux | Platform.Desktop,
@@ -25,7 +25,7 @@ var linkPlatformMapping: { [key: string]: Platform } = {
 
 	osx: Platform.Mac | Platform.Desktop,
 	macos: Platform.Mac | Platform.Desktop,
-	
+
 	linux: Platform.Linux | Platform.Desktop,
 	ubuntu: Platform.Linux | Platform.Desktop,
 
@@ -59,7 +59,7 @@ var linkPlatformMapping: { [key: string]: Platform } = {
 	ios: Platform.Mobile,
 };
 
-var descriptionPlatformMapping: { [key: string]: Platform } = {
+const descriptionPlatformMapping: { [key: string]: Platform } = {
 	exe: Platform.Win | Platform.Desktop,
 	love2d: Platform.Win | Platform.Mac | Platform.Linux | Platform.Desktop,
 
@@ -84,13 +84,13 @@ var descriptionPlatformMapping: { [key: string]: Platform } = {
 function detectPlatform(entry: Entry) {
 	var plat: Platform = 0;
 
-	var descTerms = termify(entry.description);
-	var urlTerms = entry.links.map(link => termify(link.title).concat(termify(link.url))).reduce((ta, tn) => ta.concat(tn), []); // func prog style: SO much more legible!
+	const descTerms = termify(entry.description);
+	const urlTerms = entry.links.map(link => termify(link.title).concat(termify(link.url))).reduce((ta, tn) => ta.concat(tn), []); // func prog style: SO much more legible!
 
-	for (var term of urlTerms) {
+	for (const term of urlTerms) {
 		plat |= (linkPlatformMapping[term] | 0);
 	}
-	for (var term of descTerms) {
+	for (const term of descTerms) {
 		plat |= (descriptionPlatformMapping[term] | 0);
 	}
 
@@ -113,11 +113,11 @@ function detectPlatform(entry: Entry) {
 }
 
 export function classifyEntries(data: Catalog) {
-	var t0 = performance.now();
-	for (var entry of data) {
+	const t0 = performance.now();
+	for (const entry of data) {
 		entry.platform = detectPlatform(entry);
 	}
-	var t1 = performance.now();
+	const t1 = performance.now();
 	console.info("Classification took " + (t1 - t0).toFixed(1) + "ms");
 	return Promise.resolve(data);
 }

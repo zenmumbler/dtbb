@@ -2,7 +2,7 @@
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
 requirejs.config({
-	baseUrl: 'js',
+	baseUrl: "js",
 });
 
 requirejs(["app"]);

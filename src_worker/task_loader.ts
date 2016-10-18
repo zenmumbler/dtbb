@@ -7,7 +7,7 @@ declare function postMessage(msg: any): void;
 
 self.onmessage = (evt: MessageEvent) => {
 	self.onmessage = undefined;
-	var modName = <string>evt.data;
+	const modName = <string>evt.data;
 	require([modName], () => {
 		postMessage("loaded");
 	});

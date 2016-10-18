@@ -38,7 +38,7 @@ export interface Entry {
 		uid: number;
 		avatar_url: string;
 		author_home_url: string;
-	}
+	};
 
 	screens: {
 		thumbnail_url: string;
