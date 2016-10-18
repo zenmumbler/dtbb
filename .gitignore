@@ -1,6 +1,4 @@
-entry_pages
-entry_pages_35
 node_modules
-old/
-js
-!js/require.js
+site/js
+!site/js/require.js
+spider_data/entry_pages/**/*.html
