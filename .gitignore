@@ -1,5 +1,6 @@
 node_modules
 import/**/*.js
+lib/**/*.js
 js/**/*.js
 !js/require.js
 import/spider_data/entry_pages/**/*.html
