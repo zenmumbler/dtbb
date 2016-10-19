@@ -5,7 +5,7 @@ import * as fs from "fs";
 import * as request from "request";
 import * as http from "http";
 
-import { listingPath, issueBaseURL, timeoutPromise } from "./importutil";
+import { ensureDirectory, listingDirPath, listingPath, issueBaseURL, timeoutPromise } from "./importutil";
 
 const LD_PAGE_SIZE = 24;
 const DELAY_BETWEEN_REQUESTS_MS = 20;
@@ -60,14 +60,16 @@ function next(state: SpiderState) {
 					console.info(`Writing listing (${state.allLinks.length} entries)...`);
 					const listingJSON = JSON.stringify({ links: state.allLinks, thumbs: state.allThumbs });
 
-					fs.writeFile(listingPath(state.issue), listingJSON, (err) => {
-						if (err) {
-							console.error("Failed to write listing file", err);
-						}
-						else {
-							console.info("Done.");
-							resolve();
-						}
+					ensureDirectory(listingDirPath()).then(() => {
+						fs.writeFile(listingPath(state.issue), listingJSON, (err) => {
+							if (err) {
+								console.error("Failed to write listing file", err);
+							}
+							else {
+								console.info("Done.");
+								resolve();
+							}
+						});
 					});
 				}
 			}
@@ -79,6 +81,8 @@ export function fetchListing(issue: number) {
 	if (isNaN(issue) || issue < 15 || issue > 99) {
 		return Promise.reject("issue must be (15 <= issue <= 99)");
 	}
+
+	console.info(`Fetching listing for issue ${issue}`);
 
 	return next({
 		issue,

@@ -4,8 +4,8 @@
 import * as fs from "fs";
 import * as jsdom from "jsdom";
 
-import { Platform, EntryListing, Catalog, Entry } from "../lib/catalog";
-import { listingPath, issueBaseURL, entryPageFilePath, entriesCatalogPath } from "./importutil";
+import { Platform, EntryListing, Entry } from "../lib/catalog";
+import { listingPath, issueBaseURL, entryPageFilePath, entriesCatalogPath, timeoutPromise } from "./importutil";
 
 
 function entryDoc(issue: number, uid: number): Promise<Document> {
@@ -107,99 +107,123 @@ function createEntry(relURI: string, issue: number, uid: number, thumbImg: strin
 // ------------
 
 
-// only and required input arg is the LD issue
-let LDIssue = 0;
-if (process.argv.length === 3) {
-	LDIssue = parseInt(process.argv[2]);
-	if (isNaN(LDIssue) || LDIssue < 15 || LDIssue > 99) {
-		LDIssue = 0;
-	}
-}
-if (LDIssue === 0) {
-	console.info("Expected LD issue counter as sole arg (15 < issue < 99)");
-	process.exit(1);
+const MAX_INFLIGHT = 10;
+
+interface ExtractState {
+	issue: number;
+	done: boolean;
+	completionPromise?: Promise<void>;
+	inFlight: Promise<Entry>[];
+	source: EntryListing;
+	catalog: Entry[];
 }
 
-function extractEntryFromPage(link: string, thumb: string) {
+
+function extractEntryFromPage(state: ExtractState, link: string, thumb: string) {
 	const uid = parseInt(link.substr(link.indexOf("uid=") + 4));
 
-	return entryDoc(LDIssue, uid)
+	return entryDoc(state.issue, uid)
 		.then(doc => {
-			return createEntry(link, LDIssue, uid, thumb, doc);
+			return createEntry(link, state.issue, uid, thumb, doc);
 		});
 }
 
 
-function completed(entries: Catalog) {
-	console.info(`Extraction complete, writing ${entries.length} entries to catalog file...`);
-	const catalogJSON = JSON.stringify(entries);
-	fs.writeFile(entriesCatalogPath(LDIssue), catalogJSON, (err) => {
-		if (err) {
-			console.info("Could not write catalog file: ", err);
-		}
-		else {
-			console.info("Done");
-		}
-	});
-}
-
 // Good thing this is all single-threaded so this hackery actually works.
 
-const MAX_INFLIGHT = 10;
-const inFlight: Promise<Entry>[] = [];
-var isDone = false;
-
-function tryNext(source: EntryListing, catalog: Catalog) {
-	const checkDone = function() {
-		if (isDone) {
-			return true;
-		}
-		isDone = (source.links.length === 0 && inFlight.length === 0);
-		if (isDone) {
-			completed(catalog);
-		}
-		return isDone;
-	};
-	if (checkDone()) {
-		return;
+function completed(state: ExtractState) {
+	if (state.completionPromise) {
+		return state.completionPromise;
 	}
 
-	if (source.links.length > 0 && inFlight.length < MAX_INFLIGHT) {
-		const link = source.links.shift()!;
-		const thumb = source.thumbs.shift()!;
+	console.info(`Extraction complete, writing ${state.catalog.length} entries to catalog file...`);
+	const catalogJSON = JSON.stringify(state.catalog);
+
+	state.completionPromise = new Promise<void>((resolve, reject) => {
+		fs.writeFile(entriesCatalogPath(state.issue), catalogJSON, (err) => {
+			if (err) {
+				console.info("Could not write catalog file: ", err);
+				reject(err);
+			}
+			else {
+				console.info("Done");
+				resolve();
+			}
+		});
+	});
+
+	return state.completionPromise;
+}
+
+
+function tryNext(state: ExtractState): Promise<void> {
+	const checkDone = function() {
+		if (state.done) {
+			return true;
+		}
+		state.done = (state.source.links.length === 0 && state.inFlight.length === 0);
+		return state.done;
+	};
+	if (checkDone()) {
+		return completed(state);
+	}
+
+	if (state.source.links.length > 0 && state.inFlight.length < MAX_INFLIGHT) {
+		const link = state.source.links.shift()!;
+		const thumb = state.source.thumbs.shift()!;
 
 		const unqueueSelf = function(prom: Promise<Entry>) {
-			const promIx = inFlight.indexOf(prom);
+			const promIx = state.inFlight.indexOf(prom);
 			if (promIx < 0) {
-				console.error("Can't find myself in the inFlight array!", inFlight, prom);
-				process.abort();
+				console.error("Can't find myself in the inFlight array!", state.inFlight, prom);
+				return Promise.reject("internal inconsistency error");
 			}
-			inFlight.splice(promIx, 1);
-			checkDone();
+			state.inFlight.splice(promIx, 1);
+			if (checkDone()) {
+				return completed(state);
+			}
+			else {
+				return Promise.resolve();
+			}
 		};
 
-		const p = extractEntryFromPage(link, thumb)
+		const p: Promise<void> = extractEntryFromPage(state, link, thumb)
 			.then(entry => {
-				catalog.push(entry);
+				state.catalog.push(entry);
 
-				const totalCount = source.links.length + catalog.length;
-				if (catalog.length % 10 === 0) {
-					console.info((100 * (catalog.length / totalCount)).toFixed(1) + "%");
+				const totalCount = state.source.links.length + state.catalog.length;
+				if (state.catalog.length % 10 === 0) {
+					console.info((100 * (state.catalog.length / totalCount)).toFixed(1) + "%");
 				}
 
-				unqueueSelf(p);
+				return unqueueSelf(p);
 			})
 			.catch(err => {
 				console.info(`ERROR for ${link}: `, err);
-				unqueueSelf(p);
+				return unqueueSelf(p);
 			});
 
-		inFlight.push(p);
+		state.inFlight.push(p);
 	}
 
-	setTimeout(function() { tryNext(source, catalog); }, 1);
+	return timeoutPromise(1).then(() => tryNext(state));
 }
 
-loadCatalog(LDIssue).then(catalogIndex => {
-	tryNext(catalogIndex, []);
-});
+
+export function extractEntries(issue: number) {
+	if (isNaN(issue) || issue < 15 || issue > 99) {
+		return Promise.reject("issue must be (15 <= issue <= 99)");
+	}
+
+	console.info(`Extracting entry records for issue ${issue}`);
+
+	return loadCatalog(issue).then(catalogIndex => {
+		return tryNext({
+			issue,
+			done: false,
+			inFlight: [],
+			source: catalogIndex,
+			catalog: []
+		});
+	});
+}

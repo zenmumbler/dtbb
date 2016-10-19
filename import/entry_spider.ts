@@ -78,6 +78,8 @@ export function fetchEntryPages(issue: number) {
 		return Promise.reject("issue must be (15 <= issue <= 99)");
 	}
 
+	console.info(`Fetching entry pages for issue ${issue}`);
+
 	return new Promise<void>((resolve, reject) => {
 		fs.readFile(listingPath(issue), "utf8", (listingErr, data) => {
 			if (listingErr) {
