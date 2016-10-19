@@ -1,10 +1,10 @@
-// spiderutil - part of dtbb
+// importutil - part of dtbb
 // by Arthur Langereis - @zenmumbler
 
 import * as mkdirp from "mkdirp";
 
-export function catalogIndexPath(issue: number) {
-	return `../spider_data/catalogs/catalog_${issue}.json`;
+export function listingPath(issue: number) {
+	return `../spider_data/listings/listing_${issue}.json`;
 }
 
 export function entryPagesDirPath(issue: number) {
@@ -16,7 +16,7 @@ export function entryPageFilePath(issue: number, uid: number) {
 }
 
 export function entriesCatalogPath(issue: number) {
-	return `../site/data/ld${issue}_entries.json`;
+	return `../site/catalogs/ld${issue}_entries.json`;
 }
 
 export function gzippedEntriesCatalogPath(issue: number) {
@@ -38,5 +38,11 @@ export function ensureDirectory(dir: string) {
 				resolve();
 			}
 		});
+	});
+}
+
+export function timeoutPromise(delayMS: number) {
+	return new Promise(resolve => {
+		setTimeout(resolve, delayMS);
 	});
 }

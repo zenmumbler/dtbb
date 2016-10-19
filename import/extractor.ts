@@ -4,8 +4,8 @@
 import * as fs from "fs";
 import * as jsdom from "jsdom";
 
-import { Platform, CatalogJSON, Catalog, Entry } from "../lib/catalog";
-import { catalogIndexPath, issueBaseURL, entryPageFilePath, entriesCatalogPath } from "../lib/spiderutil";
+import { Platform, EntryListing, Catalog, Entry } from "../lib/catalog";
+import { listingPath, issueBaseURL, entryPageFilePath, entriesCatalogPath } from "./importutil";
 
 
 function entryDoc(issue: number, uid: number): Promise<Document> {
@@ -24,15 +24,15 @@ function entryDoc(issue: number, uid: number): Promise<Document> {
 }
 
 
-function loadCatalog(issue: number): Promise<CatalogJSON> {
+function loadCatalog(issue: number): Promise<EntryListing> {
 	return new Promise((resolve, reject) => {
-		fs.readFile(catalogIndexPath(issue), "utf8", (err, data) => {
+		fs.readFile(listingPath(issue), "utf8", (err, data) => {
 			if (err) {
 				reject(err);
 			}
 			else {
-				const catalogJSON = JSON.parse(data) as CatalogJSON;
-				resolve(catalogJSON);
+				const listingJSON = JSON.parse(data) as EntryListing;
+				resolve(listingJSON);
 			}
 		});
 	});
@@ -149,7 +149,7 @@ const MAX_INFLIGHT = 10;
 const inFlight: Promise<Entry>[] = [];
 var isDone = false;
 
-function tryNext(source: CatalogJSON, catalog: Catalog) {
+function tryNext(source: EntryListing, catalog: Catalog) {
 	const checkDone = function() {
 		if (isDone) {
 			return true;

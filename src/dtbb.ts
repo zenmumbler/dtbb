@@ -5,4 +5,4 @@ requirejs.config({
 	baseUrl: "js",
 });
 
-requirejs(["app"]);
+requirejs(["src/app"]);

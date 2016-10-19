@@ -1,4 +1,5 @@
 node_modules
-site/js
-!site/js/require.js
-spider_data/entry_pages/**/*.html
+import/**/*.js
+js/**/*.js
+!js/require.js
+import/spider_data/entry_pages/**/*.html

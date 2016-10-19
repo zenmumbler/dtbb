@@ -1,7 +1,7 @@
 // catalog.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
-export interface CatalogJSON {
+export interface EntryListing {
 	links: string[];
 	thumbs: string[];
 }

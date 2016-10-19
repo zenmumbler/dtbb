@@ -1,19 +1,19 @@
 // app.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
-import { Category, Catalog, Platform, PlatformList } from "../../lib/catalog";
-import { TextIndex, SerializedTextIndex } from "textindex";
-import { GamesBrowserState } from "state";
-import { GamesGrid } from "gamesgrid";
-import { intersectSet } from "../../lib/setutil";
+import { Category, Catalog, Platform, PlatformList } from "../lib/catalog";
+import { TextIndex, SerializedTextIndex } from "./textindex";
+import { GamesBrowserState } from "./state";
+import { GamesGrid } from "./gamesgrid";
+import { intersectSet } from "../lib/setutil";
 import { loadTypedJSON, elem, elemList } from "./domutil";
 
 // -- config
-const INDEX_ON_THE_FLY = false;
+const INDEX_ON_THE_FLY = true;
 const DATA_REVISION = 1;
 const DATA_EXTENSION = location.host.toLowerCase() !== "zenmumbler.net" ? ".json" : ".gzjson";
-const TEXT_INDEX_URL = "data/ld36-entries-index" + DATA_EXTENSION + "?" + DATA_REVISION;
-const ENTRIES_URL = "data/ld36-entries" + DATA_EXTENSION + "?" + DATA_REVISION;
+const TEXT_INDEX_URL = "data/ld36_entries_index" + DATA_EXTENSION + "?" + DATA_REVISION;
+const ENTRIES_URL = "data/ld36_entries" + DATA_EXTENSION + "?" + DATA_REVISION;
 
 // -- components
 var entryData: Catalog | null = null;

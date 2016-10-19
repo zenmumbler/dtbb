@@ -3,7 +3,7 @@
 
 // Roman English script only
 
-import { intersectSet, newSetFromArray } from "../../lib/setutil";
+import { intersectSet, newSetFromArray } from "../lib/setutil";
 
 export type SerializedTextIndex = { [key: string]: number[] };
 

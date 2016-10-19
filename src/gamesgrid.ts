@@ -1,7 +1,7 @@
 // gamesgrid.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
-import { Platform, PlatformList, Catalog } from "../../lib/catalog";
+import { Platform, PlatformList, Catalog } from "../lib/catalog";
 
 
 interface GameCell {
