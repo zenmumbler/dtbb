@@ -18,6 +18,8 @@ var entriesDir = "../spider_data/entry_pages/entries_" + LDIssue + "/";
 var entriesPrefix = "entry_";
 var entriesPostfix = ".html";
 var delayBetweenRequests = 50;
+var entriesWritten = 0;
+var failures = 0;
 function ensureDirectory(dir) {
     return new Promise(function (resolve, reject) {
         mkdirp(dir, function (err) {
@@ -32,8 +34,8 @@ function ensureDirectory(dir) {
 }
 function load(urlList, index) {
     if (index >= urlList.length) {
-        console.info("Done");
-        return;
+        console.info("Done (wrote " + entriesWritten + " entries, " + failures + " failures)");
+        process.exit(failures);
     }
     var link = urlList[index];
     var uid = link.substr(link.indexOf("uid=") + 4);
@@ -45,20 +47,28 @@ function load(urlList, index) {
         setTimeout(function () { load(urlList, index + 1); }, overrideDelay || delayBetweenRequests);
     };
     if (fs.existsSync(filePath)) {
-        next(0);
+        next(1);
     }
     else {
-        request(link, function (error, response, body) {
+        request({
+            url: link,
+            timeout: 3000
+        }, function (error, response, body) {
             if (!error && response.statusCode === 200) {
                 fs.writeFile(filePath, body, function (err) {
                     if (err) {
                         console.log("Failed to write file for uid: " + uid, err);
+                        failures += 1;
+                    }
+                    else {
+                        entriesWritten += 1;
                     }
                     next();
                 });
             }
             else {
-                console.log("Failed to load entry page for uid: " + uid, error, response.statusCode);
+                console.log("Failed to load entry page for uid: " + uid, error, response ? response.statusCode : "-");
+                failures += 1;
                 next();
             }
         });

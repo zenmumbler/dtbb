@@ -24,6 +24,8 @@ const entriesPrefix = "entry_";
 const entriesPostfix = ".html";
 const delayBetweenRequests = 50;
 
+let entriesWritten = 0;
+let failures = 0;
 
 function ensureDirectory(dir: string) {
 	return new Promise((resolve, reject) => {
@@ -41,8 +43,8 @@ function ensureDirectory(dir: string) {
 
 function load(urlList: string[], index: number) {
 	if (index >= urlList.length) {
-		console.info("Done");
-		return;
+		console.info(`Done (wrote ${entriesWritten} entries, ${failures} failures)`);
+		process.exit(failures);
 	}
 
 	const link = urlList[index];
@@ -57,22 +59,30 @@ function load(urlList: string[], index: number) {
 	};
 
 	if (fs.existsSync(filePath)) {
-		next(0);
+		next(1);
 	}
 	else {
 		request(
-			link,
+			{
+				url: link,
+				timeout: 3000
+			},
 			(error, response, body) => {
 				if (!error && response.statusCode === 200) {
 					fs.writeFile(filePath, body, (err) => {
 						if (err) {
 							console.log(`Failed to write file for uid: ${uid}`, err);
+							failures += 1;
+						}
+						else {
+							entriesWritten += 1;
 						}
 						next();
 					});
 				}
 				else {
-					console.log(`Failed to load entry page for uid: ${uid}`, error, response.statusCode);
+					console.log(`Failed to load entry page for uid: ${uid}`, error, response ? response.statusCode : "-");
+					failures += 1;
 					next();
 				}
 			}
