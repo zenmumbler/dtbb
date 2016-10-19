@@ -49,15 +49,15 @@ function load(urlList: string[], index: number) {
 	const uid = link.substr(link.indexOf("uid=") + 4);
 	const filePath = entriesDir + entriesPrefix + uid + entriesPostfix;
 
-	const next = () => {
+	const next = (overrideDelay?: number) => {
 		if (index % 10 === 0) {
 			console.info((100 * (index / urlList.length)).toFixed(1) + "%");
 		}
-		setTimeout(() => { load(urlList, index + 1); }, delayBetweenRequests);
+		setTimeout(() => { load(urlList, index + 1); }, overrideDelay || delayBetweenRequests);
 	};
 
 	if (fs.existsSync(filePath)) {
-		next();
+		next(0);
 	}
 	else {
 		request(

@@ -38,14 +38,14 @@ function load(urlList, index) {
     var link = urlList[index];
     var uid = link.substr(link.indexOf("uid=") + 4);
     var filePath = entriesDir + entriesPrefix + uid + entriesPostfix;
-    var next = function () {
+    var next = function (overrideDelay) {
         if (index % 10 === 0) {
             console.info((100 * (index / urlList.length)).toFixed(1) + "%");
         }
-        setTimeout(function () { load(urlList, index + 1); }, delayBetweenRequests);
+        setTimeout(function () { load(urlList, index + 1); }, overrideDelay || delayBetweenRequests);
     };
     if (fs.existsSync(filePath)) {
-        next();
+        next(0);
     }
     else {
         request(link, function (error, response, body) {
