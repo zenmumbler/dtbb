@@ -1,12 +1,12 @@
 // app.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
-import { classifyEntries } from "analyze";
-import { Category, Catalog, Platform, PlatformList, loadCatalog } from "catalog";
+import { Category, Catalog, Platform, PlatformList } from "../../lib/catalog";
 import { TextIndex, SerializedTextIndex } from "textindex";
 import { GamesBrowserState } from "state";
 import { GamesGrid } from "gamesgrid";
-import { intersectSet, loadTypedJSON, elem, elemList } from "util";
+import { intersectSet } from "../../lib/setutil";
+import { loadTypedJSON, elem, elemList } from "./domutil";
 
 // -- config
 const INDEX_ON_THE_FLY = false;
@@ -87,7 +87,7 @@ if (! INDEX_ON_THE_FLY) {
 }
 
 
-loadCatalog(ENTRIES_URL).then(classifyEntries).then(data => {
+loadTypedJSON<Catalog>(ENTRIES_URL).then(data => {
 	entryData = data;
 
 	// index all text and populate filter sets

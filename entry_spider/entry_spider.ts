@@ -1,9 +1,11 @@
-// entries_scrape - part of dtbb
+// entry_spider - part of dtbb
 // by Arthur Langereis - @zenmumbler
 
 import * as fs from "fs";
 import * as request from "request";
-import * as mkdirp from "mkdirp";
+
+import { CatalogJSON } from "../lib/catalog";
+import { ensureDirectory, issueBaseURL, catalogIndexPath, entryPagesDirPath, entryPageFilePath } from "../lib/spiderutil";
 
 // only and required input arg is the LD issue
 let LDIssue = 0;
@@ -18,27 +20,10 @@ if (LDIssue === 0) {
 	process.exit(1);
 }
 
-const baseURL = `http://ludumdare.com/compo/ludum-dare-${LDIssue}/`;
-const entriesDir = `../spider_data/entry_pages/entries_${LDIssue}/`;
-const entriesPrefix = "entry_";
-const entriesPostfix = ".html";
-const delayBetweenRequests = 50;
 
+const delayBetweenRequests = 50;
 let entriesWritten = 0;
 let failures = 0;
-
-function ensureDirectory(dir: string) {
-	return new Promise((resolve, reject) => {
-		mkdirp(dir, err => {
-			if (err) {
-				reject(err);
-			}
-			else {
-				resolve();
-			}
-		});
-	});
-}
 
 
 function load(urlList: string[], index: number) {
@@ -48,8 +33,8 @@ function load(urlList: string[], index: number) {
 	}
 
 	const link = urlList[index];
-	const uid = link.substr(link.indexOf("uid=") + 4);
-	const filePath = entriesDir + entriesPrefix + uid + entriesPostfix;
+	const uid = parseInt(link.substr(link.indexOf("uid=") + 4));
+	const filePath = entryPageFilePath(LDIssue, uid);
 
 	const next = (overrideDelay?: number) => {
 		if (index % 10 === 0) {
@@ -90,18 +75,14 @@ function load(urlList: string[], index: number) {
 	}
 }
 
-interface CatalogJSON {
-	links: string[];
-	thumbs: string[];
-}
-
-fs.readFile(`../spider_data/catalogs/catalog_${LDIssue}.json`, "utf8", (catalogErr, data) => {
+fs.readFile(catalogIndexPath(LDIssue), "utf8", (catalogErr, data) => {
 	if (catalogErr) {
 		console.info(`Could not load catalog for issue ${LDIssue}: ${catalogErr}`);
 	}
 	else {
-		ensureDirectory(entriesDir)
+		ensureDirectory(entryPagesDirPath(LDIssue))
 			.then(() => {
+				const baseURL = issueBaseURL(LDIssue);
 				const json = JSON.parse(data) as CatalogJSON;
 				const links = json.links.map(u => baseURL + u);
 				load(links, 0);

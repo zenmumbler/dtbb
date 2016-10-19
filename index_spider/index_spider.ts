@@ -1,9 +1,11 @@
-// catalog_scraper - part of dtbb
+// index_spider - part of dtbb
 // by Arthur Langereis - @zenmumbler
 
 import * as fs from "fs";
 import * as request from "request";
 import * as http from "http";
+
+import { catalogIndexPath, issueBaseURL } from "../lib/spiderutil";
 
 const LD_PAGE_SIZE = 24;
 
@@ -21,12 +23,12 @@ if (process.argv.length === 3) {
 }
 if (LDIssue === 0) {
 	console.info("Expected LD issue counter as sole arg (15 < issue < 99)");
-	process.abort();
+	process.exit(1);
 }
 
 function next() {
 	request(
-		`http://ludumdare.com/compo/ludum-dare-${LDIssue}/?action=preview&start=${offset}`,
+		`${issueBaseURL(LDIssue)}/?action=preview&start=${offset}`,
 		(error: any, response: http.IncomingMessage, body: string) => {
 			let completed = false;
 
@@ -69,7 +71,7 @@ function next() {
 				console.info(`Writing catalog (${allLinks.length} entries)...`);
 				const catalogJSON = JSON.stringify({ links: allLinks, thumbs: allThumbs });
 
-				fs.writeFile(`../spider_data/catalogs/catalog_${LDIssue}.json`, catalogJSON, (err) => {
+				fs.writeFile(catalogIndexPath(LDIssue), catalogJSON, (err) => {
 					if (err) {
 						console.error("Failed to write catalog file", err);
 					}

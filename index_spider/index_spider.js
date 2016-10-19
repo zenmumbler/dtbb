@@ -1,6 +1,7 @@
 "use strict";
 var fs = require("fs");
 var request = require("request");
+var spiderutil_1 = require("../lib/spiderutil");
 var LD_PAGE_SIZE = 24;
 var offset = 0;
 var allLinks = [];
@@ -13,11 +14,11 @@ if (process.argv.length === 3) {
     }
 }
 if (LDIssue === 0) {
-    console.info("expected LD issue counter as sole arg (15 < issue < 99)");
-    process.abort();
+    console.info("Expected LD issue counter as sole arg (15 < issue < 99)");
+    process.exit(1);
 }
 function next() {
-    request("http://ludumdare.com/compo/ludum-dare-" + LDIssue + "/?action=preview&start=" + offset, function (error, response, body) {
+    request(spiderutil_1.issueBaseURL(LDIssue) + "/?action=preview&start=" + offset, function (error, response, body) {
         var completed = false;
         if (!error && response.statusCode === 200) {
             var links = body.match(/\?action=preview&(amp;)?uid=(\d+)/g);
@@ -54,7 +55,7 @@ function next() {
         else {
             console.info("Writing catalog (" + allLinks.length + " entries)...");
             var catalogJSON = JSON.stringify({ links: allLinks, thumbs: allThumbs });
-            fs.writeFile("../spider_data/catalogs/catalog_" + LDIssue + ".json", catalogJSON, function (err) {
+            fs.writeFile(spiderutil_1.catalogIndexPath(LDIssue), catalogJSON, function (err) {
                 if (err) {
                     console.error("Failed to write catalog file", err);
                 }

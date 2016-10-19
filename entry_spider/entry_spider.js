@@ -1,7 +1,7 @@
 "use strict";
 var fs = require("fs");
 var request = require("request");
-var mkdirp = require("mkdirp");
+var spiderutil_1 = require("../lib/spiderutil");
 var LDIssue = 0;
 if (process.argv.length === 3) {
     LDIssue = parseInt(process.argv[2]);
@@ -13,33 +13,17 @@ if (LDIssue === 0) {
     console.info("Expected LD issue counter as sole arg (15 < issue < 99)");
     process.exit(1);
 }
-var baseURL = "http://ludumdare.com/compo/ludum-dare-" + LDIssue + "/";
-var entriesDir = "../spider_data/entry_pages/entries_" + LDIssue + "/";
-var entriesPrefix = "entry_";
-var entriesPostfix = ".html";
 var delayBetweenRequests = 50;
 var entriesWritten = 0;
 var failures = 0;
-function ensureDirectory(dir) {
-    return new Promise(function (resolve, reject) {
-        mkdirp(dir, function (err) {
-            if (err) {
-                reject(err);
-            }
-            else {
-                resolve();
-            }
-        });
-    });
-}
 function load(urlList, index) {
     if (index >= urlList.length) {
         console.info("Done (wrote " + entriesWritten + " entries, " + failures + " failures)");
         process.exit(failures);
     }
     var link = urlList[index];
-    var uid = link.substr(link.indexOf("uid=") + 4);
-    var filePath = entriesDir + entriesPrefix + uid + entriesPostfix;
+    var uid = parseInt(link.substr(link.indexOf("uid=") + 4));
+    var filePath = spiderutil_1.entryPageFilePath(LDIssue, uid);
     var next = function (overrideDelay) {
         if (index % 10 === 0) {
             console.info((100 * (index / urlList.length)).toFixed(1) + "%");
@@ -74,13 +58,14 @@ function load(urlList, index) {
         });
     }
 }
-fs.readFile("../spider_data/catalogs/catalog_" + LDIssue + ".json", "utf8", function (catalogErr, data) {
+fs.readFile(spiderutil_1.catalogIndexPath(LDIssue), "utf8", function (catalogErr, data) {
     if (catalogErr) {
         console.info("Could not load catalog for issue " + LDIssue + ": " + catalogErr);
     }
     else {
-        ensureDirectory(entriesDir)
+        spiderutil_1.ensureDirectory(spiderutil_1.entryPagesDirPath(LDIssue))
             .then(function () {
+            var baseURL = spiderutil_1.issueBaseURL(LDIssue);
             var json = JSON.parse(data);
             var links = json.links.map(function (u) { return baseURL + u; });
             load(links, 0);

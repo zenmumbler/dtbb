@@ -1,9 +1,13 @@
 // catalog.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
-import { loadTypedJSON } from "util";
+export interface CatalogJSON {
+	links: string[];
+	thumbs: string[];
+}
 
 export const enum Platform {
+	None = 0,
 	Desktop = 1,
 	Win = 2,
 	Mac = 4,
@@ -15,8 +19,8 @@ export const enum Platform {
 }
 
 export const PlatformList = (() => {
-	var platforms: Platform[] = [];
-	var platMask = Platform.Desktop;
+	const platforms: Platform[] = [];
+	let platMask = Platform.Desktop;
 	while (platMask <= Platform.Mobile) {
 		platforms.push(platMask);
 		platMask <<= 1;
@@ -27,6 +31,8 @@ export const PlatformList = (() => {
 export type Category = "" | "compo" | "jam";
 
 export interface Entry {
+	ld_issue: number;
+
 	title: string;
 	category: Category;
 	description: string;
@@ -37,7 +43,7 @@ export interface Entry {
 		name: string;
 		uid: number;
 		avatar_url: string;
-		author_home_url: string;
+		home_url: string;
 	};
 
 	screens: {
@@ -54,7 +60,3 @@ export interface Entry {
 }
 
 export type Catalog = Entry[];
-
-export function loadCatalog(fileURL: string) {
-	return loadTypedJSON<Catalog>(fileURL);
-}

@@ -1,12 +1,22 @@
-// analyze.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
+// detect_platform.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
-import { Entry, Platform, Catalog } from "catalog";
+import { Entry, Platform } from "../lib/catalog";
 
 function termify(text: string) {
-	return text.toLowerCase().replace(/os.x/g, "osx").replace(/[\(\)\/\.\n\r\*\?\-]/g, " ").replace(/ +/g, " ").trim().split(" ").map(term => {
-		return term.replace("lve", "love").replace(",", "").replace(/^mac$/, "osx");
-	});
+	return text
+		.toLowerCase()
+		.replace(/os.x/g, "osx")
+		.replace(/[\(\)\/\.\n\r\*\?\-]/g, " ")
+		.replace(/ +/g, " ")
+		.trim()
+		.split(" ")
+		.map(term => {
+			return term
+				.replace("lve", "love")
+				.replace(",", "")
+				.replace(/^mac$/, "osx");
+		});
 }
 
 const linkPlatformMapping: { [key: string]: Platform } = {
@@ -81,11 +91,16 @@ const descriptionPlatformMapping: { [key: string]: Platform } = {
 };
 
 
-function detectPlatform(entry: Entry) {
+export function detectPlatform(entry: Entry) {
 	var plat: Platform = 0;
 
 	const descTerms = termify(entry.description);
-	const urlTerms = entry.links.map(link => termify(link.title).concat(termify(link.url))).reduce((ta, tn) => ta.concat(tn), []); // func prog style: SO much more legible!
+	const urlTerms = entry.links
+		.map(link =>
+			termify(link.title)
+			.concat(termify(link.url))
+		)
+		.reduce((ta, tn) => ta.concat(tn), []);
 
 	for (const term of urlTerms) {
 		plat |= (linkPlatformMapping[term] | 0);
@@ -94,7 +109,7 @@ function detectPlatform(entry: Entry) {
 		plat |= (descriptionPlatformMapping[term] | 0);
 	}
 
-	if (plat == 0) {
+	if (plat === 0) {
 		// last resort, try itch on url and keyboard refs in description to try and add a generic platform
 		if (
 			(urlTerms.indexOf("itch") > -1) ||
@@ -104,20 +119,7 @@ function detectPlatform(entry: Entry) {
 		) {
 			plat = Platform.Desktop;
 		}
-		else {
-			// console.info("No platform: ", entry);
-		}
 	}
 
 	return plat;
-}
-
-export function classifyEntries(data: Catalog) {
-	const t0 = performance.now();
-	for (const entry of data) {
-		entry.platform = detectPlatform(entry);
-	}
-	const t1 = performance.now();
-	console.info("Classification took " + (t1 - t0).toFixed(1) + "ms");
-	return Promise.resolve(data);
 }
