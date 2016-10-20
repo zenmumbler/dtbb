@@ -45,7 +45,7 @@ function rangedTaskPerIssue(f: string, t: string, sitFn: (issue: number) => Prom
 		return next();
 	}
 	else {
-		return Promise.reject("bad range");
+		return Promise.resolve();
 	}
 }
 
