@@ -1,7 +1,7 @@
 // gamesgrid.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
-import { Platform, PlatformList, Catalog } from "../lib/catalog";
+import { PlatformMask, PlatformList, Entry } from "../lib/catalog";
 
 
 interface GameCell {
@@ -19,14 +19,14 @@ interface GameCell {
 
 
 const platLabel: { [f: number]: string } = {};
-platLabel[Platform.Desktop] = "Desktop";
-platLabel[Platform.Win] = "Win";
-platLabel[Platform.Mac] = "Mac";
-platLabel[Platform.Linux] = "Linux";
-platLabel[Platform.Web] = "Web";
-platLabel[Platform.Java] = "Java";
-platLabel[Platform.VR] = "VR";
-platLabel[Platform.Mobile] = "Mobile";
+platLabel[PlatformMask.Desktop] = "Desktop";
+platLabel[PlatformMask.Win] = "Win";
+platLabel[PlatformMask.Mac] = "Mac";
+platLabel[PlatformMask.Linux] = "Linux";
+platLabel[PlatformMask.Web] = "Web";
+platLabel[PlatformMask.Java] = "Java";
+platLabel[PlatformMask.VR] = "VR";
+platLabel[PlatformMask.Mobile] = "Mobile";
 
 
 export class GamesGrid {
@@ -51,7 +51,7 @@ export class GamesGrid {
 	private firstVisibleRow_ = 0;
 
 
-	constructor(private containerElem_: HTMLElement, private catalog_: Catalog) {
+	constructor(private containerElem_: HTMLElement, private catalog_: Entry[]) {
 		this.entryCount_ = this.catalog_.length;
 		for (let x = 0; x < this.entryCount_; ++x) {
 			this.activeList_.push(x);

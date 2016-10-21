@@ -1,22 +1,20 @@
 // app.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
-import { Category, Catalog, Platform, PlatformList } from "../lib/catalog";
-import { TextIndex, SerializedTextIndex } from "./textindex";
+import { Entry, Category, Catalog, PlatformMask, PlatformList } from "../lib/catalog";
+import { TextIndex } from "./textindex";
 import { GamesBrowserState } from "./state";
 import { GamesGrid } from "./gamesgrid";
 import { intersectSet } from "../lib/setutil";
 import { loadTypedJSON, elem, elemList } from "./domutil";
 
 // -- config
-const INDEX_ON_THE_FLY = true;
 const DATA_REVISION = 1;
 const DATA_EXTENSION = location.host.toLowerCase() !== "zenmumbler.net" ? ".json" : ".gzjson";
-const TEXT_INDEX_URL = "data/ld36_entries_index" + DATA_EXTENSION + "?" + DATA_REVISION;
 const ENTRIES_URL = "data/ld36_entries" + DATA_EXTENSION + "?" + DATA_REVISION;
 
 // -- components
-var entryData: Catalog | null = null;
+var entryData: Entry[] | null = null;
 var gamesGrid: GamesGrid;
 const state = new GamesBrowserState();
 const plasticSurge = new TextIndex();
@@ -26,7 +24,7 @@ const plasticSurge = new TextIndex();
 const allSet = new Set<number>();
 const compoFilter = new Set<number>();
 const jamFilter = new Set<number>();
-const filterSets = new Map<Platform, Set<number>>();
+const filterSets = new Map<PlatformMask, Set<number>>();
 PlatformList.forEach(p => {
 	filterSets.set(p, new Set<number>());
 });
@@ -76,19 +74,8 @@ state.onChange(function() {
 });
 
 
-if (! INDEX_ON_THE_FLY) {
-	loadTypedJSON<SerializedTextIndex>(TEXT_INDEX_URL).then(sti => {
-		const t0 = performance.now();
-		plasticSurge.load(sti);
-		const t1 = performance.now();
-		(<HTMLElement>document.querySelector(".pleasehold")).style.display = "none";
-		console.info("Index load took: " + (t1 - t0).toFixed(1) + "ms");
-	});
-}
-
-
-loadTypedJSON<Catalog>(ENTRIES_URL).then(data => {
-	entryData = data;
+loadTypedJSON<Catalog>(ENTRIES_URL).then(catalog => {
+	entryData = catalog.entries;
 
 	// index all text and populate filter sets
 	const count = entryData.length;
@@ -111,22 +98,18 @@ loadTypedJSON<Catalog>(ENTRIES_URL).then(data => {
 			jamFilter.add(x);
 		}
 
-		if (INDEX_ON_THE_FLY) {
-			// build fulltext index on-the-fly
-			plasticSurge.indexRawString(entry.title, x);
-			plasticSurge.indexRawString(entry.author.name, x);
-			plasticSurge.indexRawString(entry.description, x);
-			for (const link of entry.links) {
-				plasticSurge.indexRawString(link.title, x);
-			}
+		// build fulltext index on-the-fly
+		plasticSurge.indexRawString(entry.title, x);
+		plasticSurge.indexRawString(entry.author.name, x);
+		plasticSurge.indexRawString(entry.description, x);
+		for (const link of entry.links) {
+			plasticSurge.indexRawString(link.label, x);
 		}
 	}
 	const t1 = performance.now();
 
-	if (INDEX_ON_THE_FLY) {
-		console.info("Text Indexing took " + (t1 - t0).toFixed(1) + "ms");
-		(<HTMLElement>document.querySelector(".pleasehold")).style.display = "none";
-	}
+	console.info("Text Indexing took " + (t1 - t0).toFixed(1) + "ms");
+	(<HTMLElement>document.querySelector(".pleasehold")).style.display = "none";
 
 
 	// -- view

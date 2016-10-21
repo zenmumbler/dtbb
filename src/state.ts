@@ -1,20 +1,20 @@
 // state.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
-import { Category, Platform } from "../lib/catalog";
+import { Category, PlatformMask } from "../lib/catalog";
 
 export type StateListener = (state: GamesBrowserState) => void;
 
 export class GamesBrowserState {
 	private listeners_: StateListener[] = [];
 
-	private platformMask_: Platform = 0;
-	private category_: Category = "";
+	private platformMask_: PlatformMask = 0;
+	private category_: Category | "" = "";
 	private query_ = "";
 
 	get platformMask() { return this.platformMask_; }
 
-	set platformMask(newPlat: Platform) {
+	set platformMask(newPlat: PlatformMask) {
 		if (newPlat != this.platformMask_) {
 			this.platformMask_ = newPlat;
 			this.filtersChanged();
@@ -23,7 +23,7 @@ export class GamesBrowserState {
 
 	get category() { return this.category_; }
 
-	set category(newCat: Category) {
+	set category(newCat: Category | "") {
 		if (newCat != this.category_) {
 			this.category_ = newCat;
 			this.filtersChanged();
