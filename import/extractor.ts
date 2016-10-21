@@ -4,8 +4,9 @@
 import * as fs from "fs";
 import * as jsdom from "jsdom";
 
-import { Platform, EntryListing, Entry } from "../lib/catalog";
+import { EntryListing, Entry, Catalog, EntryRating, RatingArea, IssueStats, nameListForPlatformMask } from "../lib/catalog";
 import { listingPath, issueBaseURL, entryPageFilePath, entriesCatalogPath, timeoutPromise } from "./importutil";
+import { detectPlatforms } from "./detect_platform";
 
 
 function entryDoc(issue: number, uid: number): Promise<Document> {
@@ -39,6 +40,49 @@ function loadCatalog(issue: number): Promise<EntryListing> {
 }
 
 
+function extractRatings(table: HTMLTableElement): EntryRating[] {
+	const ratings: EntryRating[] = [];
+	if (table) {
+		const trs = [].slice.call(table.querySelectorAll("tr")) as HTMLTableRowElement[];
+		for (const row of trs) {
+			const tds = row.querySelectorAll("td");
+			if (tds.length !== 3) {
+				console.info("weird rating table found");
+				break;
+			}
+
+			// rank
+			let rank = -1;
+			const rankString = tds[0].innerHTML.trim();
+			const simpleRank = rankString.match(/#(\d+)/);
+			if (simpleRank) {
+				rank = parseInt(simpleRank[1]);
+			}
+			else if (rankString.indexOf("ibronze") > -1) {
+				rank = 3;
+			}
+			else if (rankString.indexOf("isilver") > -1) {
+				rank = 2;
+			}
+			else if (rankString.indexOf("igold") > -1) {
+				rank = 1;
+			}
+
+			// area
+			let area = (tds[1].innerHTML.trim().toLowerCase().replace("(jam)", "")) as RatingArea;
+
+			// score
+			let score = parseFloat(tds[2].innerHTML.trim());
+
+			if (rank > -1 && area.length > 0 && !isNaN(score)) {
+				ratings.push({ area, rank, score });
+			}
+		}
+	}
+	return ratings;
+}
+
+
 function createEntry(relURI: string, issue: number, uid: number, thumbImg: string, doc: Document): Entry {
 	const ldBaseURL = "http://ludumdare.com/compo/";
 	const eventBaseURL = issueBaseURL(issue);
@@ -57,6 +101,7 @@ function createEntry(relURI: string, issue: number, uid: number, thumbImg: strin
 	const screensArray = [].slice.call(screensArrayElem.querySelectorAll("img")) as HTMLImageElement[];
 	const linksArray = [].slice.call(base.querySelectorAll(".links a")) as HTMLAnchorElement[];
 	const description = screensArrayElem.nextSibling.textContent || "";
+	const ratingTable = base.querySelector("table");
 
 	const categoryStr = categoryText.split(" ")[0].toLowerCase().replace("competition", "compo");
 
@@ -92,13 +137,17 @@ function createEntry(relURI: string, issue: number, uid: number, thumbImg: strin
 		links: linksArray.map(
 			link => {
 				return {
-					title: link.textContent || "",
+					label: link.textContent || "",
 					url: link.getAttribute("href")!
 				};
 			}),
 
-		platform: Platform.None
+		ratings: extractRatings(ratingTable),
+		platforms: []
 	};
+
+	const platformsMask = detectPlatforms(entry);
+	entry.platforms = nameListForPlatformMask(platformsMask);
 
 	return entry;
 }
@@ -115,7 +164,8 @@ interface ExtractState {
 	completionPromise?: Promise<void>;
 	inFlight: Promise<Entry>[];
 	source: EntryListing;
-	catalog: Entry[];
+	stats: IssueStats;
+	entries: Entry[];
 }
 
 
@@ -136,8 +186,11 @@ function completed(state: ExtractState) {
 		return state.completionPromise;
 	}
 
-	console.info(`Extraction complete, writing ${state.catalog.length} entries to catalog file...`);
-	const catalogJSON = JSON.stringify(state.catalog);
+	console.info(`Extraction complete, writing ${state.entries.length} entries to catalog file...`);
+	const catalogJSON = JSON.stringify({
+		stats: state.stats,
+		entries: state.entries
+	} as Catalog);
 
 	state.completionPromise = new Promise<void>((resolve, reject) => {
 		fs.writeFile(entriesCatalogPath(state.issue), catalogJSON, (err) => {
@@ -153,6 +206,26 @@ function completed(state: ExtractState) {
 	});
 
 	return state.completionPromise;
+}
+
+
+function updateStats(stats: IssueStats, entry: Entry) {
+	stats.entries += 1;
+	if (entry.category === "compo") {
+		stats.compoEntries += 1;
+	}
+	else {
+		stats.jamEntries += 1;
+	}
+
+	for (const rating of entry.ratings) {
+		if (rating.area in stats.ratingDistribution) {
+			stats.ratingDistribution[rating.area] += 1;
+		}
+		else {
+			stats.ratingDistribution[rating.area] = 1;
+		}
+	}
 }
 
 
@@ -189,11 +262,12 @@ function tryNext(state: ExtractState): Promise<void> {
 
 		const p: Promise<void> = extractEntryFromPage(state, link, thumb)
 			.then(entry => {
-				state.catalog.push(entry);
+				state.entries.push(entry);
+				updateStats(state.stats, entry);
 
-				const totalCount = state.source.links.length + state.catalog.length;
-				if (state.catalog.length % 10 === 0) {
-					console.info((100 * (state.catalog.length / totalCount)).toFixed(1) + "%");
+				const totalCount = state.source.links.length + state.entries.length;
+				if (state.entries.length % 10 === 0) {
+					console.info((100 * (state.entries.length / totalCount)).toFixed(1) + "%");
 				}
 
 				return unqueueSelf(p);
@@ -223,7 +297,13 @@ export function extractEntries(issue: number) {
 			done: false,
 			inFlight: [],
 			source: catalogIndex,
-			catalog: []
+			stats: {
+				entries: 0,
+				compoEntries: 0,
+				jamEntries: 0,
+				ratingDistribution: {}
+			},
+			entries: []
 		});
 	});
 }
