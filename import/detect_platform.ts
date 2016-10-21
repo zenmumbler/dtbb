@@ -1,7 +1,7 @@
 // detect_platform.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
-import { Entry, Platform } from "../lib/catalog";
+import { Entry, PlatformMask } from "../lib/catalog";
 
 function termify(text: string) {
 	return text
@@ -19,85 +19,85 @@ function termify(text: string) {
 		});
 }
 
-const linkPlatformMapping: { [key: string]: Platform } = {
-	download: Platform.Desktop,
-	love: Platform.Win | Platform.Mac | Platform.Linux | Platform.Desktop,
-	love2d: Platform.Win | Platform.Mac | Platform.Linux | Platform.Desktop,
-	standalone: Platform.Desktop,
+const linkPlatformMapping: { [key: string]: PlatformMask } = {
+	download: PlatformMask.Desktop,
+	love: PlatformMask.Win | PlatformMask.Mac | PlatformMask.Linux | PlatformMask.Desktop,
+	love2d: PlatformMask.Win | PlatformMask.Mac | PlatformMask.Linux | PlatformMask.Desktop,
+	standalone: PlatformMask.Desktop,
 
-	win: Platform.Win | Platform.Desktop,
-	win32: Platform.Win | Platform.Desktop,
-	windows32: Platform.Win | Platform.Desktop,
-	win64: Platform.Win | Platform.Desktop,
-	windows64: Platform.Win | Platform.Desktop,
-	windows: Platform.Win | Platform.Desktop,
-	exe: Platform.Win | Platform.Desktop,
+	win: PlatformMask.Win | PlatformMask.Desktop,
+	win32: PlatformMask.Win | PlatformMask.Desktop,
+	windows32: PlatformMask.Win | PlatformMask.Desktop,
+	win64: PlatformMask.Win | PlatformMask.Desktop,
+	windows64: PlatformMask.Win | PlatformMask.Desktop,
+	windows: PlatformMask.Win | PlatformMask.Desktop,
+	exe: PlatformMask.Win | PlatformMask.Desktop,
 
-	osx: Platform.Mac | Platform.Desktop,
-	macos: Platform.Mac | Platform.Desktop,
+	osx: PlatformMask.Mac | PlatformMask.Desktop,
+	macos: PlatformMask.Mac | PlatformMask.Desktop,
 
-	linux: Platform.Linux | Platform.Desktop,
-	ubuntu: Platform.Linux | Platform.Desktop,
+	linux: PlatformMask.Linux | PlatformMask.Desktop,
+	ubuntu: PlatformMask.Linux | PlatformMask.Desktop,
 
-	web: Platform.Web,
-	html5: Platform.Web,
-	chrome: Platform.Web,
-	browser: Platform.Web,
-	firefox: Platform.Web,
-	safari: Platform.Web,
-	webgl: Platform.Web,
-	online: Platform.Web,
-	webplayer: Platform.Web,
-	newgrounds: Platform.Web,
+	web: PlatformMask.Web,
+	html5: PlatformMask.Web,
+	chrome: PlatformMask.Web,
+	browser: PlatformMask.Web,
+	firefox: PlatformMask.Web,
+	safari: PlatformMask.Web,
+	webgl: PlatformMask.Web,
+	online: PlatformMask.Web,
+	webplayer: PlatformMask.Web,
+	newgrounds: PlatformMask.Web,
 	// gamejolt: Platform.Web,
 
-	java: Platform.Java,
-	java7: Platform.Java,
-	java8: Platform.Java,
-	jar: Platform.Java,
+	java: PlatformMask.Java,
+	java7: PlatformMask.Java,
+	java8: PlatformMask.Java,
+	jar: PlatformMask.Java,
 
-	flash: Platform.Web,
-	swf: Platform.Web,
+	flash: PlatformMask.Web,
+	swf: PlatformMask.Web,
 
-	vr: Platform.VR,
-	oculus: Platform.VR,
-	vive: Platform.VR,
-	cardboard: Platform.VR,
+	vr: PlatformMask.VR,
+	oculus: PlatformMask.VR,
+	vive: PlatformMask.VR,
+	cardboard: PlatformMask.VR,
 
-	android: Platform.Mobile,
-	apk: Platform.Mobile,
-	ios: Platform.Mobile,
+	android: PlatformMask.Mobile,
+	apk: PlatformMask.Mobile,
+	ios: PlatformMask.Mobile,
 };
 
-const descriptionPlatformMapping: { [key: string]: Platform } = {
-	exe: Platform.Win | Platform.Desktop,
-	love2d: Platform.Win | Platform.Mac | Platform.Linux | Platform.Desktop,
+const descriptionPlatformMapping: { [key: string]: PlatformMask } = {
+	exe: PlatformMask.Win | PlatformMask.Desktop,
+	love2d: PlatformMask.Win | PlatformMask.Mac | PlatformMask.Linux | PlatformMask.Desktop,
 
-	html5: Platform.Web,
-	chrome: Platform.Web,
-	firefox: Platform.Web,
-	safari: Platform.Web,
+	html5: PlatformMask.Web,
+	chrome: PlatformMask.Web,
+	firefox: PlatformMask.Web,
+	safari: PlatformMask.Web,
 
-	java: Platform.Java | Platform.Desktop,
-	jar: Platform.Java | Platform.Desktop,
+	java: PlatformMask.Java | PlatformMask.Desktop,
+	jar: PlatformMask.Java | PlatformMask.Desktop,
 
-	flash: Platform.Web,
-	swf: Platform.Web,
+	flash: PlatformMask.Web,
+	swf: PlatformMask.Web,
 
-	vr: Platform.VR,
-	oculus: Platform.VR,
-	vive: Platform.VR,
-	cardboard: Platform.VR,
+	vr: PlatformMask.VR,
+	oculus: PlatformMask.VR,
+	vive: PlatformMask.VR,
+	cardboard: PlatformMask.VR,
 };
 
 
-export function detectPlatform(entry: Entry) {
-	var plat: Platform = 0;
+export function detectPlatforms(entry: Entry) {
+	var plat: PlatformMask = 0;
 
 	const descTerms = termify(entry.description);
 	const urlTerms = entry.links
 		.map(link =>
-			termify(link.title)
+			termify(link.label)
 			.concat(termify(link.url))
 		)
 		.reduce((ta, tn) => ta.concat(tn), []);
@@ -117,7 +117,7 @@ export function detectPlatform(entry: Entry) {
 			(descTerms.indexOf("awsd") > -1) ||
 			(descTerms.indexOf("aswd") > -1)
 		) {
-			plat = Platform.Desktop;
+			plat = PlatformMask.Desktop;
 		}
 	}
 
