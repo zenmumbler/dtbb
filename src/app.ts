@@ -2,10 +2,11 @@
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
 import { Entry, Category, Catalog, PlatformMask, PlatformList } from "../lib/catalog";
-import { TextIndex } from "./textindex";
+import { TextIndex } from "../lib/textindex";
+import { intersectSet } from "../lib/setutil";
+
 import { GamesBrowserState } from "./state";
 import { GamesGrid } from "./gamesgrid";
-import { intersectSet } from "../lib/setutil";
 import { loadTypedJSON, elem, elemList } from "./domutil";
 
 // -- config
@@ -91,7 +92,7 @@ loadTypedJSON<Catalog>(ENTRIES_URL).then(catalog => {
 			}
 		});
 
-		if (entry.category == "compo") {
+		if (entry.category === "compo") {
 			compoFilter.add(x);
 		}
 		else {
