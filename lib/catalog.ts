@@ -47,6 +47,27 @@ export function nameListForPlatformMask(mask: PlatformMask): Platform[] {
 	return names;
 }
 
+export function platformMaskForNameList(names: Platform[]): PlatformMask {
+	let mask: PlatformMask = 0;
+
+	for (const name of names) {
+		switch (name) {
+			case "desktop": mask |= PlatformMask.Desktop; break;
+			case "win": mask |= PlatformMask.Win; break;
+			case "mac": mask |= PlatformMask.Mac; break;
+			case "linux": mask |= PlatformMask.Linux; break;
+			case "web": mask |= PlatformMask.Web; break;
+			case "java": mask |= PlatformMask.Java; break;
+			case "vr": mask |= PlatformMask.VR; break;
+			case "mobile": mask |= PlatformMask.Mobile; break;
+			default: break;
+		}
+	}
+
+	return mask;
+}
+
+
 // ----
 
 export type Category = "compo" | "jam";
