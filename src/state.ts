@@ -67,5 +67,49 @@ state.onChange(function() {
 
 
 export class GamesBrowserState {
+	acceptCatalogData(catalog: Catalog) {
+		entryData = catalog.entries;
 
+		// index all text and populate filter sets
+		const count = entryData.length;
+		const t0 = performance.now();
+		for (let x = 0; x < count; ++x) {
+			allSet.add(x);
+
+			const entry = entryData[x];
+
+			PlatformList.forEach(plat => {
+				if (entry.platform & plat) {
+					filterSets.get(plat)!.add(x);
+				}
+			});
+
+			if (entry.category === "compo") {
+				compoFilter.add(x);
+			}
+			else {
+				jamFilter.add(x);
+			}
+
+			// build fulltext index on-the-fly
+			plasticSurge.indexRawString(entry.title, x);
+			plasticSurge.indexRawString(entry.author.name, x);
+			plasticSurge.indexRawString(entry.description, x);
+			for (const link of entry.links) {
+				plasticSurge.indexRawString(link.label, x);
+			}
+		}
+		const t1 = performance.now();
+
+		console.info("Text Indexing took " + (t1 - t0).toFixed(1) + "ms");
+	}
+
+	setQuery(q: string) {
+	}
+
+	setCategory(c: Category) {
+	}
+
+	setPlatform(p: PlatformMask) {
+	}
 }

@@ -2,7 +2,7 @@
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
 import { PlatformMask, PlatformList, Entry } from "../lib/catalog";
-
+import { GamesBrowserState } from "./state";
 
 interface GameCell {
 	tile: HTMLElement;
@@ -51,7 +51,7 @@ export class GamesGrid {
 	private firstVisibleRow_ = 0;
 
 
-	constructor(private containerElem_: HTMLElement, private catalog_: Entry[]) {
+	constructor(private containerElem_: HTMLElement, private state_: GamesBrowserState) {
 		this.entryCount_ = this.catalog_.length;
 		for (let x = 0; x < this.entryCount_; ++x) {
 			this.activeList_.push(x);
