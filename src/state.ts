@@ -1,19 +1,10 @@
 // state.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
-import { Catalog, Entry, Category, PlatformMask, PlatformList } from "../lib/catalog";
+import { Catalog, Entry, Category, PlatformMask, PlatformList, platformMaskForNameList } from "../lib/catalog";
 import { TextIndex } from "../lib/textindex";
-import { intersectSet, newSetFromArray } from "../lib/setutil";
-
-// -- config
-const DATA_REVISION = 1;
-const DATA_EXTENSION = location.host.toLowerCase() !== "zenmumbler.net" ? ".json" : ".gzjson";
-const ENTRIES_URL = "data/ld36_entries" + DATA_EXTENSION + "?" + DATA_REVISION;
-
-// -- components
-var entryData: Entry[] | null = null;
-const plasticSurge = new TextIndex();
-
+import { intersectSet/*, newSetFromArray*/ } from "../lib/setutil";
+import { Watchable } from "../lib/watchable";
 
 // -- filter sets
 const allSet = new Set<number>();
@@ -25,61 +16,78 @@ PlatformList.forEach(p => {
 });
 
 
-state.onChange(function() {
-	const restrictionSets: Set<number>[] = [];
-
-	// -- get list of active filter sets
-	if (state.query.length > 0) {
-		const textFilter = plasticSurge.query(state.query);
-		if (textFilter) {
-			restrictionSets.push(textFilter);
-		}
-	}
-
-	if (state.category == "compo") {
-		restrictionSets.push(compoFilter);
-	}
-	else if (state.category == "jam") {
-		restrictionSets.push(jamFilter);
-	}
-
-	PlatformList.forEach(plat => {
-		if (state.platformMask & plat) {
-			restrictionSets.push(filterSets.get(plat)!);
-		}
-	});
-
-	// -- combine all filters
-	var resultSet: Set<number>;
-
-	if (restrictionSets.length == 0) {
-		resultSet = allSet;
-	}
-	else {
-		restrictionSets.sort((a, b) => { return a.size < b.size ? -1 : 1; });
-
-		resultSet = new Set(restrictionSets[0]);
-		for (let tisix = 1; tisix < restrictionSets.length; ++tisix) {
-			resultSet = intersectSet(resultSet, restrictionSets[tisix]);
-		}
-	}
-});
-
-
 export class GamesBrowserState {
+	private plasticSurge_ = new TextIndex();
+
+	// store data
+	private entryData_: Entry[];
+	private filteredSet_: Watchable<Set<number>>;
+	private platformMask_: PlatformMask = 0;
+	private category_: Category | "" = "";
+	private query_ = "";
+
+	constructor() {
+		this.filteredSet_ = new Watchable(new Set<number>());
+		this.entryData_ = [];
+	}
+
+	private filtersChanged() {
+		const restrictionSets: Set<number>[] = [];
+
+		// -- get list of active filter sets
+		if (this.query_.length > 0) {
+			const textFilter = this.plasticSurge_.query(this.query_);
+			if (textFilter) {
+				restrictionSets.push(textFilter);
+			}
+		}
+
+		if (this.category_ === "compo") {
+			restrictionSets.push(compoFilter);
+		}
+		else if (this.category_ === "jam") {
+			restrictionSets.push(jamFilter);
+		}
+
+		PlatformList.forEach(plat => {
+			if (this.platformMask_ & plat) {
+				restrictionSets.push(filterSets.get(plat)!);
+			}
+		});
+
+		// -- combine all filters
+		let resultSet: Set<number>;
+
+		if (restrictionSets.length == 0) {
+			resultSet = allSet;
+		}
+		else {
+			restrictionSets.sort((a, b) => { return a.size < b.size ? -1 : 1; });
+
+			resultSet = new Set(restrictionSets[0]);
+			for (let tisix = 1; tisix < restrictionSets.length; ++tisix) {
+				resultSet = intersectSet(resultSet, restrictionSets[tisix]);
+			}
+		}
+
+		this.filteredSet_.set(resultSet);
+	}
+
+	// actions
 	acceptCatalogData(catalog: Catalog) {
-		entryData = catalog.entries;
+		this.entryData_ = catalog.entries;
 
 		// index all text and populate filter sets
-		const count = entryData.length;
+		const count = this.entryData_.length;
 		const t0 = performance.now();
 		for (let x = 0; x < count; ++x) {
 			allSet.add(x);
 
-			const entry = entryData[x];
+			const entry = this.entryData_[x];
+			const platformMask = platformMaskForNameList(entry.platforms);
 
 			PlatformList.forEach(plat => {
-				if (entry.platform & plat) {
+				if (platformMask & plat) {
 					filterSets.get(plat)!.add(x);
 				}
 			});
@@ -92,11 +100,11 @@ export class GamesBrowserState {
 			}
 
 			// build fulltext index on-the-fly
-			plasticSurge.indexRawString(entry.title, x);
-			plasticSurge.indexRawString(entry.author.name, x);
-			plasticSurge.indexRawString(entry.description, x);
+			this.plasticSurge_.indexRawString(entry.title, x);
+			this.plasticSurge_.indexRawString(entry.author.name, x);
+			this.plasticSurge_.indexRawString(entry.description, x);
 			for (const link of entry.links) {
-				plasticSurge.indexRawString(link.label, x);
+				this.plasticSurge_.indexRawString(link.label, x);
 			}
 		}
 		const t1 = performance.now();
@@ -104,12 +112,26 @@ export class GamesBrowserState {
 		console.info("Text Indexing took " + (t1 - t0).toFixed(1) + "ms");
 	}
 
-	setQuery(q: string) {
+	// mutations
+	get query() { return this.query_; }
+	set query(q: string) {
+		this.query_ = q;
+		this.filtersChanged();
 	}
 
-	setCategory(c: Category) {
+	get category() { return this.category_; }
+	set category(c: Category | "") {
+		this.category_ = c;
+		this.filtersChanged();
 	}
 
-	setPlatform(p: PlatformMask) {
+	get platform() { return this.platformMask_; }
+	set platform(p: PlatformMask) {
+		this.platformMask_ = p;
+		this.filtersChanged();
 	}
+
+	// getters
+	get filteredSet() { return this.filteredSet_; }
+	get entries() { return this.entryData_; }
 }
