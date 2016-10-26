@@ -1,7 +1,7 @@
 // gamesgrid.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
-import { PlatformMask, PlatformList, Entry } from "../lib/catalog";
+import { PlatformMask/*, PlatformList*/ } from "../lib/catalog";
 import { GamesBrowserState } from "./state";
 
 interface GameCell {
@@ -52,7 +52,7 @@ export class GamesGrid {
 
 
 	constructor(private containerElem_: HTMLElement, private state_: GamesBrowserState) {
-		this.entryCount_ = this.catalog_.length;
+		this.entryCount_ = state_.entries.length;
 		for (let x = 0; x < this.entryCount_; ++x) {
 			this.activeList_.push(x);
 		}
@@ -62,6 +62,13 @@ export class GamesGrid {
 			this.scrollPosChanged((<HTMLElement>evt.target).scrollTop);
 		};
 
+		state_.filteredSet.watch(filteredSet => {
+			this.activeSetChanged(filteredSet);
+		});
+
+		window.onresize = () => {
+			this.resized();
+		};
 		this.resized();
 	}
 
@@ -150,7 +157,7 @@ export class GamesGrid {
 		const contentIndex = this.activeList_[newPosition];
 		if (cell.contentIndex != contentIndex) {
 			cell.contentIndex = contentIndex;
-			const entry = this.catalog_[contentIndex];
+			const entry = this.state_.entries[contentIndex];
 
 			cell.tile.dataset["eix"] = "" + contentIndex;
 			cell.link.href = entry.entry_url;
@@ -160,6 +167,7 @@ export class GamesGrid {
 			cell.author.textContent = entry.author.name;
 			cell.pills.innerHTML = "";
 
+/*
 			PlatformList.forEach(plat => {
 				if (entry.platform & plat) {
 					const pill = document.createElement("span");
@@ -168,6 +176,7 @@ export class GamesGrid {
 					cell.pills.appendChild(pill);
 				}
 			});
+*/
 		}
 	}
 
