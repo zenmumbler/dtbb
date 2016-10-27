@@ -1,7 +1,8 @@
 // gamesgrid.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
-import { PlatformMask/*, PlatformList*/ } from "../lib/catalog";
+import { Platforms } from "../lib/catalog";
+import { elemList } from "./domutil";
 import { GamesBrowserState } from "./state";
 
 interface GameCell {
@@ -10,23 +11,12 @@ interface GameCell {
 	thumb: HTMLDivElement;
 	title: HTMLElement;
 	author: HTMLElement;
-	pills: HTMLElement;
+	pills: { [mask: number]: HTMLSpanElement; };
 
 	position: number;
 	contentIndex: number;
 	hidden: boolean;
 }
-
-
-const platLabel: { [f: number]: string } = {};
-platLabel[PlatformMask.Desktop] = "Desktop";
-platLabel[PlatformMask.Win] = "Win";
-platLabel[PlatformMask.Mac] = "Mac";
-platLabel[PlatformMask.Linux] = "Linux";
-platLabel[PlatformMask.Web] = "Web";
-platLabel[PlatformMask.Java] = "Java";
-platLabel[PlatformMask.VR] = "VR";
-platLabel[PlatformMask.Mobile] = "Mobile";
 
 
 export class GamesGrid {
@@ -87,13 +77,18 @@ export class GamesGrid {
 	private makeCell() {
 		const tile = <HTMLDivElement>(<Element>this.entryTemplate_.content.cloneNode(true)).firstElementChild;
 
+		const pills: { [mask: number]: HTMLSpanElement; } = [];
+		for (const pill of elemList(".pills span", tile)) {
+			pills[parseInt(pill.dataset["mask"])] = pill;
+		}
+
 		const cell: GameCell = {
 			tile: <HTMLElement>tile,
 			link: <HTMLAnchorElement>tile.querySelector("a"),
 			thumb: <HTMLDivElement>tile.querySelector(".thumb"),
 			title: <HTMLElement>tile.querySelector("h2"),
 			author: <HTMLElement>tile.querySelector("p.author span"),
-			pills: <HTMLElement>tile.querySelector(".pills"),
+			pills: pills,
 			position: -1,
 			contentIndex: -1,
 			hidden: false
@@ -165,18 +160,12 @@ export class GamesGrid {
 			cell.thumb.style.backgroundImage = "url(" + entry.thumbnail_url + ")";
 			cell.title.textContent = entry.title;
 			cell.author.textContent = entry.author.name;
-			cell.pills.innerHTML = "";
 
-/*
-			PlatformList.forEach(plat => {
-				if (entry.platform & plat) {
-					const pill = document.createElement("span");
-					pill.className = "pill";
-					pill.textContent = platLabel[plat];
-					cell.pills.appendChild(pill);
-				}
-			});
-*/
+			for (const platKey in Platforms) {
+				const plat = Platforms[platKey];
+				const entryInMask = (entry.indexes.platformMask & plat.mask) !== 0;
+				cell.pills[plat.mask].style.display = entryInMask ? "" : "none";
+			}
 		}
 	}
 
