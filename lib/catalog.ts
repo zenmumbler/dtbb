@@ -120,3 +120,13 @@ export interface Catalog {
 	stats: IssueStats;
 	entries: Entry[];
 }
+
+// ----
+
+export interface EntryIndexes {
+	platformMask: number;
+}
+
+export interface IndexedEntry extends Entry {
+	indexes: EntryIndexes;
+}

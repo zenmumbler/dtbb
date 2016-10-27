@@ -1,7 +1,7 @@
 // state.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
-import { Catalog, Entry, Category, PlatformMask, PlatformList, platformMaskForNameList } from "../lib/catalog";
+import { Catalog, IndexedEntry, Category, Platforms, maskForPlatformKeys } from "../lib/catalog";
 import { TextIndex } from "../lib/textindex";
 import { intersectSet/*, newSetFromArray*/ } from "../lib/setutil";
 import { Watchable } from "../lib/watchable";
@@ -10,19 +10,19 @@ import { Watchable } from "../lib/watchable";
 const allSet = new Set<number>();
 const compoFilter = new Set<number>();
 const jamFilter = new Set<number>();
-const filterSets = new Map<PlatformMask, Set<number>>();
-PlatformList.forEach(p => {
-	filterSets.set(p, new Set<number>());
-});
+const filterSets = new Map<number, Set<number>>();
+for (const pk in Platforms) {
+	filterSets.set(Platforms[pk].mask, new Set<number>());
+}
 
 
 export class GamesBrowserState {
 	private plasticSurge_ = new TextIndex();
 
 	// store data
-	private entryData_: Entry[];
+	private entryData_: IndexedEntry[];
 	private filteredSet_: Watchable<Set<number>>;
-	private platformMask_: PlatformMask = 0;
+	private platformMask_ = 0;
 	private category_: Category | "" = "";
 	private query_ = "";
 
@@ -49,11 +49,12 @@ export class GamesBrowserState {
 			restrictionSets.push(jamFilter);
 		}
 
-		PlatformList.forEach(plat => {
-			if (this.platformMask_ & plat) {
-				restrictionSets.push(filterSets.get(plat)!);
+		for (const pk in Platforms) {
+			const plat = Platforms[pk];
+			if (this.platformMask_ & plat.mask) {
+				restrictionSets.push(filterSets.get(plat.mask)!);
 			}
-		});
+		}
 
 		// -- combine all filters
 		let resultSet: Set<number>;
@@ -75,7 +76,13 @@ export class GamesBrowserState {
 
 	// actions
 	acceptCatalogData(catalog: Catalog) {
-		this.entryData_ = catalog.entries;
+		this.entryData_ = catalog.entries.map(entry => {
+			const indEntry = entry as IndexedEntry;
+			indEntry.indexes = {
+				platformMask: 0
+			};
+			return indEntry;
+		});
 
 		// index all text and populate filter sets
 		const count = this.entryData_.length;
@@ -84,13 +91,14 @@ export class GamesBrowserState {
 			allSet.add(x);
 
 			const entry = this.entryData_[x];
-			const platformMask = platformMaskForNameList(entry.platforms);
+			entry.indexes.platformMask = maskForPlatformKeys(entry.platforms);
 
-			PlatformList.forEach(plat => {
-				if (platformMask & plat) {
-					filterSets.get(plat)!.add(x);
+			for (const pk in Platforms) {
+				const plat = Platforms[pk];
+				if (entry.indexes.platformMask & plat.mask) {
+					filterSets.get(plat.mask)!.add(x);
 				}
-			});
+			}
 
 			if (entry.category === "compo") {
 				compoFilter.add(x);
@@ -126,7 +134,7 @@ export class GamesBrowserState {
 	}
 
 	get platform() { return this.platformMask_; }
-	set platform(p: PlatformMask) {
+	set platform(p: number) {
 		this.platformMask_ = p;
 		this.filtersChanged();
 	}
