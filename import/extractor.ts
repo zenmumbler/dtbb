@@ -4,8 +4,9 @@
 import * as fs from "fs";
 import * as jsdom from "jsdom";
 
-import { EntryListing, Entry, Catalog, EntryRating, RatingArea, IssueStats, nameListForPlatformMask } from "../lib/catalog";
+import { EntryListing, Entry, Catalog, EntryRating, RatingArea, IssueStats } from "../lib/catalog";
 import { listingPath, issueBaseURL, entryPageFilePath, entriesCatalogPath, timeoutPromise } from "./importutil";
+import { arrayFromSet } from "../lib/setutil";
 import { detectPlatforms } from "./detect_platform";
 
 
@@ -146,8 +147,7 @@ function createEntry(relURI: string, issue: number, uid: number, thumbImg: strin
 		platforms: []
 	};
 
-	const platformsMask = detectPlatforms(entry);
-	entry.platforms = nameListForPlatformMask(platformsMask);
+	entry.platforms = arrayFromSet(detectPlatforms(entry));
 
 	return entry;
 }
