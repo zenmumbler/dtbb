@@ -4,7 +4,7 @@
 import * as fs from "fs";
 import * as jsdom from "jsdom";
 
-import { EntryListing, Entry, Catalog, EntryRating, RatingArea, IssueStats } from "../lib/catalog";
+import { EntryListing, Entry, Catalog, EntryRating, RatingArea, IssueStats, IssueThemeNames } from "../lib/catalog";
 import { listingPath, issueBaseURL, entryPageFilePath, entriesCatalogPath, timeoutPromise } from "./importutil";
 import { arrayFromSet } from "../lib/setutil";
 import { detectPlatforms } from "./detect_platform";
@@ -187,10 +187,13 @@ function completed(state: ExtractState) {
 	}
 
 	console.info(`Extraction complete, writing ${state.entries.length} entries to catalog file...`);
-	const catalogJSON = JSON.stringify({
+	const catalog: Catalog = {
+		issue: state.issue,
+		theme: IssueThemeNames[state.issue],
 		stats: state.stats,
 		entries: state.entries
-	} as Catalog);
+	};
+	const catalogJSON = JSON.stringify(catalog);
 
 	state.completionPromise = new Promise<void>((resolve, reject) => {
 		fs.writeFile(entriesCatalogPath(state.issue), catalogJSON, (err) => {
