@@ -1,7 +1,8 @@
 // detect_platform.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
-import { Entry, PlatformMask } from "../lib/catalog";
+import { Entry, PlatformKey } from "../lib/catalog";
+import { newSetFromArray, mergeSet } from "../lib/setutil";
 
 function termify(text: string) {
 	return text
@@ -19,80 +20,83 @@ function termify(text: string) {
 		});
 }
 
-const linkPlatformMapping: { [key: string]: PlatformMask } = {
-	download: PlatformMask.Desktop,
-	love: PlatformMask.Win | PlatformMask.Mac | PlatformMask.Linux | PlatformMask.Desktop,
-	love2d: PlatformMask.Win | PlatformMask.Mac | PlatformMask.Linux | PlatformMask.Desktop,
-	standalone: PlatformMask.Desktop,
+function pks(keys: PlatformKey[]): Set<PlatformKey> {
+	return newSetFromArray(keys);
+}
 
-	win: PlatformMask.Win | PlatformMask.Desktop,
-	win32: PlatformMask.Win | PlatformMask.Desktop,
-	windows32: PlatformMask.Win | PlatformMask.Desktop,
-	win64: PlatformMask.Win | PlatformMask.Desktop,
-	windows64: PlatformMask.Win | PlatformMask.Desktop,
-	windows: PlatformMask.Win | PlatformMask.Desktop,
-	exe: PlatformMask.Win | PlatformMask.Desktop,
+const linkPlatformMapping: { [term: string]: Set<PlatformKey> | undefined } = {
+	download: pks(["desktop"]),
+	love: pks(["win", "mac", "linux", "desktop"]),
+	love2d: pks(["win", "mac", "linux", "desktop"]),
+	standalone: pks(["desktop"]),
 
-	osx: PlatformMask.Mac | PlatformMask.Desktop,
-	macos: PlatformMask.Mac | PlatformMask.Desktop,
+	win: pks(["win", "desktop"]),
+	win32: pks(["win", "desktop"]),
+	windows32: pks(["win", "desktop"]),
+	win64: pks(["win", "desktop"]),
+	windows64: pks(["win", "desktop"]),
+	windows: pks(["win", "desktop"]),
+	exe: pks(["win", "desktop"]),
 
-	linux: PlatformMask.Linux | PlatformMask.Desktop,
-	ubuntu: PlatformMask.Linux | PlatformMask.Desktop,
+	osx: pks(["mac", "desktop"]),
+	macos: pks(["mac", "desktop"]),
 
-	web: PlatformMask.Web,
-	html5: PlatformMask.Web,
-	chrome: PlatformMask.Web,
-	browser: PlatformMask.Web,
-	firefox: PlatformMask.Web,
-	safari: PlatformMask.Web,
-	webgl: PlatformMask.Web,
-	online: PlatformMask.Web,
-	webplayer: PlatformMask.Web,
-	newgrounds: PlatformMask.Web,
-	// gamejolt: Platform.Web,
+	linux: pks(["linux", "desktop"]),
+	ubuntu: pks(["linux", "desktop"]),
 
-	java: PlatformMask.Java,
-	java7: PlatformMask.Java,
-	java8: PlatformMask.Java,
-	jar: PlatformMask.Java,
+	web: pks(["web"]),
+	html5: pks(["web"]),
+	chrome: pks(["web"]),
+	browser: pks(["web"]),
+	firefox: pks(["web"]),
+	safari: pks(["web"]),
+	webgl: pks(["web"]),
+	online: pks(["web"]),
+	webplayer: pks(["web"]),
+	newgrounds: pks(["web"]),
 
-	flash: PlatformMask.Web,
-	swf: PlatformMask.Web,
+	java: pks(["java"]),
+	java7: pks(["java"]),
+	java8: pks(["java"]),
+	jar: pks(["java"]),
 
-	vr: PlatformMask.VR,
-	oculus: PlatformMask.VR,
-	vive: PlatformMask.VR,
-	cardboard: PlatformMask.VR,
+	flash: pks(["web"]),
+	swf: pks(["web"]),
 
-	android: PlatformMask.Mobile,
-	apk: PlatformMask.Mobile,
-	ios: PlatformMask.Mobile,
+	vr: pks(["vr"]),
+	oculus: pks(["vr"]),
+	vive: pks(["vr"]),
+	cardboard: pks(["vr"]),
+
+	android: pks(["mobile"]),
+	apk: pks(["mobile"]),
+	ios: pks(["mobile"]),
 };
 
-const descriptionPlatformMapping: { [key: string]: PlatformMask } = {
-	exe: PlatformMask.Win | PlatformMask.Desktop,
-	love2d: PlatformMask.Win | PlatformMask.Mac | PlatformMask.Linux | PlatformMask.Desktop,
+const descriptionPlatformMapping: { [term: string]: Set<PlatformKey> | undefined } = {
+	exe: pks(["win", "desktop"]),
+	love2d: pks(["win", "mac", "linux", "desktop"]),
 
-	html5: PlatformMask.Web,
-	chrome: PlatformMask.Web,
-	firefox: PlatformMask.Web,
-	safari: PlatformMask.Web,
+	html5: pks(["web"]),
+	chrome: pks(["web"]),
+	firefox: pks(["web"]),
+	safari: pks(["web"]),
 
-	java: PlatformMask.Java | PlatformMask.Desktop,
-	jar: PlatformMask.Java | PlatformMask.Desktop,
+	java: pks(["java", "desktop"]),
+	jar: pks(["java", "desktop"]),
 
-	flash: PlatformMask.Web,
-	swf: PlatformMask.Web,
+	flash: pks(["web"]),
+	swf: pks(["web"]),
 
-	vr: PlatformMask.VR,
-	oculus: PlatformMask.VR,
-	vive: PlatformMask.VR,
-	cardboard: PlatformMask.VR,
+	vr: pks(["vr"]),
+	oculus: pks(["vr"]),
+	vive: pks(["vr"]),
+	cardboard: pks(["vr"]),
 };
 
 
 export function detectPlatforms(entry: Entry) {
-	var plat: PlatformMask = 0;
+	const plats = new Set<PlatformKey>();
 
 	const descTerms = termify(entry.description);
 	const urlTerms = entry.links
@@ -103,13 +107,19 @@ export function detectPlatforms(entry: Entry) {
 		.reduce((ta, tn) => ta.concat(tn), []);
 
 	for (const term of urlTerms) {
-		plat |= (linkPlatformMapping[term] | 0);
+		const lks = linkPlatformMapping[term];
+		if (lks) {
+			mergeSet(plats, lks);
+		}
 	}
 	for (const term of descTerms) {
-		plat |= (descriptionPlatformMapping[term] | 0);
+		const dks = descriptionPlatformMapping[term];
+		if (dks) {
+			mergeSet(plats, dks);
+		}
 	}
 
-	if (plat === 0) {
+	if (plats.size === 0) {
 		// last resort, try itch on url and keyboard refs in description to try and add a generic platform
 		if (
 			(urlTerms.indexOf("itch") > -1) ||
@@ -117,9 +127,9 @@ export function detectPlatforms(entry: Entry) {
 			(descTerms.indexOf("awsd") > -1) ||
 			(descTerms.indexOf("aswd") > -1)
 		) {
-			plat = PlatformMask.Desktop;
+			plats.add("desktop");
 		}
 	}
 
-	return plat;
+	return plats;
 }
