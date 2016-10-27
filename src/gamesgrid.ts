@@ -2,6 +2,7 @@
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
 import { Platforms } from "../lib/catalog";
+import { arrayFromSet } from "../lib/setutil";
 import { elemList } from "./domutil";
 import { GamesBrowserState } from "./state";
 
@@ -42,10 +43,8 @@ export class GamesGrid {
 
 
 	constructor(private containerElem_: HTMLElement, private state_: GamesBrowserState) {
-		this.entryCount_ = state_.entries.length;
-		for (let x = 0; x < this.entryCount_; ++x) {
-			this.activeList_.push(x);
-		}
+		this.entryCount_ = state_.allSet.size;
+		this.activeList_ = arrayFromSet(state_.allSet);
 
 		this.scrollingElem_ = containerElem_.parentElement;
 		this.scrollingElem_.onscroll = (evt: Event) => {
@@ -65,10 +64,8 @@ export class GamesGrid {
 
 	activeSetChanged(newActiveSet: Set<number>) {
 		this.entryCount_ = newActiveSet.size;
-		this.activeList_ = [];
-		newActiveSet.forEach(index => {
-			this.activeList_.push(index);
-		});
+		this.activeList_ = arrayFromSet(newActiveSet);
+		console.info("ASC", this.activeList_.slice(0, 20));
 
 		this.relayout();
 	}

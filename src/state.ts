@@ -3,7 +3,7 @@
 
 import { Catalog, IndexedEntry, Category, Platforms, maskForPlatformKeys } from "../lib/catalog";
 import { TextIndex } from "../lib/textindex";
-import { intersectSet/*, newSetFromArray*/ } from "../lib/setutil";
+import { intersectSet } from "../lib/setutil";
 import { Watchable } from "../lib/watchable";
 
 // -- filter sets
@@ -15,6 +15,10 @@ for (const pk in Platforms) {
 	filterSets.set(Platforms[pk].mask, new Set<number>());
 }
 
+export function makeDocID(issue: number, entryIndex: number) {
+	// this imposes a limit of 65536 entries per issue
+	return (issue << 16) | entryIndex;
+}
 
 export class GamesBrowserState {
 	private plasticSurge_ = new TextIndex();
@@ -76,7 +80,7 @@ export class GamesBrowserState {
 
 	// actions
 	acceptCatalogData(catalog: Catalog) {
-		this.entryData_ = catalog.entries.map(entry => {
+		const entries = catalog.entries.map(entry => {
 			const indEntry = entry as IndexedEntry;
 			indEntry.indexes = {
 				platformMask: 0
@@ -85,34 +89,39 @@ export class GamesBrowserState {
 		});
 
 		// index all text and populate filter sets
-		const count = this.entryData_.length;
+		const count = entries.length;
 		const t0 = performance.now();
-		for (let x = 0; x < count; ++x) {
-			allSet.add(x);
+		for (let entryIndex = 0; entryIndex < count; ++entryIndex) {
+			const docID = makeDocID(catalog.issue, entryIndex);
+			allSet.add(docID);
 
-			const entry = this.entryData_[x];
+			const entry = entries[entryIndex];
 			entry.indexes.platformMask = maskForPlatformKeys(entry.platforms);
 
+			// add entry in docID slot of full entries array
+			this.entryData_[docID] = entry;
+
+			// add docID to various filtersets
 			for (const pk in Platforms) {
 				const plat = Platforms[pk];
 				if (entry.indexes.platformMask & plat.mask) {
-					filterSets.get(plat.mask)!.add(x);
+					filterSets.get(plat.mask)!.add(docID);
 				}
 			}
 
 			if (entry.category === "compo") {
-				compoFilter.add(x);
+				compoFilter.add(docID);
 			}
 			else {
-				jamFilter.add(x);
+				jamFilter.add(docID);
 			}
 
-			// build fulltext index on-the-fly
-			this.plasticSurge_.indexRawString(entry.title, x);
-			this.plasticSurge_.indexRawString(entry.author.name, x);
-			this.plasticSurge_.indexRawString(entry.description, x);
+			// index text of entry
+			this.plasticSurge_.indexRawString(entry.title, docID);
+			this.plasticSurge_.indexRawString(entry.author.name, docID);
+			this.plasticSurge_.indexRawString(entry.description, docID);
 			for (const link of entry.links) {
-				this.plasticSurge_.indexRawString(link.label, x);
+				this.plasticSurge_.indexRawString(link.label, docID);
 			}
 		}
 		const t1 = performance.now();
@@ -142,4 +151,6 @@ export class GamesBrowserState {
 	// getters
 	get filteredSet() { return this.filteredSet_; }
 	get entries() { return this.entryData_; }
+
+	get allSet() { return allSet; }
 }

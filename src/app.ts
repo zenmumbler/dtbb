@@ -14,7 +14,7 @@ const ENTRIES_URL = "data/ld36_entries" + DATA_EXTENSION + "?" + DATA_REVISION;
 
 // -- components
 var gamesGrid: GamesGrid;
-const state = new GamesBrowserState();
+export const state = new GamesBrowserState();
 
 loadTypedJSON<Catalog>(ENTRIES_URL).then(catalog => {
 	state.acceptCatalogData(catalog);
