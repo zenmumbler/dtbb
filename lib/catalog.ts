@@ -8,65 +8,57 @@ export interface EntryListing {
 
 // ----
 
-export type Platform = "desktop" | "win" | "mac" | "linux" | "web" | "java" | "vr" | "mobile";
+export type PlatformKey = "desktop" | "win" | "mac" | "linux" | "web" | "java" | "vr" | "mobile";
 
-export const enum PlatformMask {
-	None = 0,
-	Desktop = 1,
-	Win = 2,
-	Mac = 4,
-	Linux = 8,
-	Web = 16,
-	Java = 32,
-	VR = 64,
-	Mobile = 128
+export interface Platform {
+	key: PlatformKey;
+	label: string;
+	mask: number;
 }
 
-export const PlatformList = (() => {
-	const platforms: PlatformMask[] = [];
-	let platMask = PlatformMask.Desktop;
-	while (platMask <= PlatformMask.Mobile) {
-		platforms.push(platMask);
-		platMask <<= 1;
-	}
-	return Object.freeze(platforms);
-})();
-
-export function nameListForPlatformMask(mask: PlatformMask): Platform[] {
-	const names: Platform[] = [];
-
-	if (mask & PlatformMask.Desktop) { names.push("desktop"); }
-	if (mask & PlatformMask.Win) { names.push("win"); }
-	if (mask & PlatformMask.Mac) { names.push("mac"); }
-	if (mask & PlatformMask.Linux) { names.push("linux"); }
-	if (mask & PlatformMask.Web) { names.push("web"); }
-	if (mask & PlatformMask.Java) { names.push("java"); }
-	if (mask & PlatformMask.VR) { names.push("vr"); }
-	if (mask & PlatformMask.Mobile) { names.push("mobile"); }
-
-	return names;
+export interface PlatformLookup {
+	readonly [key: string]: Platform;
 }
 
-export function platformMaskForNameList(names: Platform[]): PlatformMask {
-	let mask: PlatformMask = 0;
+interface PlatformDesc {
+	key: PlatformKey;
+	label: string;
+}
 
-	for (const name of names) {
-		switch (name) {
-			case "desktop": mask |= PlatformMask.Desktop; break;
-			case "win": mask |= PlatformMask.Win; break;
-			case "mac": mask |= PlatformMask.Mac; break;
-			case "linux": mask |= PlatformMask.Linux; break;
-			case "web": mask |= PlatformMask.Web; break;
-			case "java": mask |= PlatformMask.Java; break;
-			case "vr": mask |= PlatformMask.VR; break;
-			case "mobile": mask |= PlatformMask.Mobile; break;
-			default: break;
-		}
+function makePlatformLookup(plats: PlatformDesc[]): PlatformLookup {
+	const pl: { [key: string]: Platform } = {};
+	let shift = 0;
+
+	for (const p of plats) {
+		pl[p.key] = {
+			key: p.key,
+			label: p.label,
+			mask: 1 << shift
+		};
+		shift += 1;
 	}
 
-	return mask;
+	return pl;
 }
 
+export const Platforms = makePlatformLookup([
+	{ key: "desktop", label: "Desktop" },
+	{ key: "win", label: "Windows" },
+	{ key: "mac", label: "MacOS" },
+	{ key: "linux", label: "Linux" },
+	{ key: "web", label: "Web" },
+	{ key: "java", label: "Java" },
+	{ key: "vr", label: "VR" },
+	{ key: "mobile", label: "Mobile" },
+]);
+
+
+export function maskForPlatformKeys(keys: PlatformKey[]) {
+	return keys.reduce((mask, key) => {
+		const plat = Platforms[key];
+		return mask | (plat ? plat.mask : 0);
+	}, 0);
+}
 
 // ----
 
@@ -110,7 +102,7 @@ export interface Entry {
 	screens: Screenshot[];
 	links: LabelledLink[];
 	ratings: EntryRating[];
-	platforms: Platform[];
+	platforms: PlatformKey[];
 }
 
 // ----
