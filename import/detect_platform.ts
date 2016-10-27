@@ -131,5 +131,12 @@ export function detectPlatforms(entry: Entry) {
 		}
 	}
 
+	// special case Java, remove win/mac/lin nodes
+	if (plats.has("java")) {
+		plats.delete("win");
+		plats.delete("mac");
+		plats.delete("linux");
+	}
+
 	return plats;
 }
