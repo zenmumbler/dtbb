@@ -1,19 +1,53 @@
 // setutil.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
-export function intersectSet<T>(dest: Set<T>, other: Set<T>) {
-	const union = new Set<T>();
-	dest.forEach(index => {
-		if (other.has(index)) {
-			union.add(index);
+export function intersectSet<T>(a: Set<T>, b: Set<T>) {
+	const intersection = new Set<T>();
+	let tiny: Set<T>;
+	let large: Set<T>;
+
+	if (a.size < b.size) {
+		[tiny, large] = [a, b];
+	}
+	else {
+		[tiny, large] = [b, a];
+	}
+
+	tiny.forEach(val => {
+		if (large.has(val)) {
+			intersection.add(val);
 		}
+	});
+	return intersection;
+}
+
+
+export function unionSet<T>(a: Set<T>, b: Set<T>) {
+	let tiny: Set<T>;
+	let large: Set<T>;
+
+	if (a.size < b.size) {
+		[tiny, large] = [a, b];
+	}
+	else {
+		[tiny, large] = [b, a];
+	}
+
+	const union = new Set<T>(large);
+	tiny.forEach(val => {
+		union.add(val);
 	});
 	return union;
 }
 
 
+export function mergeSet<T>(dest: Set<T>, source: Set<T>) {
+	source.forEach(val => dest.add(val));
+}
+
+
 export function newSetFromArray<T>(source: T[]) {
-	// one would think the instructor from an iterable is faster
+	// one would think the constructor from an iterable is faster
 	// than just looping over it and doing 100s of 1000s of function calls
 	// on Safari and Chrome, one would be wrong.
 
@@ -27,4 +61,11 @@ export function newSetFromArray<T>(source: T[]) {
 	}
 
 	return set;
+}
+
+
+export function arrayFromSet<T>(source: Set<T>): T[] {
+	const arr: T[] = [];
+	source.forEach(val => arr.push(val));
+	return arr;
 }
