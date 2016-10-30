@@ -1,9 +1,6 @@
 var Builder = require('systemjs-builder');
 
-// optional constructor options
-// sets the baseURL and loads the configuration file
 const builder = new Builder();
-
 builder.config({
 	defaultJSExtensions: true
 });
