@@ -53,6 +53,31 @@ function maskForPlatformKeys(keys) {
         return mask | (plat ? plat.mask : 0);
     }, 0);
 }
+var IssueThemeNames = {
+    15: "Caverns",
+    16: "Exploration",
+    17: "Islands",
+    18: "Enemies as Weapons",
+    19: "Discovery",
+    20: "It’s Dangerous to go Alone! Take this!",
+    21: "Escape",
+    22: "Alone",
+    23: "Tiny World",
+    24: "Evolution",
+    25: "You are the Villain",
+    26: "Minimalism",
+    27: "10 Seconds",
+    28: "You Only Get One",
+    29: "Beneath the Surface",
+    30: "Connected Worlds",
+    31: "Entire Game on One Screen",
+    32: "An Unconventional Weapon",
+    33: "You are the Monster",
+    34: "Two Button Controls, Growing",
+    35: "Shapeshift",
+    36: "Ancient Technology",
+    37: "?",
+};
 
 function intersectSet(a, b) {
     var intersection = new Set();
@@ -270,19 +295,19 @@ var TextIndex = (function () {
     return TextIndex;
 }());
 
-var Watchable = (function () {
-    function Watchable(initial) {
+var WatchableValue = (function () {
+    function WatchableValue(initial) {
         this.watchers_ = [];
         this.purgeableWatchers_ = [];
         this.notifying_ = false;
         this.value_ = initial;
     }
-    Watchable.prototype.watch = function (watcher) {
+    WatchableValue.prototype.watch = function (watcher) {
         if (this.watchers_.indexOf(watcher) === -1) {
             this.watchers_.push(watcher);
         }
     };
-    Watchable.prototype.unwatch = function (watcher) {
+    WatchableValue.prototype.unwatch = function (watcher) {
         var watcherIndex = this.watchers_.indexOf(watcher);
         if (watcherIndex !== -1) {
             if (this.notifying_) {
@@ -293,7 +318,7 @@ var Watchable = (function () {
             }
         }
     };
-    Watchable.prototype.notify = function () {
+    WatchableValue.prototype.notify = function () {
         this.notifying_ = true;
         this.purgeableWatchers_ = [];
         for (var _i = 0, _a = this.watchers_; _i < _a.length; _i++) {
@@ -306,59 +331,68 @@ var Watchable = (function () {
             this.unwatch(pw);
         }
     };
-    Watchable.prototype.get = function () { return this.value_; };
-    Watchable.prototype.set = function (newValue) {
+    WatchableValue.prototype.get = function () { return this.value_; };
+    WatchableValue.prototype.set = function (newValue) {
         this.value_ = newValue;
         this.notify();
     };
-    Watchable.prototype.changed = function () {
+    WatchableValue.prototype.changed = function () {
         this.notify();
     };
-    return Watchable;
+    Object.defineProperty(WatchableValue.prototype, "watchable", {
+        get: function () { return this; },
+        enumerable: true,
+        configurable: true
+    });
+    return WatchableValue;
 }());
 
-var allSet = new Set();
-var compoFilter = new Set();
-var jamFilter = new Set();
-var filterSets = new Map();
-for (var pk in Platforms) {
-    filterSets.set(Platforms[pk].mask, new Set());
-}
 function makeDocID(issue, entryIndex) {
     return (issue << 16) | entryIndex;
 }
 var GamesBrowserState = (function () {
     function GamesBrowserState() {
         this.plasticSurge_ = new TextIndex();
-        this.platformMask_ = 0;
-        this.category_ = "";
-        this.query_ = "";
-        this.filteredSet_ = new Watchable(new Set());
         this.entryData_ = new Map();
+        this.allSet_ = new Set();
+        this.compoFilter_ = new Set();
+        this.jamFilter_ = new Set();
+        this.platformFilters_ = new Map();
+        for (var pk in Platforms) {
+            this.platformFilters_.set(Platforms[pk].mask, new Set());
+        }
+        this.filteredSet_ = new WatchableValue(new Set());
+        this.platformMask_ = new WatchableValue(0);
+        this.category_ = new WatchableValue("");
+        this.query_ = new WatchableValue("");
+        this.issue_ = new WatchableValue(0);
     }
     GamesBrowserState.prototype.filtersChanged = function () {
         var restrictionSets = [];
-        if (this.query_.length > 0) {
-            var textFilter = this.plasticSurge_.query(this.query_);
+        var query = this.query_.get();
+        var category = this.category_.get();
+        var platform = this.platformMask_.get();
+        if (query.length > 0) {
+            var textFilter = this.plasticSurge_.query(query);
             if (textFilter) {
                 restrictionSets.push(textFilter);
             }
         }
-        if (this.category_ === "compo") {
-            restrictionSets.push(compoFilter);
+        if (category === "compo") {
+            restrictionSets.push(this.compoFilter_);
         }
-        else if (this.category_ === "jam") {
-            restrictionSets.push(jamFilter);
+        else if (category === "jam") {
+            restrictionSets.push(this.jamFilter_);
         }
         for (var pk in Platforms) {
             var plat = Platforms[pk];
-            if (this.platformMask_ & plat.mask) {
-                restrictionSets.push(filterSets.get(plat.mask));
+            if (platform & plat.mask) {
+                restrictionSets.push(this.platformFilters_.get(plat.mask));
             }
         }
         var resultSet;
         if (restrictionSets.length == 0) {
-            resultSet = allSet;
+            resultSet = this.allSet_;
         }
         else {
             restrictionSets.sort(function (a, b) { return a.size < b.size ? -1 : 1; });
@@ -381,21 +415,21 @@ var GamesBrowserState = (function () {
         var t0 = performance.now();
         for (var entryIndex = 0; entryIndex < count; ++entryIndex) {
             var docID = makeDocID(catalog.issue, entryIndex);
-            allSet.add(docID);
+            this.allSet_.add(docID);
             var entry = entries[entryIndex];
             entry.indexes.platformMask = maskForPlatformKeys(entry.platforms);
             this.entryData_.set(docID, entry);
             for (var pk in Platforms) {
                 var plat = Platforms[pk];
                 if (entry.indexes.platformMask & plat.mask) {
-                    filterSets.get(plat.mask).add(docID);
+                    this.platformFilters_.get(plat.mask).add(docID);
                 }
             }
             if (entry.category === "compo") {
-                compoFilter.add(docID);
+                this.compoFilter_.add(docID);
             }
             else {
-                jamFilter.add(docID);
+                this.jamFilter_.add(docID);
             }
             this.plasticSurge_.indexRawString(entry.title, docID);
             this.plasticSurge_.indexRawString(entry.author.name, docID);
@@ -407,46 +441,67 @@ var GamesBrowserState = (function () {
         }
         var t1 = performance.now();
         console.info("Text Indexing took " + (t1 - t0).toFixed(1) + "ms");
+        this.filtersChanged();
+    };
+    GamesBrowserState.prototype.loadCatalog = function (issue) {
+        var _this = this;
+        var revision = 1;
+        var extension = location.host.toLowerCase() !== "zenmumbler.net" ? ".json" : ".gzjson";
+        var entriesURL = "data/ld" + issue + "_entries" + extension + "?" + revision;
+        return loadTypedJSON(entriesURL).then(function (catalog) {
+            _this.acceptCatalogData(catalog);
+        });
     };
     Object.defineProperty(GamesBrowserState.prototype, "query", {
-        get: function () { return this.query_; },
-        set: function (q) {
-            this.query_ = q;
-            this.filtersChanged();
-        },
+        get: function () { return this.query_.watchable; },
         enumerable: true,
         configurable: true
     });
     Object.defineProperty(GamesBrowserState.prototype, "category", {
-        get: function () { return this.category_; },
-        set: function (c) {
-            this.category_ = c;
-            this.filtersChanged();
-        },
+        get: function () { return this.category_.watchable; },
         enumerable: true,
         configurable: true
     });
     Object.defineProperty(GamesBrowserState.prototype, "platform", {
-        get: function () { return this.platformMask_; },
-        set: function (p) {
-            this.platformMask_ = p;
-            this.filtersChanged();
-        },
+        get: function () { return this.platformMask_.watchable; },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(GamesBrowserState.prototype, "issue", {
+        get: function () { return this.issue_.watchable; },
+        enumerable: true,
+        configurable: true
+    });
+    GamesBrowserState.prototype.setQuery = function (q) {
+        this.query_.set(q);
+        this.filtersChanged();
+    };
+    GamesBrowserState.prototype.setCategory = function (c) {
+        this.category_.set(c);
+        this.filtersChanged();
+    };
+    GamesBrowserState.prototype.setPlatform = function (p) {
+        this.platformMask_.set(p);
+        this.filtersChanged();
+    };
+    GamesBrowserState.prototype.setIssue = function (newIssue) {
+        if (newIssue !== this.issue_.get() && (newIssue in IssueThemeNames)) {
+            this.issue_.set(newIssue);
+            this.loadCatalog(newIssue);
+        }
+    };
+    Object.defineProperty(GamesBrowserState.prototype, "allSet", {
+        get: function () { return this.allSet_; },
         enumerable: true,
         configurable: true
     });
     Object.defineProperty(GamesBrowserState.prototype, "filteredSet", {
-        get: function () { return this.filteredSet_; },
+        get: function () { return this.filteredSet_.watchable; },
         enumerable: true,
         configurable: true
     });
     Object.defineProperty(GamesBrowserState.prototype, "entries", {
         get: function () { return this.entryData_; },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(GamesBrowserState.prototype, "allSet", {
-        get: function () { return allSet; },
         enumerable: true,
         configurable: true
     });
@@ -650,45 +705,44 @@ var GamesGrid = (function () {
 
 var FilterControls = (function () {
     function FilterControls(containerElem_, state_) {
-        var searchControl = elem("#terms", containerElem_);
-        searchControl.oninput = function (_) {
-            state_.query = searchControl.value;
+        var issueSelect = elem("select[data-filter=issue]", containerElem_);
+        issueSelect.onchange = function (_) {
+            state_.setIssue(parseInt(issueSelect.value));
         };
+        state_.issue.watch(function (newIssue) {
+            var curIssue = parseInt(issueSelect.value);
+            if (curIssue !== newIssue) {
+                issueSelect.value = String(newIssue);
+            }
+        });
         var categoryControls = elemList("input[name=category]", containerElem_);
         for (var _i = 0, categoryControls_1 = categoryControls; _i < categoryControls_1.length; _i++) {
             var cc = categoryControls_1[_i];
             cc.onchange = function (evt) {
                 var ctrl = evt.target;
                 if (ctrl.checked) {
-                    state_.category = ctrl.value;
+                    state_.setCategory(ctrl.value);
                 }
             };
         }
-        var platformSelect = elem("select", containerElem_);
-        platformSelect.onchange = function (evt) {
-            var ctrl = evt.target;
-            state_.platform = parseInt(ctrl.value);
+        var platformSelect = elem("select[data-filter=platform]", containerElem_);
+        platformSelect.onchange = function (_) {
+            state_.setPlatform(parseInt(platformSelect.value));
         };
-        for (var platKey in Platforms) {
-            var plat = Platforms[platKey];
-            var pe = document.createElement("option");
-            pe.value = String(plat.mask);
-            pe.textContent = plat.label;
-        }
+        var searchControl = elem("#terms", containerElem_);
+        searchControl.oninput = function (_) {
+            state_.setQuery(searchControl.value);
+        };
         searchControl.focus();
     }
     return FilterControls;
 }());
 
-var DATA_REVISION = 1;
-var DATA_EXTENSION = location.host.toLowerCase() !== "zenmumbler.net" ? ".json" : ".gzjson";
-var ENTRIES_URL = "data/ld36_entries" + DATA_EXTENSION + "?" + DATA_REVISION;
 var state = new GamesBrowserState();
-loadTypedJSON(ENTRIES_URL).then(function (catalog) {
-    state.acceptCatalogData(catalog);
-    (elem(".pleasehold")).style.display = "none";
+document.addEventListener("DOMContentLoaded", function (_) {
     new GamesGrid(elem(".entries"), state);
     new FilterControls(elem(".filters"), state);
+    state.setIssue(36);
 });
 
 exports.state = state;
