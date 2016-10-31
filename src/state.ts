@@ -21,6 +21,7 @@ export class GamesBrowserState {
 	private compoFilter_ = new Set<number>();
 	private jamFilter_ = new Set<number>();
 	private platformFilters_ = new Map<number, Set<number>>();
+	private issueFilters_ = new Map<number, Set<number>>();
 
 	// derived data
 	private filteredSet_: WatchableValue<Set<number>>;
@@ -72,6 +73,11 @@ export class GamesBrowserState {
 			}
 		}
 
+		const issueSet = this.issueFilters_.get(this.issue.get());
+		if (issueSet) {
+			restrictionSets.push(issueSet);
+		}
+
 		// -- combine all filters
 		let resultSet: Set<number>;
 
@@ -109,6 +115,14 @@ export class GamesBrowserState {
 
 			const entry = entries[entryIndex];
 			entry.indexes.platformMask = maskForPlatformKeys(entry.platforms);
+
+			// update issue filter
+			let issueSet = this.issueFilters_.get(entry.ld_issue);
+			if (! issueSet) {
+				issueSet = new Set<number>();
+				this.issueFilters_.set(entry.ld_issue, issueSet);
+			}
+			issueSet.add(docID);
 
 			// add entry in docID slot of full entries array
 			this.entryData_.set(docID, entry);
