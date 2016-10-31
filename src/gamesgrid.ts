@@ -3,11 +3,11 @@
 
 import { Platforms } from "../lib/catalog";
 import { arrayFromSet } from "../lib/setutil";
-import { elemList } from "./domutil";
+import { elem, elemList } from "./domutil";
 import { GamesBrowserState } from "./state";
 
 interface GameCell {
-	tile: HTMLElement;
+	tile: HTMLDivElement;
 	link: HTMLAnchorElement;
 	thumb: HTMLDivElement;
 	title: HTMLElement;
@@ -35,7 +35,7 @@ export class GamesGrid {
 	private activeList_: number[] = [];
 
 	private cells_: GameCell[] = [];
-	private entryTemplate_ = <HTMLTemplateElement>document.querySelector("#entry");
+	private entryTemplate_ = elem<HTMLTemplateElement>("#entry");
 
 	private scrollingElem_: HTMLElement;
 	private scrollOffset_ = 0;
@@ -65,7 +65,6 @@ export class GamesGrid {
 	activeSetChanged(newActiveSet: Set<number>) {
 		this.entryCount_ = newActiveSet.size;
 		this.activeList_ = arrayFromSet(newActiveSet);
-		console.info("ASC", this.activeList_.slice(0, 20));
 
 		this.relayout();
 	}
@@ -80,12 +79,12 @@ export class GamesGrid {
 		}
 
 		const cell: GameCell = {
-			tile: <HTMLElement>tile,
+			tile,
 			link: <HTMLAnchorElement>tile.querySelector("a"),
 			thumb: <HTMLDivElement>tile.querySelector(".thumb"),
 			title: <HTMLElement>tile.querySelector("h2"),
 			author: <HTMLElement>tile.querySelector("p.author span"),
-			pills: pills,
+			pills,
 			position: -1,
 			contentIndex: -1,
 			hidden: false

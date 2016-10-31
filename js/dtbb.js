@@ -1,6 +1,28 @@
 (function (exports) {
 'use strict';
 
+function loadTypedJSON(url) {
+    return new Promise(function (resolve, reject) {
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", url);
+        xhr.overrideMimeType("application/json");
+        xhr.responseType = "json";
+        xhr.onload = function () {
+            resolve(xhr.response);
+        };
+        xhr.onerror = reject;
+        xhr.send(null);
+    });
+}
+function elem(sel, base) {
+    if (base === void 0) { base = document; }
+    return (base.querySelector(sel));
+}
+function elemList(sel, base) {
+    if (base === void 0) { base = document; }
+    return ([].slice.call(base.querySelectorAll(sel), 0));
+}
+
 function makePlatformLookup(plats) {
     var pl = {};
     var shift = 0;
@@ -431,28 +453,6 @@ var GamesBrowserState = (function () {
     return GamesBrowserState;
 }());
 
-function loadTypedJSON(url) {
-    return new Promise(function (resolve, reject) {
-        var xhr = new XMLHttpRequest();
-        xhr.open("GET", url);
-        xhr.overrideMimeType("application/json");
-        xhr.responseType = "json";
-        xhr.onload = function () {
-            resolve(xhr.response);
-        };
-        xhr.onerror = reject;
-        xhr.send(null);
-    });
-}
-function elem(sel, base) {
-    if (base === void 0) { base = document; }
-    return (base.querySelector(sel));
-}
-function elemList(sel, base) {
-    if (base === void 0) { base = document; }
-    return ([].slice.call(base.querySelectorAll(sel), 0));
-}
-
 var GamesGrid = (function () {
     function GamesGrid(containerElem_, state_) {
         var _this = this;
@@ -468,7 +468,7 @@ var GamesGrid = (function () {
         this.entryCount_ = 0;
         this.activeList_ = [];
         this.cells_ = [];
-        this.entryTemplate_ = document.querySelector("#entry");
+        this.entryTemplate_ = elem("#entry");
         this.scrollOffset_ = 0;
         this.firstVisibleRow_ = 0;
         this.entryCount_ = state_.allSet.size;
@@ -488,7 +488,6 @@ var GamesGrid = (function () {
     GamesGrid.prototype.activeSetChanged = function (newActiveSet) {
         this.entryCount_ = newActiveSet.size;
         this.activeList_ = arrayFromSet(newActiveSet);
-        console.info("ASC", this.activeList_.slice(0, 20));
         this.relayout();
     };
     GamesGrid.prototype.makeCell = function () {
@@ -646,36 +645,41 @@ var GamesGrid = (function () {
     return GamesGrid;
 }());
 
+var FilterControls = (function () {
+    function FilterControls(containerElem_, state_) {
+        var searchControl = elem("#terms", containerElem_);
+        searchControl.oninput = function (_) {
+            state_.query = searchControl.value;
+        };
+        var categoryControls = elemList("input[name=category]", containerElem_);
+        for (var _i = 0, categoryControls_1 = categoryControls; _i < categoryControls_1.length; _i++) {
+            var cc = categoryControls_1[_i];
+            cc.onchange = function (evt) {
+                var ctrl = evt.target;
+                if (ctrl.checked) {
+                    state_.category = ctrl.value;
+                }
+            };
+        }
+        var platformSelect = elem("select", containerElem_);
+        platformSelect.onchange = function (evt) {
+            var ctrl = evt.target;
+            state_.platform = parseInt(ctrl.value);
+        };
+        searchControl.focus();
+    }
+    return FilterControls;
+}());
+
 var DATA_REVISION = 1;
 var DATA_EXTENSION = location.host.toLowerCase() !== "zenmumbler.net" ? ".json" : ".gzjson";
 var ENTRIES_URL = "data/ld36_entries" + DATA_EXTENSION + "?" + DATA_REVISION;
-var gamesGrid;
 var state = new GamesBrowserState();
 loadTypedJSON(ENTRIES_URL).then(function (catalog) {
     state.acceptCatalogData(catalog);
-    document.querySelector(".pleasehold").style.display = "none";
-    var grid = document.querySelector(".entries");
-    gamesGrid = new GamesGrid(grid, state);
-    var searchControl = elem("#terms");
-    searchControl.oninput = function (_) {
-        state.query = searchControl.value;
-    };
-    var categoryControls = elemList("input[name=category]");
-    for (var _i = 0, categoryControls_1 = categoryControls; _i < categoryControls_1.length; _i++) {
-        var cc = categoryControls_1[_i];
-        cc.onchange = function (evt) {
-            var ctrl = evt.target;
-            if (ctrl.checked) {
-                state.category = ctrl.value;
-            }
-        };
-    }
-    var platformSelect = elem("select");
-    platformSelect.onchange = function (evt) {
-        var ctrl = evt.target;
-        state.platform = parseInt(ctrl.value);
-    };
-    searchControl.focus();
+    (elem(".pleasehold")).style.display = "none";
+    new GamesGrid(elem(".entries"), state);
+    new FilterControls(elem(".filters"), state);
 });
 
 exports.state = state;
