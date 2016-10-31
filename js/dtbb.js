@@ -358,6 +358,7 @@ var GamesBrowserState = (function () {
         this.compoFilter_ = new Set();
         this.jamFilter_ = new Set();
         this.platformFilters_ = new Map();
+        this.issueFilters_ = new Map();
         for (var pk in Platforms) {
             this.platformFilters_.set(Platforms[pk].mask, new Set());
         }
@@ -390,6 +391,10 @@ var GamesBrowserState = (function () {
                 restrictionSets.push(this.platformFilters_.get(plat.mask));
             }
         }
+        var issueSet = this.issueFilters_.get(this.issue.get());
+        if (issueSet) {
+            restrictionSets.push(issueSet);
+        }
         var resultSet;
         if (restrictionSets.length == 0) {
             resultSet = this.allSet_;
@@ -418,6 +423,12 @@ var GamesBrowserState = (function () {
             this.allSet_.add(docID);
             var entry = entries[entryIndex];
             entry.indexes.platformMask = maskForPlatformKeys(entry.platforms);
+            var issueSet = this.issueFilters_.get(entry.ld_issue);
+            if (!issueSet) {
+                issueSet = new Set();
+                this.issueFilters_.set(entry.ld_issue, issueSet);
+            }
+            issueSet.add(docID);
             this.entryData_.set(docID, entry);
             for (var pk in Platforms) {
                 var plat = Platforms[pk];
@@ -703,37 +714,142 @@ var GamesGrid = (function () {
     return GamesGrid;
 }());
 
-var FilterControls = (function () {
-    function FilterControls(containerElem_, state_) {
-        var issueSelect = elem("select[data-filter=issue]", containerElem_);
-        issueSelect.onchange = function (_) {
-            state_.setIssue(parseInt(issueSelect.value));
-        };
-        state_.issue.watch(function (newIssue) {
-            var curIssue = parseInt(issueSelect.value);
-            if (curIssue !== newIssue) {
-                issueSelect.value = String(newIssue);
+var WatchableInputBinding = (function () {
+    function WatchableInputBinding(watchable_, elems_) {
+        var _this = this;
+        this.watchable_ = watchable_;
+        this.elems_ = elems_;
+        for (var _i = 0, elems_1 = elems_; _i < elems_1.length; _i++) {
+            var elem = elems_1[_i];
+            this.bindElement(elem);
+        }
+        watchable_.watch(function (newVal) {
+            _this.acceptChange(newVal);
+        });
+    }
+    WatchableInputBinding.prototype.broadcast = function (fn) {
+        this.broadcastFn_ = fn;
+        return this;
+    };
+    WatchableInputBinding.prototype.accept = function (fn) {
+        this.acceptFn_ = fn;
+        return this;
+    };
+    WatchableInputBinding.prototype.broadcastChange = function (newValue) {
+        if (this.broadcastFn_) {
+            this.broadcastFn_(newValue);
+        }
+    };
+    WatchableInputBinding.prototype.acceptChange = function (newValue) {
+        if (this.acceptFn_) {
+            this.acceptFn_(newValue);
+        }
+        else {
+            var watchableValue = String(newValue);
+            for (var _i = 0, _a = this.elems_; _i < _a.length; _i++) {
+                var elem = _a[_i];
+                var currentValue = this.getElementValue(elem);
+                if (watchableValue !== currentValue) {
+                    this.setElementValue(elem, newValue);
+                }
+            }
+        }
+    };
+    WatchableInputBinding.prototype.getElementValue = function (elem) {
+        var tag = elem.nodeName.toLowerCase();
+        switch (tag) {
+            case "select":
+            case "textarea":
+                return elem.value;
+            case "input": {
+                var type = elem.type;
+                if (type === "radio" || type === "checkbox") {
+                    return elem.checked ? elem.value : undefined;
+                }
+                return elem.value;
+            }
+            default:
+                return elem.textContent || "";
+        }
+    };
+    WatchableInputBinding.prototype.setElementValue = function (elem, newValue) {
+        var tag = elem.nodeName.toLowerCase();
+        switch (tag) {
+            case "select":
+            case "textarea":
+                elem.value = String(newValue);
+                break;
+            case "input": {
+                var type = elem.type;
+                if (type === "radio" || type === "checkbox") {
+                    elem.checked = (newValue == elem.value);
+                }
+                else {
+                    elem.value = String(newValue);
+                }
+                break;
+            }
+            default:
+                elem.textContent = String(newValue);
+                break;
+        }
+    };
+    WatchableInputBinding.prototype.bindElement = function (elem) {
+        var _this = this;
+        var tag = elem.nodeName.toLowerCase();
+        var type = elem.type;
+        var eventName;
+        if (tag === "input" && (type === "radio" || type === "checkbox")) {
+            eventName = "change";
+        }
+        else {
+            eventName = "input";
+        }
+        elem.addEventListener(eventName, function (_) {
+            var valueStr = _this.getElementValue(elem);
+            if (valueStr === undefined) {
+                return;
+            }
+            var watchableType = typeof _this.watchable_.get();
+            if (watchableType === "number") {
+                var value = void 0;
+                value = parseInt(valueStr);
+                _this.broadcastChange(value);
+            }
+            else if (watchableType === "boolean") {
+                var value = void 0;
+                value = (valueStr === "true");
+                _this.broadcastChange(value);
+            }
+            else if (watchableType === "string") {
+                var value = void 0;
+                value = valueStr;
+                _this.broadcastChange(value);
+            }
+            else {
+                console.warn("Don't know what to do with a watchable of type " + watchableType);
             }
         });
-        var categoryControls = elemList("input[name=category]", containerElem_);
-        for (var _i = 0, categoryControls_1 = categoryControls; _i < categoryControls_1.length; _i++) {
-            var cc = categoryControls_1[_i];
-            cc.onchange = function (evt) {
-                var ctrl = evt.target;
-                if (ctrl.checked) {
-                    state_.setCategory(ctrl.value);
-                }
-            };
-        }
-        var platformSelect = elem("select[data-filter=platform]", containerElem_);
-        platformSelect.onchange = function (_) {
-            state_.setPlatform(parseInt(platformSelect.value));
-        };
-        var searchControl = elem("#terms", containerElem_);
-        searchControl.oninput = function (_) {
-            state_.setQuery(searchControl.value);
-        };
-        searchControl.focus();
+    };
+    return WatchableInputBinding;
+}());
+function watchableBinding(w, elemOrSel, context) {
+    var elems = ((typeof elemOrSel === "string")
+        ? [].slice.call((context || document).querySelectorAll(elemOrSel))
+        : (Array.isArray(elemOrSel) ? elemOrSel : [elemOrSel]));
+    return new WatchableInputBinding(w, elems);
+}
+
+var FilterControls = (function () {
+    function FilterControls(containerElem_, state_) {
+        watchableBinding(state_.issue, "select[data-filter=issue]", containerElem_)
+            .broadcast(function (issue) { state_.setIssue(issue); });
+        watchableBinding(state_.category, "input[name=category]", containerElem_)
+            .broadcast(function (category) { state_.setCategory(category); });
+        watchableBinding(state_.platform, "select[data-filter=platform]", containerElem_)
+            .broadcast(function (platform) { state_.setPlatform(platform); });
+        watchableBinding(state_.query, "#terms", containerElem_)
+            .broadcast(function (query) { state_.setQuery(query); });
     }
     return FilterControls;
 }());
