@@ -3,7 +3,13 @@
 
 export type ValueChangedCallback<T> = (newValue: T) => void;
 
-export class Watchable<T> {
+export interface Watchable<T> {
+	watch(watcher: ValueChangedCallback<T>): void;
+	unwatch(watcher: ValueChangedCallback<T>): void;
+	get(): T;
+}
+
+export class WatchableValue<T> implements Watchable<T> {
 	private watchers_: ValueChangedCallback<T>[] = [];
 	private purgeableWatchers_: ValueChangedCallback<T>[] = [];
 	private notifying_ = false;
@@ -56,4 +62,6 @@ export class Watchable<T> {
 	changed() {
 		this.notify();
 	}
+
+	get watchable() { return this as Watchable<T>; }
 }
