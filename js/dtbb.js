@@ -334,7 +334,7 @@ var GamesBrowserState = (function () {
         this.category_ = "";
         this.query_ = "";
         this.filteredSet_ = new Watchable(new Set());
-        this.entryData_ = [];
+        this.entryData_ = new Map();
     }
     GamesBrowserState.prototype.filtersChanged = function () {
         var restrictionSets = [];
@@ -384,7 +384,7 @@ var GamesBrowserState = (function () {
             allSet.add(docID);
             var entry = entries[entryIndex];
             entry.indexes.platformMask = maskForPlatformKeys(entry.platforms);
-            this.entryData_[docID] = entry;
+            this.entryData_.set(docID, entry);
             for (var pk in Platforms) {
                 var plat = Platforms[pk];
                 if (entry.indexes.platformMask & plat.mask) {
@@ -505,7 +505,7 @@ var GamesGrid = (function () {
             author: tile.querySelector("p.author span"),
             pills: pills,
             position: -1,
-            contentIndex: -1,
+            docID: -1,
             hidden: false
         };
         this.containerElem_.appendChild(tile);
@@ -526,7 +526,7 @@ var GamesGrid = (function () {
                 var c = doomed_1[_i];
                 this.containerElem_.removeChild(c.tile);
                 c.position = -1;
-                c.contentIndex = -1;
+                c.docID = -1;
             }
         }
         else {
@@ -553,20 +553,23 @@ var GamesGrid = (function () {
         var cellPixelPos = this.pixelPositionForCellPosition(newPosition);
         cell.tile.style.left = cellPixelPos.left + "px";
         cell.tile.style.top = cellPixelPos.top + "px";
-        var contentIndex = this.activeList_[newPosition];
-        if (cell.contentIndex != contentIndex) {
-            cell.contentIndex = contentIndex;
-            var entry = this.state_.entries[contentIndex];
-            cell.tile.dataset["eix"] = "" + contentIndex;
-            cell.link.href = entry.entry_url;
-            cell.link.className = entry.category;
-            cell.thumb.style.backgroundImage = "url(" + entry.thumbnail_url + ")";
-            cell.title.textContent = entry.title;
-            cell.author.textContent = entry.author.name;
-            for (var platKey in Platforms) {
-                var plat = Platforms[platKey];
-                var entryInMask = (entry.indexes.platformMask & plat.mask) !== 0;
-                cell.pills[plat.mask].style.display = entryInMask ? "" : "none";
+        var docID = this.activeList_[newPosition];
+        if (cell.docID != docID) {
+            cell.docID = docID;
+            var entry = this.state_.entries.get(docID);
+            cell.tile.dataset["docId"] = "" + docID;
+            console.assert(entry, "No entry for docID " + docID);
+            if (entry) {
+                cell.link.href = entry.entry_url;
+                cell.link.className = entry.category;
+                cell.thumb.style.backgroundImage = "url(" + entry.thumbnail_url + ")";
+                cell.title.textContent = entry.title;
+                cell.author.textContent = entry.author.name;
+                for (var platKey in Platforms) {
+                    var plat = Platforms[platKey];
+                    var entryInMask = (entry.indexes.platformMask & plat.mask) !== 0;
+                    cell.pills[plat.mask].style.display = entryInMask ? "" : "none";
+                }
             }
         }
     };
@@ -666,6 +669,12 @@ var FilterControls = (function () {
             var ctrl = evt.target;
             state_.platform = parseInt(ctrl.value);
         };
+        for (var platKey in Platforms) {
+            var plat = Platforms[platKey];
+            var pe = document.createElement("option");
+            pe.value = String(plat.mask);
+            pe.textContent = plat.label;
+        }
         searchControl.focus();
     }
     return FilterControls;

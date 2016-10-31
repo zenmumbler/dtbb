@@ -24,15 +24,16 @@ export class GamesBrowserState {
 	private plasticSurge_ = new TextIndex();
 
 	// store data
-	private entryData_: IndexedEntry[];
+	private entryData_: Map<number, IndexedEntry>;
 	private filteredSet_: Watchable<Set<number>>;
+
 	private platformMask_ = 0;
 	private category_: Category | "" = "";
 	private query_ = "";
 
 	constructor() {
 		this.filteredSet_ = new Watchable(new Set<number>());
-		this.entryData_ = [];
+		this.entryData_ = new Map<number, IndexedEntry>();
 	}
 
 	private filtersChanged() {
@@ -99,7 +100,7 @@ export class GamesBrowserState {
 			entry.indexes.platformMask = maskForPlatformKeys(entry.platforms);
 
 			// add entry in docID slot of full entries array
-			this.entryData_[docID] = entry;
+			this.entryData_.set(docID, entry);
 
 			// add docID to various filtersets
 			for (const pk in Platforms) {

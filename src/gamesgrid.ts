@@ -15,7 +15,7 @@ interface GameCell {
 	pills: { [mask: number]: HTMLSpanElement; };
 
 	position: number;
-	contentIndex: number;
+	docID: number;
 	hidden: boolean;
 }
 
@@ -86,7 +86,7 @@ export class GamesGrid {
 			author: <HTMLElement>tile.querySelector("p.author span"),
 			pills,
 			position: -1,
-			contentIndex: -1,
+			docID: -1,
 			hidden: false
 		};
 
@@ -112,7 +112,7 @@ export class GamesGrid {
 			for (const c of doomed) {
 				this.containerElem_.removeChild(c.tile);
 				c.position = -1;
-				c.contentIndex = -1;
+				c.docID = -1;
 			}
 		}
 		else {
@@ -145,22 +145,26 @@ export class GamesGrid {
 		cell.tile.style.left = cellPixelPos.left + "px";
 		cell.tile.style.top = cellPixelPos.top + "px";
 
-		const contentIndex = this.activeList_[newPosition];
-		if (cell.contentIndex != contentIndex) {
-			cell.contentIndex = contentIndex;
-			const entry = this.state_.entries[contentIndex];
+		const docID = this.activeList_[newPosition];
+		if (cell.docID != docID) {
+			cell.docID = docID;
+			const entry = this.state_.entries.get(docID);
 
-			cell.tile.dataset["eix"] = "" + contentIndex;
-			cell.link.href = entry.entry_url;
-			cell.link.className = entry.category;
-			cell.thumb.style.backgroundImage = "url(" + entry.thumbnail_url + ")";
-			cell.title.textContent = entry.title;
-			cell.author.textContent = entry.author.name;
+			cell.tile.dataset["docId"] = "" + docID;
+			console.assert(entry, `No entry for docID ${docID}`);
 
-			for (const platKey in Platforms) {
-				const plat = Platforms[platKey];
-				const entryInMask = (entry.indexes.platformMask & plat.mask) !== 0;
-				cell.pills[plat.mask].style.display = entryInMask ? "" : "none";
+			if (entry) {
+				cell.link.href = entry.entry_url;
+				cell.link.className = entry.category;
+				cell.thumb.style.backgroundImage = "url(" + entry.thumbnail_url + ")";
+				cell.title.textContent = entry.title;
+				cell.author.textContent = entry.author.name;
+
+				for (const platKey in Platforms) {
+					const plat = Platforms[platKey];
+					const entryInMask = (entry.indexes.platformMask & plat.mask) !== 0;
+					cell.pills[plat.mask].style.display = entryInMask ? "" : "none";
+				}
 			}
 		}
 	}
