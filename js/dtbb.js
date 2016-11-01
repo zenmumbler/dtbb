@@ -79,6 +79,58 @@ var IssueThemeNames = {
     37: "?",
 };
 
+var WatchableValue = (function () {
+    function WatchableValue(initial) {
+        this.watchers_ = [];
+        this.purgeableWatchers_ = [];
+        this.notifying_ = false;
+        this.value_ = initial;
+    }
+    WatchableValue.prototype.watch = function (watcher) {
+        if (this.watchers_.indexOf(watcher) === -1) {
+            this.watchers_.push(watcher);
+        }
+    };
+    WatchableValue.prototype.unwatch = function (watcher) {
+        var watcherIndex = this.watchers_.indexOf(watcher);
+        if (watcherIndex !== -1) {
+            if (this.notifying_) {
+                this.purgeableWatchers_.push(watcher);
+            }
+            else {
+                this.watchers_.splice(watcherIndex, 1);
+            }
+        }
+    };
+    WatchableValue.prototype.notify = function () {
+        this.notifying_ = true;
+        this.purgeableWatchers_ = [];
+        for (var _i = 0, _a = this.watchers_; _i < _a.length; _i++) {
+            var w = _a[_i];
+            w(this.value_);
+        }
+        this.notifying_ = false;
+        for (var _b = 0, _c = this.purgeableWatchers_; _b < _c.length; _b++) {
+            var pw = _c[_b];
+            this.unwatch(pw);
+        }
+    };
+    WatchableValue.prototype.get = function () { return this.value_; };
+    WatchableValue.prototype.set = function (newValue) {
+        this.value_ = newValue;
+        this.notify();
+    };
+    WatchableValue.prototype.changed = function () {
+        this.notify();
+    };
+    Object.defineProperty(WatchableValue.prototype, "watchable", {
+        get: function () { return this; },
+        enumerable: true,
+        configurable: true
+    });
+    return WatchableValue;
+}());
+
 function intersectSet(a, b) {
     var intersection = new Set();
     var tiny;
@@ -295,63 +347,133 @@ var TextIndex = (function () {
     return TextIndex;
 }());
 
-var WatchableValue = (function () {
-    function WatchableValue(initial) {
-        this.watchers_ = [];
-        this.purgeableWatchers_ = [];
-        this.notifying_ = false;
-        this.value_ = initial;
+var PromiseDB = (function () {
+    function PromiseDB(name, version, upgrade) {
+        if (version === void 0) { version = 1; }
+        this.db_ = this.request(indexedDB.open(name, version), function (openReq) {
+            openReq.onupgradeneeded = function (upgradeEvt) {
+                var db = openReq.result;
+                upgrade(db, upgradeEvt.oldVersion, upgradeEvt.newVersion || version);
+            };
+        });
+        this.tctx_ = {
+            request: this.request.bind(this),
+            cursor: this.cursor.bind(this),
+            keyCursor: this.keyCursor.bind(this)
+        };
     }
-    WatchableValue.prototype.watch = function (watcher) {
-        if (this.watchers_.indexOf(watcher) === -1) {
-            this.watchers_.push(watcher);
-        }
+    PromiseDB.prototype.transaction = function (storeNames, mode, fn) {
+        var _this = this;
+        return this.db_.then(function (db) {
+            return new Promise(function (resolve, reject) {
+                var tr = db.transaction(storeNames, mode);
+                tr.onerror = function (_) { reject(tr.error ? tr.error.toString() : "transaction failed"); };
+                tr.onabort = function (_) { reject("aborted"); };
+                tr.oncomplete = function (_) { resolve(tr); };
+                fn(tr, _this.tctx_);
+            });
+        });
     };
-    WatchableValue.prototype.unwatch = function (watcher) {
-        var watcherIndex = this.watchers_.indexOf(watcher);
-        if (watcherIndex !== -1) {
-            if (this.notifying_) {
-                this.purgeableWatchers_.push(watcher);
+    PromiseDB.prototype.request = function (req, fn) {
+        var reqProm = new Promise(function (resolve, reject) {
+            req.onerror = function () { reject(req.error.toString()); };
+            req.onsuccess = function () { resolve(req.result); };
+            if (fn) {
+                fn(req);
+            }
+        });
+        return this.db_ ? this.db_.then(function (_) { return reqProm; }) : reqProm;
+    };
+    PromiseDB.prototype.cursorImpl = function (cursorReq) {
+        var result = {
+            next: function (callback) {
+                this.callbackFn_ = callback;
+                return this;
+            },
+            complete: function (callback) {
+                this.completeFn_ = callback;
+                return this;
+            },
+            catch: function (callback) {
+                this.errorFn_ = callback;
+                return this;
+            }
+        };
+        cursorReq.onerror = function () {
+            if (result.errorFn_) {
+                result.errorFn_(cursorReq.error);
+            }
+        };
+        cursorReq.onsuccess = function () {
+            var cursor = cursorReq.result;
+            if (cursor) {
+                if (result.callbackFn_) {
+                    result.callbackFn_(cursor);
+                }
             }
             else {
-                this.watchers_.splice(watcherIndex, 1);
+                if (result.completeFn_) {
+                    result.completeFn_();
+                }
             }
-        }
+        };
+        return result;
     };
-    WatchableValue.prototype.notify = function () {
-        this.notifying_ = true;
-        this.purgeableWatchers_ = [];
-        for (var _i = 0, _a = this.watchers_; _i < _a.length; _i++) {
-            var w = _a[_i];
-            w(this.value_);
-        }
-        this.notifying_ = false;
-        for (var _b = 0, _c = this.purgeableWatchers_; _b < _c.length; _b++) {
-            var pw = _c[_b];
-            this.unwatch(pw);
-        }
+    PromiseDB.prototype.cursor = function (container, range, direction) {
+        var cursorReq = container.openCursor(range, direction);
+        return this.cursorImpl(cursorReq);
     };
-    WatchableValue.prototype.get = function () { return this.value_; };
-    WatchableValue.prototype.set = function (newValue) {
-        this.value_ = newValue;
-        this.notify();
+    PromiseDB.prototype.keyCursor = function (index, range, direction) {
+        var cursorReq = index.openKeyCursor(range, direction);
+        return this.cursorImpl(cursorReq);
     };
-    WatchableValue.prototype.changed = function () {
-        this.notify();
-    };
-    Object.defineProperty(WatchableValue.prototype, "watchable", {
-        get: function () { return this; },
+    Object.defineProperty(PromiseDB.prototype, "idb", {
+        get: function () { return this.db_; },
         enumerable: true,
         configurable: true
     });
-    return WatchableValue;
+    return PromiseDB;
 }());
 
 function makeDocID(issue, entryIndex) {
     return (issue << 16) | entryIndex;
 }
-var GamesBrowserState = (function () {
-    function GamesBrowserState() {
+var CatalogPersistence = (function () {
+    function CatalogPersistence() {
+        this.db_ = new PromiseDB("dtbb", 1, function (db, _oldVersion, _newVersion) {
+            db.createObjectStore("entries", { keyPath: "docID" });
+        });
+    }
+    CatalogPersistence.prototype.saveEntries = function (entries) {
+        return this.db_.transaction("entries", "readwrite", function (tr, _a) {
+            var request = _a.request;
+            var store = tr.objectStore("entries");
+            for (var _i = 0, entries_1 = entries; _i < entries_1.length; _i++) {
+                var entry = entries_1[_i];
+                request(store.add(entry)).catch(function (err) { console.warn("Could not save entry", err); });
+            }
+        });
+    };
+    CatalogPersistence.prototype.enumEntries = function () {
+        this.db_.transaction("entries", "readonly", function (tr, _a) {
+            var cursor = _a.cursor;
+            var store = tr.objectStore("entries");
+            cursor(store)
+                .next(function (cur) {
+                console.info("entry");
+                cur.continue();
+            })
+                .complete(function () {
+                console.info("done");
+            });
+        });
+    };
+    return CatalogPersistence;
+}());
+var CatalogStore = (function () {
+    function CatalogStore(state_) {
+        var _this = this;
+        this.state_ = state_;
         this.plasticSurge_ = new TextIndex();
         this.entryData_ = new Map();
         this.allSet_ = new Set();
@@ -359,20 +481,22 @@ var GamesBrowserState = (function () {
         this.jamFilter_ = new Set();
         this.platformFilters_ = new Map();
         this.issueFilters_ = new Map();
+        this.persist_ = new CatalogPersistence();
         for (var pk in Platforms) {
             this.platformFilters_.set(Platforms[pk].mask, new Set());
         }
         this.filteredSet_ = new WatchableValue(new Set());
-        this.platformMask_ = new WatchableValue(0);
-        this.category_ = new WatchableValue("");
-        this.query_ = new WatchableValue("");
-        this.issue_ = new WatchableValue(0);
+        state_.query.watch(function (_) { return _this.filtersChanged(); });
+        state_.category.watch(function (_) { return _this.filtersChanged(); });
+        state_.platform.watch(function (_) { return _this.filtersChanged(); });
+        state_.issue.watch(function (issue) { return _this.issueChanged(issue); });
     }
-    GamesBrowserState.prototype.filtersChanged = function () {
+    CatalogStore.prototype.filtersChanged = function () {
         var restrictionSets = [];
-        var query = this.query_.get();
-        var category = this.category_.get();
-        var platform = this.platformMask_.get();
+        var query = this.state_.query.get();
+        var category = this.state_.category.get();
+        var platform = this.state_.platform.get();
+        var issue = this.state_.issue.get();
         if (query.length > 0) {
             var textFilter = this.plasticSurge_.query(query);
             if (textFilter) {
@@ -391,7 +515,7 @@ var GamesBrowserState = (function () {
                 restrictionSets.push(this.platformFilters_.get(plat.mask));
             }
         }
-        var issueSet = this.issueFilters_.get(this.issue.get());
+        var issueSet = this.issueFilters_.get(issue);
         if (issueSet) {
             restrictionSets.push(issueSet);
         }
@@ -408,7 +532,13 @@ var GamesBrowserState = (function () {
         }
         this.filteredSet_.set(resultSet);
     };
-    GamesBrowserState.prototype.acceptCatalogData = function (catalog) {
+    CatalogStore.prototype.issueChanged = function (newIssue) {
+        this.loadCatalog(newIssue);
+    };
+    CatalogStore.prototype.storeCatalog = function (_catalog, indexedEntries) {
+        this.persist_.saveEntries(indexedEntries).then(function () { console.info("saved 'em!"); });
+    };
+    CatalogStore.prototype.acceptCatalogData = function (catalog) {
         var entries = catalog.entries.map(function (entry) {
             var indEntry = entry;
             indEntry.indexes = {
@@ -422,6 +552,7 @@ var GamesBrowserState = (function () {
             var docID = makeDocID(catalog.issue, entryIndex);
             this.allSet_.add(docID);
             var entry = entries[entryIndex];
+            entry.docID = docID;
             entry.indexes.platformMask = maskForPlatformKeys(entry.platforms);
             var issueSet = this.issueFilters_.get(entry.ld_issue);
             if (!issueSet) {
@@ -452,9 +583,10 @@ var GamesBrowserState = (function () {
         }
         var t1 = performance.now();
         console.info("Text Indexing took " + (t1 - t0).toFixed(1) + "ms");
+        this.storeCatalog(catalog, entries);
         this.filtersChanged();
     };
-    GamesBrowserState.prototype.loadCatalog = function (issue) {
+    CatalogStore.prototype.loadCatalog = function (issue) {
         var _this = this;
         var revision = 1;
         var extension = location.host.toLowerCase() !== "zenmumbler.net" ? ".json" : ".gzjson";
@@ -463,6 +595,27 @@ var GamesBrowserState = (function () {
             _this.acceptCatalogData(catalog);
         });
     };
+    Object.defineProperty(CatalogStore.prototype, "filteredSet", {
+        get: function () { return this.filteredSet_.watchable; },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(CatalogStore.prototype, "entries", {
+        get: function () { return this.entryData_; },
+        enumerable: true,
+        configurable: true
+    });
+    return CatalogStore;
+}());
+
+var GamesBrowserState = (function () {
+    function GamesBrowserState() {
+        this.platformMask_ = new WatchableValue(0);
+        this.category_ = new WatchableValue("");
+        this.query_ = new WatchableValue("");
+        this.issue_ = new WatchableValue(0);
+        this.catalogStore_ = new CatalogStore(this);
+    }
     Object.defineProperty(GamesBrowserState.prototype, "query", {
         get: function () { return this.query_.watchable; },
         enumerable: true,
@@ -485,34 +638,25 @@ var GamesBrowserState = (function () {
     });
     GamesBrowserState.prototype.setQuery = function (q) {
         this.query_.set(q);
-        this.filtersChanged();
     };
     GamesBrowserState.prototype.setCategory = function (c) {
         this.category_.set(c);
-        this.filtersChanged();
     };
     GamesBrowserState.prototype.setPlatform = function (p) {
         this.platformMask_.set(p);
-        this.filtersChanged();
     };
     GamesBrowserState.prototype.setIssue = function (newIssue) {
         if (newIssue !== this.issue_.get() && (newIssue in IssueThemeNames)) {
             this.issue_.set(newIssue);
-            this.loadCatalog(newIssue);
         }
     };
-    Object.defineProperty(GamesBrowserState.prototype, "allSet", {
-        get: function () { return this.allSet_; },
-        enumerable: true,
-        configurable: true
-    });
     Object.defineProperty(GamesBrowserState.prototype, "filteredSet", {
-        get: function () { return this.filteredSet_.watchable; },
+        get: function () { return this.catalogStore_.filteredSet; },
         enumerable: true,
         configurable: true
     });
     Object.defineProperty(GamesBrowserState.prototype, "entries", {
-        get: function () { return this.entryData_; },
+        get: function () { return this.catalogStore_.entries; },
         enumerable: true,
         configurable: true
     });
@@ -537,8 +681,6 @@ var GamesGrid = (function () {
         this.entryTemplate_ = elem("#entry");
         this.scrollOffset_ = 0;
         this.firstVisibleRow_ = 0;
-        this.entryCount_ = state_.allSet.size;
-        this.activeList_ = arrayFromSet(state_.allSet);
         this.scrollingElem_ = containerElem_.parentElement;
         this.scrollingElem_.onscroll = function (evt) {
             _this.scrollPosChanged(evt.target.scrollTop);
