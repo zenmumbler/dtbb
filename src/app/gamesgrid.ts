@@ -43,9 +43,6 @@ export class GamesGrid {
 
 
 	constructor(private containerElem_: HTMLElement, private state_: GamesBrowserState) {
-		this.entryCount_ = state_.allSet.size;
-		this.activeList_ = arrayFromSet(state_.allSet);
-
 		this.scrollingElem_ = containerElem_.parentElement;
 		this.scrollingElem_.onscroll = (evt: Event) => {
 			this.scrollPosChanged((<HTMLElement>evt.target).scrollTop);

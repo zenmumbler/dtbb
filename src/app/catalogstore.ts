@@ -1,18 +1,61 @@
-// state.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
+// catalogstore.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
-import { Catalog, IndexedEntry, Category, Platforms, IssueThemeNames, maskForPlatformKeys } from "../lib/catalog";
+import { Catalog, IndexedEntry, Platforms, maskForPlatformKeys } from "../lib/catalog";
 import { TextIndex } from "../lib/textindex";
 import { intersectSet } from "../lib/setutil";
+import { PromiseDB } from "../lib/promisedb";
 import { loadTypedJSON } from "./domutil";
 import { WatchableValue } from "../lib/watchable";
+import { GamesBrowserState } from "./state";
 
 export function makeDocID(issue: number, entryIndex: number) {
 	// this imposes a limit of 65536 entries per issue
 	return (issue << 16) | entryIndex;
 }
 
-export class GamesBrowserState {
+class CatalogPersistence {
+	private db_: PromiseDB;
+
+	constructor() {
+		this.db_ = new PromiseDB("dtbb", 1,
+			(db, _oldVersion, _newVersion) => {
+				db.createObjectStore("entries", { keyPath: "docID" });
+			});
+	}
+
+	saveEntries(entries: IndexedEntry[]) {
+		return this.db_.transaction("entries", "readwrite",
+			(tr, {request}) => {
+				const store = tr.objectStore("entries");
+
+				for (const entry of entries) {
+					request(store.add(entry)).catch(
+						err => { console.warn("Could not save entry", err); }
+					);
+				}
+			});
+	}
+
+	enumEntries() {
+		this.db_.transaction("entries", "readonly",
+			(tr, {cursor}) => {
+				const store = tr.objectStore("entries");
+				cursor(store)
+					.next(cur => {
+						console.info("entry");
+						cur.continue();
+					})
+					.complete(() => {
+						console.info("done");
+					});
+			});
+	}
+}
+
+
+export class CatalogStore {
+	private persist_: CatalogPersistence;
 	private plasticSurge_ = new TextIndex();
 
 	// static data
@@ -26,30 +69,30 @@ export class GamesBrowserState {
 	// derived data
 	private filteredSet_: WatchableValue<Set<number>>;
 
-	// direct properties
-	private platformMask_: WatchableValue<number>;
-	private category_: WatchableValue<Category | "">;
-	private query_: WatchableValue<string>;
-	private issue_: WatchableValue<number>;
+	constructor(private state_: GamesBrowserState) {
+		this.persist_ = new CatalogPersistence();
 
-	constructor() {
 		for (const pk in Platforms) {
 			this.platformFilters_.set(Platforms[pk].mask, new Set<number>());
 		}
 
 		this.filteredSet_ = new WatchableValue(new Set<number>());
-		this.platformMask_ = new WatchableValue(0);
-		this.category_ = new WatchableValue<Category | "">("");
-		this.query_ = new WatchableValue("");
-		this.issue_ = new WatchableValue(0);
-	}
 
+		// watch some other state data
+		state_.query.watch(_ => this.filtersChanged());
+		state_.category.watch(_ => this.filtersChanged());
+		state_.platform.watch(_ => this.filtersChanged());
+
+		state_.issue.watch(issue => this.issueChanged(issue));
+	}
 
 	private filtersChanged() {
 		const restrictionSets: Set<number>[] = [];
-		const query = this.query_.get();
-		const category = this.category_.get();
-		const platform = this.platformMask_.get();
+
+		const query = this.state_.query.get();
+		const category = this.state_.category.get();
+		const platform = this.state_.platform.get();
+		const issue = this.state_.issue.get();
 
 		// -- get list of active filter sets
 		if (query.length > 0) {
@@ -73,7 +116,7 @@ export class GamesBrowserState {
 			}
 		}
 
-		const issueSet = this.issueFilters_.get(this.issue.get());
+		const issueSet = this.issueFilters_.get(issue);
 		if (issueSet) {
 			restrictionSets.push(issueSet);
 		}
@@ -96,6 +139,13 @@ export class GamesBrowserState {
 		this.filteredSet_.set(resultSet);
 	}
 
+	private issueChanged(newIssue: number) {
+		this.loadCatalog(newIssue);
+	}
+
+	private storeCatalog(_catalog: Catalog, indexedEntries: IndexedEntry[]) {
+		this.persist_.saveEntries(indexedEntries).then(() => { console.info("saved 'em!"); });
+	}
 
 	private acceptCatalogData(catalog: Catalog) {
 		const entries = catalog.entries.map(entry => {
@@ -114,6 +164,7 @@ export class GamesBrowserState {
 			this.allSet_.add(docID);
 
 			const entry = entries[entryIndex];
+			entry.docID = docID;
 			entry.indexes.platformMask = maskForPlatformKeys(entry.platforms);
 
 			// update issue filter
@@ -153,12 +204,12 @@ export class GamesBrowserState {
 		const t1 = performance.now();
 
 		console.info("Text Indexing took " + (t1 - t0).toFixed(1) + "ms");
+		this.storeCatalog(catalog, entries);
 
 		this.filtersChanged();
 	}
 
-
-	loadCatalog(issue: number) {
+	private loadCatalog(issue: number) {
 		const revision = 1;
 		const extension = location.host.toLowerCase() !== "zenmumbler.net" ? ".json" : ".gzjson";
 		const entriesURL = `data/ld${issue}_entries${extension}?${revision}`;
@@ -168,37 +219,7 @@ export class GamesBrowserState {
 		});
 	}
 
-
-	// filters
-	get query() { return this.query_.watchable; }
-	get category() { return this.category_.watchable; }
-	get platform() { return this.platformMask_.watchable; }
-	get issue() { return this.issue_.watchable; }
-
-	setQuery(q: string) {
-		this.query_.set(q);
-		this.filtersChanged();
-	}
-
-	setCategory(c: Category | "") {
-		this.category_.set(c);
-		this.filtersChanged();
-	}
-
-	setPlatform(p: number) {
-		this.platformMask_.set(p);
-		this.filtersChanged();
-	}
-
-	setIssue(newIssue: number) {
-		if (newIssue !== this.issue_.get() && (newIssue in IssueThemeNames)) {
-			this.issue_.set(newIssue);
-			this.loadCatalog(newIssue);
-		}
-	}
-
-	// static / derived data
-	get allSet() { return this.allSet_; }
+	// static
 	get filteredSet() { return this.filteredSet_.watchable; }
 	get entries() { return this.entryData_; }
 }

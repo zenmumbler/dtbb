@@ -165,5 +165,6 @@ export interface EntryIndexes {
 }
 
 export interface IndexedEntry extends Entry {
+	docID: number;
 	indexes: EntryIndexes;
 }
