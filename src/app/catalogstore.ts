@@ -31,7 +31,7 @@ class CatalogPersistence {
 
 				for (const entry of entries) {
 					request(store.add(entry)).catch(
-						err => { console.warn(`Could not save entry`, err); }
+						err => { console.warn("Could not save entry", err); }
 					);
 				}
 			});

@@ -367,7 +367,7 @@ var PromiseDB = (function () {
         return this.db_.then(function (db) {
             return new Promise(function (resolve, reject) {
                 var tr = db.transaction(storeNames, mode);
-                tr.onerror = function (_) { reject(tr.error ? tr.error.toString() : "transaction failed"); };
+                tr.onerror = function (_) { reject(tr.error || "transaction failed"); };
                 tr.onabort = function (_) { reject("aborted"); };
                 tr.oncomplete = function (_) { resolve(tr); };
                 fn(tr, _this.tctx_);
@@ -376,7 +376,7 @@ var PromiseDB = (function () {
     };
     PromiseDB.prototype.request = function (req, fn) {
         var reqProm = new Promise(function (resolve, reject) {
-            req.onerror = function () { reject(req.error.toString()); };
+            req.onerror = function () { reject(req.error || "request failed"); };
             req.onsuccess = function () { resolve(req.result); };
             if (fn) {
                 fn(req);

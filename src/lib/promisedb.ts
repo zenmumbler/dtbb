@@ -49,7 +49,7 @@ export class PromiseDB {
 		return this.db_.then(db => {
 			return new Promise<IDBTransaction>((resolve, reject) => {
 				const tr = db.transaction(storeNames, mode);
-				tr.onerror = _ => { reject(tr.error ? tr.error.toString() : "transaction failed"); };
+				tr.onerror = _ => { reject(tr.error || "transaction failed"); };
 				tr.onabort = _ => { reject("aborted"); };
 				tr.oncomplete = _ => { resolve(tr); };
 
@@ -60,7 +60,7 @@ export class PromiseDB {
 
 	request<R extends IDBRequest>(req: R, fn?: (req: R) => void): Promise<any> {
 		const reqProm = new Promise<any>(function(resolve, reject) {
-				req.onerror = () => { reject(req.error.toString()); };
+				req.onerror = () => { reject(req.error || "request failed"); };
 				req.onsuccess = () => { resolve(req.result); };
 
 				if (fn) {
