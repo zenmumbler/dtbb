@@ -4,6 +4,7 @@
 import { Catalog, IndexedEntry, Platforms, maskForPlatformKeys } from "../lib/catalog";
 import { TextIndex } from "../lib/textindex";
 import { intersectSet } from "../lib/setutil";
+import { PromiseDB } from "../lib/promisedb";
 import { loadTypedJSON } from "./domutil";
 import { WatchableValue } from "../lib/watchable";
 import { GamesBrowserState } from "./state";
@@ -13,7 +14,48 @@ export function makeDocID(issue: number, entryIndex: number) {
 	return (issue << 16) | entryIndex;
 }
 
+class CatalogPersistence {
+	private db_: PromiseDB;
+
+	constructor() {
+		this.db_ = new PromiseDB("dtbb", 1,
+			(db, _oldVersion, _newVersion) => {
+				db.createObjectStore("entries", { keyPath: "docID" });
+			});
+	}
+
+	saveEntries(entries: IndexedEntry[]) {
+		return this.db_.transaction("entries", "readwrite",
+			(tr, {request}) => {
+				const store = tr.objectStore("entries");
+
+				for (const entry of entries) {
+					request(store.add(entry)).catch(
+						err => { console.warn(`Could not save entry`, err); }
+					);
+				}
+			});
+	}
+
+	enumEntries() {
+		this.db_.transaction("entries", "readonly",
+			(tr, {cursor}) => {
+				const store = tr.objectStore("entries");
+				cursor(store)
+					.next(cur => {
+						console.info("entry");
+						cur.continue();
+					})
+					.complete(() => {
+						console.info("done");
+					});
+			});
+	}
+}
+
+
 export class CatalogStore {
+	private persist_: CatalogPersistence;
 	private plasticSurge_ = new TextIndex();
 
 	// static data
@@ -28,6 +70,8 @@ export class CatalogStore {
 	private filteredSet_: WatchableValue<Set<number>>;
 
 	constructor(private state_: GamesBrowserState) {
+		this.persist_ = new CatalogPersistence();
+
 		for (const pk in Platforms) {
 			this.platformFilters_.set(Platforms[pk].mask, new Set<number>());
 		}
@@ -99,6 +143,10 @@ export class CatalogStore {
 		this.loadCatalog(newIssue);
 	}
 
+	private storeCatalog(_catalog: Catalog, indexedEntries: IndexedEntry[]) {
+		this.persist_.saveEntries(indexedEntries).then(() => { console.info("saved 'em!"); });
+	}
+
 	private acceptCatalogData(catalog: Catalog) {
 		const entries = catalog.entries.map(entry => {
 			const indEntry = entry as IndexedEntry;
@@ -116,6 +164,7 @@ export class CatalogStore {
 			this.allSet_.add(docID);
 
 			const entry = entries[entryIndex];
+			entry.docID = docID;
 			entry.indexes.platformMask = maskForPlatformKeys(entry.platforms);
 
 			// update issue filter
@@ -155,6 +204,7 @@ export class CatalogStore {
 		const t1 = performance.now();
 
 		console.info("Text Indexing took " + (t1 - t0).toFixed(1) + "ms");
+		this.storeCatalog(catalog, entries);
 
 		this.filtersChanged();
 	}
