@@ -34,26 +34,35 @@ class CatalogPersistence {
 				headers.createIndex("issue", "issue");
 				textindexes.createIndex("issue", "issue");
 
+				// these indexes are not currently used, but adding them now anyway
+				// this app needs a composite index over these 3 fields but composite + multiEntry is not allowed...
 				entries.createIndex("issue", "ld_issue");
 				entries.createIndex("category", "category");
 				entries.createIndex("platform", "platforms", { multiEntry: true });
 			});
 	}
 
-	saveCatalog(catalog: Catalog, indEntries: IndexedEntry[]) {
+	saveCatalog(catalog: Catalog, indEntries: IndexedEntry[], sti: SerializedTextIndex) {
 		const header: CatalogHeader = {
 			issue: catalog.issue,
 			theme: catalog.theme,
 			stats: catalog.stats
 		};
 
-		return this.db_.transaction(["headers", "entries"], "readwrite",
+		return this.db_.transaction(["headers", "entries", "textindexes"], "readwrite",
 			(tr, {request}) => {
-				console.info(`Storing issue ${header.issue}`, header, indEntries);
+				console.info(`Storing issue ${header.issue} with ${indEntries.length} entries and textindex`);
 				const headers = tr.objectStore("headers");
 				const entries = tr.objectStore("entries");
+				const textindexes = tr.objectStore("textindexes");
 
 				request(headers.put(header));
+
+				const textIndex: PersistedTextIndex = {
+					issue: catalog.issue,
+					data: sti
+				};
+				request(textindexes.put(textIndex));
 
 				for (const entry of indEntries) {
 					request(entries.put(entry));
@@ -91,11 +100,23 @@ class CatalogPersistence {
 			.catch(() => [] as number[]);
 	}
 
-	getIssueEntries(issue: number) {
-		return this.db_.transaction("entries", "readonly",
-			(tr, {getAll}) => {
+	loadCatalog(issue: number) {
+		return this.db_.transaction(["headers", "entries", "textindexes"], "readonly",
+			(tr, {request, getAll}) => {
+				const headerP = request(tr.objectStore("headers").get(issue));
 				const issueIndex = tr.objectStore("entries").index("issue");
-				return getAll<IndexedEntry>(issueIndex, issue);
+				const entriesP = getAll<IndexedEntry>(issueIndex, issue);
+				const ptiP = request(tr.objectStore("textindexes").get(issue));
+
+				return Promise.all([headerP, entriesP, ptiP])
+					.then((result) => {
+						const pti = result[2] as PersistedTextIndex | undefined;
+						return {
+							header: result[0] as CatalogHeader,
+							entries: result[1] as IndexedEntry[],
+							sti: pti && pti.data
+						};
+					});
 			})
 			.catch(() => null);
 	}
@@ -200,14 +221,15 @@ export class CatalogStore {
 				.then(issues => {
 					console.info(`Checking persisted issues: ${issues}`);
 					if (issues.indexOf(newIssue) > -1) {
-						this.persist_.getIssueEntries(newIssue)
-							.then(entries => {
-								console.info(`Got issue entries back: ${entries && entries.length}`);
-								if (entries && entries.length > 0) {
-									this.acceptIndexedEntries(entries);
+						this.persist_.loadCatalog(newIssue)
+							.then(catalog => {
+								console.info(`Got catalog from local DB`);
+								if (catalog && catalog.header && catalog.entries && catalog.sti && catalog.entries.length === catalog.header.stats.entries) {
+									console.info(`Catalog looks good, loading entries and textindex`);
+									this.acceptIndexedEntries(catalog.entries, catalog.sti);
 								}
 								else {
-									console.info(`Could not load persisted issues, fall back to network load.`);
+									console.info(`Catalog data smelled funny, fall back to network load.`);
 									this.loadCatalog(newIssue);
 								}
 							});
@@ -220,11 +242,14 @@ export class CatalogStore {
 		}
 	}
 
-	private storeCatalog(catalog: Catalog, indexedEntries: IndexedEntry[]) {
-		this.persist_.saveCatalog(catalog, indexedEntries).then(() => { console.info("saved 'em!"); });
+	private storeCatalog(catalog: Catalog, indexedEntries: IndexedEntry[], textIndex: TextIndex) {
+		this.persist_.saveCatalog(catalog, indexedEntries, textIndex.export())
+			.then(() => {
+				console.info(`saved issue ${catalog.issue}`);
+			});
 	}
 
-	private acceptIndexedEntries(entries: IndexedEntry[]) {
+	private acceptIndexedEntries(entries: IndexedEntry[], textIndex: TextIndex | SerializedTextIndex) {
 		// cache entries in memory and update filter sets
 		for (const entry of entries) {
 			const docID = entry.docID;
@@ -253,15 +278,10 @@ export class CatalogStore {
 			else {
 				this.jamFilter_.add(docID);
 			}
-
-			// index text of entry
-			this.plasticSurge_.indexRawString(entry.title, docID);
-			this.plasticSurge_.indexRawString(entry.author.name, docID);
-			this.plasticSurge_.indexRawString(entry.description, docID);
-			for (const link of entry.links) {
-				this.plasticSurge_.indexRawString(link.label, docID);
-			}
 		}
+
+		// merge catalog text index into global one
+		this.plasticSurge_.import(textIndex);
 
 		this.filtersChanged();
 	}
@@ -275,17 +295,29 @@ export class CatalogStore {
 			return indEntry;
 		});
 
-		// index entry
+		// index catalog
 		const count = entries.length;
+		const textIndex = new TextIndex();
 		for (let entryIndex = 0; entryIndex < count; ++entryIndex) {
 			const entry = entries[entryIndex];
-			entry.docID = makeDocID(catalog.issue, entryIndex);
+			const docID = makeDocID(catalog.issue, entryIndex);
+			entry.docID = docID;
 			entry.indexes.platformMask = maskForPlatformKeys(entry.platforms);
+
+			// index text of entry
+			textIndex.indexRawString(entry.title, docID);
+			textIndex.indexRawString(entry.author.name, docID);
+			textIndex.indexRawString(entry.description, docID);
+			for (const link of entry.links) {
+				textIndex.indexRawString(link.label, docID);
+			}
 		}
 
-		this.storeCatalog(catalog, entries);
+		// persist indexed catalog in local db
+		this.storeCatalog(catalog, entries, textIndex);
 
-		this.acceptIndexedEntries(entries);
+		// integrate indexed catalog in memory
+		this.acceptIndexedEntries(entries, textIndex);
 	}
 
 	private loadCatalog(issue: number) {
