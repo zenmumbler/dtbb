@@ -150,7 +150,9 @@ function intersectSet(a, b) {
     var _a, _b;
 }
 
-
+function mergeSet(dest, source) {
+    source.forEach(function (val) { return dest.add(val); });
+}
 function newSetFromArray(source) {
     var set = new Set();
     var len = source.length;
@@ -236,7 +238,7 @@ var TextIndex = (function () {
         this.collapsedPunctuationMatcher = /['-]/g;
         this.multipleSpacesMatcher = / +/g;
     }
-    TextIndex.prototype.save = function () {
+    TextIndex.prototype.export = function () {
         var json = {};
         this.data_.forEach(function (indexes, key) {
             var flatIndexes = [];
@@ -245,10 +247,27 @@ var TextIndex = (function () {
         });
         return json;
     };
-    TextIndex.prototype.load = function (sti) {
-        this.data_ = new Map();
-        for (var key in sti) {
-            this.data_.set(key, newSetFromArray(sti[key]));
+    TextIndex.prototype.import = function (index) {
+        var _this = this;
+        if (index instanceof TextIndex) {
+            index.data_.forEach(function (indexes, key) {
+                if (_this.data_.has(key)) {
+                    mergeSet(_this.data_.get(key), indexes);
+                }
+                else {
+                    _this.data_.set(key, indexes);
+                }
+            });
+        }
+        else {
+            for (var key in index) {
+                if (this.data_.has(key)) {
+                    mergeSet(this.data_.get(key), index[key]);
+                }
+                else {
+                    this.data_.set(key, newSetFromArray(index[key]));
+                }
+            }
         }
     };
     Object.defineProperty(TextIndex.prototype, "ngramCount", {
@@ -500,18 +519,24 @@ var CatalogPersistence = (function () {
             entries.createIndex("platform", "platforms", { multiEntry: true });
         });
     }
-    CatalogPersistence.prototype.saveCatalog = function (catalog, indEntries) {
+    CatalogPersistence.prototype.saveCatalog = function (catalog, indEntries, sti) {
         var header = {
             issue: catalog.issue,
             theme: catalog.theme,
             stats: catalog.stats
         };
-        return this.db_.transaction(["headers", "entries"], "readwrite", function (tr, _a) {
+        return this.db_.transaction(["headers", "entries", "textindexes"], "readwrite", function (tr, _a) {
             var request = _a.request;
-            console.info("Storing issue " + header.issue, header, indEntries);
+            console.info("Storing issue " + header.issue + " with " + indEntries.length + " entries and textindex");
             var headers = tr.objectStore("headers");
             var entries = tr.objectStore("entries");
+            var textindexes = tr.objectStore("textindexes");
             request(headers.put(header));
+            var textIndex = {
+                issue: catalog.issue,
+                data: sti
+            };
+            request(textindexes.put(textIndex));
             for (var _i = 0, indEntries_1 = indEntries; _i < indEntries_1.length; _i++) {
                 var entry = indEntries_1[_i];
                 request(entries.put(entry));
@@ -545,11 +570,22 @@ var CatalogPersistence = (function () {
         })
             .catch(function () { return []; });
     };
-    CatalogPersistence.prototype.getIssueEntries = function (issue) {
-        return this.db_.transaction("entries", "readonly", function (tr, _a) {
-            var getAll = _a.getAll;
+    CatalogPersistence.prototype.loadCatalog = function (issue) {
+        return this.db_.transaction(["headers", "entries", "textindexes"], "readonly", function (tr, _a) {
+            var request = _a.request, getAll = _a.getAll;
+            var headerP = request(tr.objectStore("headers").get(issue));
             var issueIndex = tr.objectStore("entries").index("issue");
-            return getAll(issueIndex, issue);
+            var entriesP = getAll(issueIndex, issue);
+            var ptiP = request(tr.objectStore("textindexes").get(issue));
+            return Promise.all([headerP, entriesP, ptiP])
+                .then(function (result) {
+                var pti = result[2];
+                return {
+                    header: result[0],
+                    entries: result[1],
+                    sti: pti && pti.data
+                };
+            });
         })
             .catch(function () { return null; });
     };
@@ -630,14 +666,15 @@ var CatalogStore = (function () {
                 .then(function (issues) {
                 console.info("Checking persisted issues: " + issues);
                 if (issues.indexOf(newIssue) > -1) {
-                    _this.persist_.getIssueEntries(newIssue)
-                        .then(function (entries) {
-                        console.info("Got issue entries back: " + (entries && entries.length));
-                        if (entries && entries.length > 0) {
-                            _this.acceptIndexedEntries(entries);
+                    _this.persist_.loadCatalog(newIssue)
+                        .then(function (catalog) {
+                        console.info("Got catalog from local DB");
+                        if (catalog && catalog.header && catalog.entries && catalog.sti && catalog.entries.length === catalog.header.stats.entries) {
+                            console.info("Catalog looks good, loading entries and textindex");
+                            _this.acceptIndexedEntries(catalog.entries, catalog.sti);
                         }
                         else {
-                            console.info("Could not load persisted issues, fall back to network load.");
+                            console.info("Catalog data smelled funny, fall back to network load.");
                             _this.loadCatalog(newIssue);
                         }
                     });
@@ -649,10 +686,13 @@ var CatalogStore = (function () {
             });
         }
     };
-    CatalogStore.prototype.storeCatalog = function (catalog, indexedEntries) {
-        this.persist_.saveCatalog(catalog, indexedEntries).then(function () { console.info("saved 'em!"); });
+    CatalogStore.prototype.storeCatalog = function (catalog, indexedEntries, textIndex) {
+        this.persist_.saveCatalog(catalog, indexedEntries, textIndex.export())
+            .then(function () {
+            console.info("saved issue " + catalog.issue);
+        });
     };
-    CatalogStore.prototype.acceptIndexedEntries = function (entries) {
+    CatalogStore.prototype.acceptIndexedEntries = function (entries, textIndex) {
         for (var _i = 0, entries_1 = entries; _i < entries_1.length; _i++) {
             var entry = entries_1[_i];
             var docID = entry.docID;
@@ -676,14 +716,8 @@ var CatalogStore = (function () {
             else {
                 this.jamFilter_.add(docID);
             }
-            this.plasticSurge_.indexRawString(entry.title, docID);
-            this.plasticSurge_.indexRawString(entry.author.name, docID);
-            this.plasticSurge_.indexRawString(entry.description, docID);
-            for (var _a = 0, _b = entry.links; _a < _b.length; _a++) {
-                var link = _b[_a];
-                this.plasticSurge_.indexRawString(link.label, docID);
-            }
         }
+        this.plasticSurge_.import(textIndex);
         this.filtersChanged();
     };
     CatalogStore.prototype.acceptCatalogData = function (catalog) {
@@ -695,13 +729,22 @@ var CatalogStore = (function () {
             return indEntry;
         });
         var count = entries.length;
+        var textIndex = new TextIndex();
         for (var entryIndex = 0; entryIndex < count; ++entryIndex) {
             var entry = entries[entryIndex];
-            entry.docID = makeDocID(catalog.issue, entryIndex);
+            var docID = makeDocID(catalog.issue, entryIndex);
+            entry.docID = docID;
             entry.indexes.platformMask = maskForPlatformKeys(entry.platforms);
+            textIndex.indexRawString(entry.title, docID);
+            textIndex.indexRawString(entry.author.name, docID);
+            textIndex.indexRawString(entry.description, docID);
+            for (var _i = 0, _a = entry.links; _i < _a.length; _i++) {
+                var link = _a[_i];
+                textIndex.indexRawString(link.label, docID);
+            }
         }
-        this.storeCatalog(catalog, entries);
-        this.acceptIndexedEntries(entries);
+        this.storeCatalog(catalog, entries, textIndex);
+        this.acceptIndexedEntries(entries, textIndex);
     };
     CatalogStore.prototype.loadCatalog = function (issue) {
         var _this = this;
