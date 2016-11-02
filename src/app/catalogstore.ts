@@ -1,17 +1,22 @@
 // catalogstore.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
-import { Catalog, IndexedEntry, Platforms, maskForPlatformKeys } from "../lib/catalog";
-import { TextIndex } from "../lib/textindex";
+import { CatalogHeader, Catalog, IndexedEntry, Platforms, maskForPlatformKeys } from "../lib/catalog";
+import { SerializedTextIndex, TextIndex } from "../lib/textindex";
 import { intersectSet } from "../lib/setutil";
 import { PromiseDB } from "../lib/promisedb";
 import { loadTypedJSON } from "./domutil";
 import { WatchableValue } from "../lib/watchable";
 import { GamesBrowserState } from "./state";
 
-export function makeDocID(issue: number, entryIndex: number) {
+function makeDocID(issue: number, entryIndex: number) {
 	// this imposes a limit of 65536 entries per issue
 	return (issue << 16) | entryIndex;
+}
+
+interface PersistedTextIndex {
+	issue: number;
+	data: SerializedTextIndex;
 }
 
 class CatalogPersistence {
@@ -20,42 +25,86 @@ class CatalogPersistence {
 	constructor() {
 		this.db_ = new PromiseDB("dtbb", 1,
 			(db, _oldVersion, _newVersion) => {
-				db.createObjectStore("entries", { keyPath: "docID" });
+				console.info("Creating stores and indexes...");
+				const headers = db.createObjectStore("headers", { keyPath: "issue" });
+				const textindexes = db.createObjectStore("textindexes", { keyPath: "issue" });
+				const entries = db.createObjectStore("entries", { keyPath: "docID" });
+
+				// duplicates of primary index to allow for keyCursor ops
+				headers.createIndex("issue", "issue");
+				textindexes.createIndex("issue", "issue");
+
+				entries.createIndex("issue", "ld_issue");
+				entries.createIndex("category", "category");
+				entries.createIndex("platform", "platforms", { multiEntry: true });
 			});
 	}
 
-	saveEntries(entries: IndexedEntry[]) {
-		return this.db_.transaction("entries", "readwrite",
+	saveCatalog(catalog: Catalog, indEntries: IndexedEntry[]) {
+		const header: CatalogHeader = {
+			issue: catalog.issue,
+			theme: catalog.theme,
+			stats: catalog.stats
+		};
+
+		return this.db_.transaction(["headers", "entries"], "readwrite",
 			(tr, {request}) => {
-				const store = tr.objectStore("entries");
+				console.info(`Storing issue ${header.issue}`, header, indEntries);
+				const headers = tr.objectStore("headers");
+				const entries = tr.objectStore("entries");
 
-				for (const entry of entries) {
-					request(store.add(entry)).catch(
-						err => { console.warn("Could not save entry", err); }
-					);
+				request(headers.put(header));
+
+				for (const entry of indEntries) {
+					request(entries.put(entry));
 				}
+			})
+			.catch(error => {
+				console.warn(`Error saving catalog ${catalog.issue}`, error);
+				throw error;
 			});
 	}
 
-	enumEntries() {
-		this.db_.transaction("entries", "readonly",
-			(tr, {cursor}) => {
-				const store = tr.objectStore("entries");
-				cursor(store)
-					.next(cur => {
-						console.info("entry");
-						cur.continue();
-					})
-					.complete(() => {
-						console.info("done");
-					});
+	saveCatalogTextIndex(issue: number, sti: SerializedTextIndex) {
+		const data: PersistedTextIndex = {
+			issue,
+			data: sti
+		};
+
+		return this.db_.transaction("textindexes", "readwrite",
+			(tr, {request}) => {
+				const textindexes = tr.objectStore("textindexes");
+				request(textindexes.put(data));
+			})
+			.catch(error => {
+				console.warn("Error saving textindex: ", error);
+				throw error;
 			});
+	}
+
+	persistedIssues() {
+		return this.db_.transaction("headers", "readonly",
+			(tr, {getAllKeys}) => {
+				const issueIndex = tr.objectStore("headers").index("issue");
+				return getAllKeys<number>(issueIndex);
+			})
+			.catch(() => [] as number[]);
+	}
+
+	getIssueEntries(issue: number) {
+		return this.db_.transaction("entries", "readonly",
+			(tr, {getAll}) => {
+				const issueIndex = tr.objectStore("entries").index("issue");
+				return getAll<IndexedEntry>(issueIndex, issue);
+			})
+			.catch(() => null);
 	}
 }
 
 
 export class CatalogStore {
 	private persist_: CatalogPersistence;
+	private loadedIssues_: Set<number>;
 	private plasticSurge_ = new TextIndex();
 
 	// static data
@@ -71,6 +120,7 @@ export class CatalogStore {
 
 	constructor(private state_: GamesBrowserState) {
 		this.persist_ = new CatalogPersistence();
+		this.loadedIssues_ = new Set<number>();
 
 		for (const pk in Platforms) {
 			this.platformFilters_.set(Platforms[pk].mask, new Set<number>());
@@ -140,34 +190,48 @@ export class CatalogStore {
 	}
 
 	private issueChanged(newIssue: number) {
-		this.loadCatalog(newIssue);
+		if (this.loadedIssues_.has(newIssue)) {
+			console.info(`Already have this issue ${newIssue} loaded`);
+			this.filtersChanged();
+		}
+		else {
+			this.loadedIssues_.add(newIssue);
+			this.persist_.persistedIssues()
+				.then(issues => {
+					console.info(`Checking persisted issues: ${issues}`);
+					if (issues.indexOf(newIssue) > -1) {
+						this.persist_.getIssueEntries(newIssue)
+							.then(entries => {
+								console.info(`Got issue entries back: ${entries && entries.length}`);
+								if (entries && entries.length > 0) {
+									this.acceptIndexedEntries(entries);
+								}
+								else {
+									console.info(`Could not load persisted issues, fall back to network load.`);
+									this.loadCatalog(newIssue);
+								}
+							});
+					}
+					else {
+						console.info(`No entries available locally, fall back to network load.`);
+						this.loadCatalog(newIssue);
+					}
+				});
+		}
 	}
 
-	private storeCatalog(_catalog: Catalog, indexedEntries: IndexedEntry[]) {
-		this.persist_.saveEntries(indexedEntries).then(() => { console.info("saved 'em!"); });
+	private storeCatalog(catalog: Catalog, indexedEntries: IndexedEntry[]) {
+		this.persist_.saveCatalog(catalog, indexedEntries).then(() => { console.info("saved 'em!"); });
 	}
 
-	private acceptCatalogData(catalog: Catalog) {
-		const entries = catalog.entries.map(entry => {
-			const indEntry = entry as IndexedEntry;
-			indEntry.indexes = {
-				platformMask: 0
-			};
-			return indEntry;
-		});
-
-		// index all text and populate filter sets
-		const count = entries.length;
-		const t0 = performance.now();
-		for (let entryIndex = 0; entryIndex < count; ++entryIndex) {
-			const docID = makeDocID(catalog.issue, entryIndex);
+	private acceptIndexedEntries(entries: IndexedEntry[]) {
+		// cache entries in memory and update filter sets
+		for (const entry of entries) {
+			const docID = entry.docID;
+			this.entryData_.set(docID, entry);
 			this.allSet_.add(docID);
 
-			const entry = entries[entryIndex];
-			entry.docID = docID;
-			entry.indexes.platformMask = maskForPlatformKeys(entry.platforms);
-
-			// update issue filter
+			// create and update issue filters
 			let issueSet = this.issueFilters_.get(entry.ld_issue);
 			if (! issueSet) {
 				issueSet = new Set<number>();
@@ -175,10 +239,7 @@ export class CatalogStore {
 			}
 			issueSet.add(docID);
 
-			// add entry in docID slot of full entries array
-			this.entryData_.set(docID, entry);
-
-			// add docID to various filtersets
+			// update platform filters
 			for (const pk in Platforms) {
 				const plat = Platforms[pk];
 				if (entry.indexes.platformMask & plat.mask) {
@@ -201,12 +262,30 @@ export class CatalogStore {
 				this.plasticSurge_.indexRawString(link.label, docID);
 			}
 		}
-		const t1 = performance.now();
-
-		console.info("Text Indexing took " + (t1 - t0).toFixed(1) + "ms");
-		this.storeCatalog(catalog, entries);
 
 		this.filtersChanged();
+	}
+
+	private acceptCatalogData(catalog: Catalog) {
+		const entries = catalog.entries.map(entry => {
+			const indEntry = entry as IndexedEntry;
+			indEntry.indexes = {
+				platformMask: 0
+			};
+			return indEntry;
+		});
+
+		// index entry
+		const count = entries.length;
+		for (let entryIndex = 0; entryIndex < count; ++entryIndex) {
+			const entry = entries[entryIndex];
+			entry.docID = makeDocID(catalog.issue, entryIndex);
+			entry.indexes.platformMask = maskForPlatformKeys(entry.platforms);
+		}
+
+		this.storeCatalog(catalog, entries);
+
+		this.acceptIndexedEntries(entries);
 	}
 
 	private loadCatalog(issue: number) {

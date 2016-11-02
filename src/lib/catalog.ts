@@ -149,12 +149,13 @@ export interface IssueStats {
 	ratingDistribution: { [area: string]: number; };
 }
 
-// ----
-
-export interface Catalog {
+export interface CatalogHeader {
 	issue: number;
 	theme: string;
 	stats: IssueStats;
+}
+
+export interface Catalog extends CatalogHeader {
 	entries: Entry[];
 }
 
