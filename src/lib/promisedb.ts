@@ -43,6 +43,8 @@ export class PromiseDB {
 				console.warn(`Failed to open / upgrade database '${name}'`, error);
 			});
 
+		// the TransactionContext is implemented as the private methods in PDB
+		// bound to this and exposed as loose functions.
 		this.tctx_ = {
 			request: this.request.bind(this),
 			cursor: this.cursor.bind(this),
