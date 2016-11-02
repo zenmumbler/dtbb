@@ -1,9 +1,9 @@
 // textindex.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
-// Roman English script only
+// roman scripts only
 
-import { intersectSet, newSetFromArray } from "./setutil";
+import { mergeSet, intersectSet, newSetFromArray } from "./setutil";
 
 export type SerializedTextIndex = { [key: string]: number[] };
 
@@ -93,7 +93,7 @@ export class TextIndex {
 	private readonly MIN_NGRAM_LENGTH = 2;
 	private readonly MAX_NGRAM_LENGTH = 12;
 
-	save() {
+	export() {
 		const json: SerializedTextIndex = {};
 
 		this.data_.forEach((indexes, key) => {
@@ -105,10 +105,26 @@ export class TextIndex {
 		return json;
 	}
 
-	load(sti: SerializedTextIndex) {
-		this.data_ = new Map<string, Set<number>>();
-		for (const key in sti) {
-			this.data_.set(key, newSetFromArray(sti[key]));
+	import(index: TextIndex | SerializedTextIndex) {
+		if (index instanceof TextIndex) {
+			index.data_.forEach((indexes, key) => {
+				if (this.data_.has(key)) {
+					mergeSet(this.data_.get(key)!, indexes);
+				}
+				else {
+					this.data_.set(key, indexes);
+				}
+			});
+		}
+		else {
+			for (const key in index) {
+				if (this.data_.has(key)) {
+					mergeSet(this.data_.get(key)!, index[key]);
+				}
+				else {
+					this.data_.set(key, newSetFromArray(index[key]));
+				}
+			}
 		}
 	}
 
