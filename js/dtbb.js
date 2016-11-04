@@ -512,8 +512,8 @@ var CatalogPersistence = (function () {
             var headers = db.createObjectStore("headers", { keyPath: "issue" });
             var textindexes = db.createObjectStore("textindexes", { keyPath: "issue" });
             var entries = db.createObjectStore("entries", { keyPath: "docID" });
-            headers.createIndex("issue", "issue");
-            textindexes.createIndex("issue", "issue");
+            headers.createIndex("issue", "issue", { unique: true });
+            textindexes.createIndex("issue", "issue", { unique: true });
             entries.createIndex("issue", "ld_issue");
             entries.createIndex("category", "category");
             entries.createIndex("platform", "platforms", { multiEntry: true });
@@ -566,7 +566,7 @@ var CatalogPersistence = (function () {
         return this.db_.transaction("headers", "readonly", function (tr, _a) {
             var getAllKeys = _a.getAllKeys;
             var issueIndex = tr.objectStore("headers").index("issue");
-            return getAllKeys(issueIndex);
+            return getAllKeys(issueIndex, undefined, "nextunique");
         })
             .catch(function () { return []; });
     };
@@ -642,7 +642,7 @@ var CatalogStore = (function () {
             restrictionSets.push(issueSet);
         }
         var resultSet;
-        if (restrictionSets.length == 0) {
+        if (restrictionSets.length === 0) {
             resultSet = this.allSet_;
         }
         else {
@@ -661,7 +661,6 @@ var CatalogStore = (function () {
             this.filtersChanged();
         }
         else {
-            this.loadedIssues_.add(newIssue);
             this.persist_.persistedIssues()
                 .then(function (issues) {
                 console.info("Checking persisted issues: " + issues);
@@ -693,17 +692,25 @@ var CatalogStore = (function () {
         });
     };
     CatalogStore.prototype.acceptIndexedEntries = function (entries, textIndex) {
+        this.entryData_ = new Map();
+        this.allSet_ = new Set();
+        var updateIssueSet = false;
+        var issueSet;
+        if (entries.length > 0) {
+            issueSet = this.issueFilters_.get(entries[0].ld_issue);
+        }
+        if (!issueSet) {
+            issueSet = new Set();
+            updateIssueSet = true;
+        }
         for (var _i = 0, entries_1 = entries; _i < entries_1.length; _i++) {
             var entry = entries_1[_i];
             var docID = entry.docID;
             this.entryData_.set(docID, entry);
             this.allSet_.add(docID);
-            var issueSet = this.issueFilters_.get(entry.ld_issue);
-            if (!issueSet) {
-                issueSet = new Set();
-                this.issueFilters_.set(entry.ld_issue, issueSet);
+            if (updateIssueSet) {
+                issueSet.add(docID);
             }
-            issueSet.add(docID);
             for (var pk in Platforms) {
                 var plat = Platforms[pk];
                 if (entry.indexes.platformMask & plat.mask) {
@@ -717,6 +724,7 @@ var CatalogStore = (function () {
                 this.jamFilter_.add(docID);
             }
         }
+        this.plasticSurge_ = new TextIndex();
         this.plasticSurge_.import(textIndex);
         this.filtersChanged();
     };
@@ -1006,7 +1014,7 @@ var GamesGrid = (function () {
         }
     };
     GamesGrid.prototype.resized = function () {
-        var OVERFLOW_ROWS = 1;
+        var OVERFLOW_ROWS = 2;
         var width = this.scrollingElem_.offsetWidth - this.gridOffsetX - 4;
         var height = this.scrollingElem_.offsetHeight - this.gridOffsetY;
         var cols = Math.floor(width / (this.cellWidth_ + this.cellMargin_));

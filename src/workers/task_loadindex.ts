@@ -1,10 +1,10 @@
-// task_loadindex.ts  - part of DTBB (https://github.com/zenmumbler/dtbb)
+// task_indextext.ts  - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
 // this is used as a WebWorker
 
-import { loadTypedJSON } from "util";
-import { SerializedTextIndex, TextIndex } from "textindex";
+import { loadTypedJSON } from "../app/domutil";
+import { SerializedTextIndex, TextIndex } from "../lib/textindex";
 
 declare function postMessage(msg: any): void;
 

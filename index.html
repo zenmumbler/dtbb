@@ -3,7 +3,8 @@
 <head>
 	<meta charset="utf-8">
 	<title>Ludum Dare Games Browser</title>
-	<meta name="author" content="Arthur Langereis">
+	<meta name="author" content="Arthur Langereis aka @zenmumbler">
+	<meta name="repo" content="https://github.com/zenmumbler/dtbb/">
 	<meta name="viewport" content="width=960">
 	<style>
 	html, body {
@@ -52,10 +53,33 @@
 		background-color: white;
 	}
 
+	/* ---- */
+
+	#smokedglass {
+		position: absolute;
+		left: 0;
+		right: 0;
+		top: 0;
+		bottom: 0;
+		background: rgba(0, 0, 0, 0.2);
+		z-index: 1;
+	}
+
+	#status {
+		box-sizing: border-box;
+		position: abolute;
+		width: 250px;
+		top: 30vh;
+		left: 50vw;
+		margin-top: -125px;
+		z-index: 2;
+		background: linear-gradient(to bottom, #18181c 0%, #171a22 100%);
+	}
+
+	/* ---- */
 
 	#controls {
 		position: relative;
-		z-index: 2;
 		padding: 20px 12px;
 		background: linear-gradient(to bottom, #18181c 0%, #171a22 100%);
 		border-bottom: 1px solid #333;
@@ -334,6 +358,10 @@
 					</optgroup>
 				</select>
 			</div>
+		</section>
+
+		<section id="status">
+
 		</section>
 
 		<section class="entriesholder">
