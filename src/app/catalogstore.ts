@@ -195,7 +195,7 @@ export class CatalogStore {
 		// -- combine all filters
 		let resultSet: Set<number>;
 
-		if (restrictionSets.length == 0) {
+		if (restrictionSets.length === 0) {
 			resultSet = this.allSet_;
 		}
 		else {
@@ -216,7 +216,8 @@ export class CatalogStore {
 			this.filtersChanged();
 		}
 		else {
-			this.loadedIssues_.add(newIssue);
+			// Disable multiple loaded issues for now
+			// this.loadedIssues_.add(newIssue);
 			this.persist_.persistedIssues()
 				.then(issues => {
 					console.info(`Checking persisted issues: ${issues}`);
@@ -250,19 +251,31 @@ export class CatalogStore {
 	}
 
 	private acceptIndexedEntries(entries: IndexedEntry[], textIndex: TextIndex | SerializedTextIndex) {
+		// reset allSet and entryData, once we support searching over all sets this can change
+		// but needs different method as it's too heavy
+		this.entryData_ = new Map();
+		this.allSet_ = new Set();
+
 		// cache entries in memory and update filter sets
+		let updateIssueSet = false;
+		let issueSet: Set<number> | undefined;
+		if (entries.length > 0) {
+			issueSet = this.issueFilters_.get(entries[0].ld_issue);
+		}
+		if (! issueSet) {
+			issueSet = new Set();
+			updateIssueSet = true;
+		}
+
 		for (const entry of entries) {
 			const docID = entry.docID;
 			this.entryData_.set(docID, entry);
 			this.allSet_.add(docID);
 
-			// create and update issue filters
-			let issueSet = this.issueFilters_.get(entry.ld_issue);
-			if (! issueSet) {
-				issueSet = new Set<number>();
-				this.issueFilters_.set(entry.ld_issue, issueSet);
+			// create and update issue filters (first time load only)
+			if (updateIssueSet) {
+				issueSet.add(docID);
 			}
-			issueSet.add(docID);
 
 			// update platform filters
 			for (const pk in Platforms) {
@@ -280,7 +293,8 @@ export class CatalogStore {
 			}
 		}
 
-		// merge catalog text index into global one
+		// use catalog text index as the global one
+		this.plasticSurge_ = new TextIndex();
 		this.plasticSurge_.import(textIndex);
 
 		this.filtersChanged();
