@@ -31,8 +31,8 @@ class CatalogPersistence {
 				const entries = db.createObjectStore("entries", { keyPath: "docID" });
 
 				// duplicates of primary index to allow for keyCursor ops
-				headers.createIndex("issue", "issue");
-				textindexes.createIndex("issue", "issue");
+				headers.createIndex("issue", "issue", { unique: true });
+				textindexes.createIndex("issue", "issue", { unique: true });
 
 				// these indexes are not currently used, but adding them now anyway
 				// this app needs a composite index over these 3 fields but composite + multiEntry is not allowed...
@@ -95,7 +95,7 @@ class CatalogPersistence {
 		return this.db_.transaction("headers", "readonly",
 			(tr, {getAllKeys}) => {
 				const issueIndex = tr.objectStore("headers").index("issue");
-				return getAllKeys<number>(issueIndex);
+				return getAllKeys<number>(issueIndex, undefined, "nextunique"); // while the key is "unique", a bug in Saf10 makes multiple indexes. Fixed in STP.
 			})
 			.catch(() => [] as number[]);
 	}
