@@ -252,7 +252,7 @@ export class GamesGrid {
 
 
 	resized() {
-		const OVERFLOW_ROWS = 1;
+		const OVERFLOW_ROWS = 2;
 
 		const width = this.scrollingElem_.offsetWidth - this.gridOffsetX - 4;
 		const height = this.scrollingElem_.offsetHeight - this.gridOffsetY;
