@@ -1,19 +1,6 @@
 (function (exports) {
 'use strict';
 
-function loadTypedJSON(url) {
-    return new Promise(function (resolve, reject) {
-        var xhr = new XMLHttpRequest();
-        xhr.open("GET", url);
-        xhr.overrideMimeType("application/json");
-        xhr.responseType = "json";
-        xhr.onload = function () {
-            resolve(xhr.response);
-        };
-        xhr.onerror = reject;
-        xhr.send(null);
-    });
-}
 function elem(sel, base) {
     if (base === void 0) { base = document; }
     return (base.querySelector(sel));
@@ -129,6 +116,229 @@ var WatchableValue = (function () {
         configurable: true
     });
     return WatchableValue;
+}());
+
+var PromiseDB = (function () {
+    function PromiseDB(name, version, upgrade) {
+        this.db_ = this.request(indexedDB.open(name, version), function (openReq) {
+            openReq.onupgradeneeded = function (upgradeEvt) {
+                var db = openReq.result;
+                upgrade(db, upgradeEvt.oldVersion, upgradeEvt.newVersion || version);
+            };
+        })
+            .catch(function (error) {
+            console.warn("Failed to open / upgrade database '" + name + "'", error);
+        });
+        this.tctx_ = {
+            request: this.request.bind(this),
+            cursor: this.cursor.bind(this),
+            keyCursor: this.keyCursor.bind(this),
+            getAll: this.getAll.bind(this),
+            getAllKeys: this.getAllKeys.bind(this)
+        };
+    }
+    PromiseDB.prototype.close = function () {
+        this.db_.then(function (db) {
+            db.close();
+        });
+    };
+    PromiseDB.prototype.transaction = function (storeNames, mode, fn) {
+        var _this = this;
+        return this.db_.then(function (db) {
+            return new Promise(function (resolve, reject) {
+                var tr = db.transaction(storeNames, mode);
+                tr.onerror = function () { reject(tr.error || "transaction failed"); };
+                tr.onabort = function () { reject("aborted"); };
+                var result = fn(tr, _this.tctx_);
+                tr.oncomplete = function () { resolve((result === undefined) ? undefined : result); };
+            });
+        });
+    };
+    PromiseDB.prototype.request = function (req, fn) {
+        var reqProm = new Promise(function (resolve, reject) {
+            req.onerror = function () { reject(req.error || "request failed"); };
+            req.onsuccess = function () { resolve(req.result); };
+            if (fn) {
+                fn(req);
+            }
+        });
+        return this.db_ ? this.db_.then(function () { return reqProm; }) : reqProm;
+    };
+    PromiseDB.prototype.cursorImpl = function (cursorReq) {
+        var result = {
+            next: function (callback) {
+                this.callbackFn_ = callback;
+                return this;
+            },
+            complete: function (callback) {
+                this.completeFn_ = callback;
+                return this;
+            },
+            catch: function (callback) {
+                this.errorFn_ = callback;
+                return this;
+            }
+        };
+        cursorReq.onerror = function () {
+            if (result.errorFn_) {
+                result.errorFn_(cursorReq.error);
+            }
+        };
+        cursorReq.onsuccess = function () {
+            var cursor = cursorReq.result;
+            if (cursor) {
+                if (result.callbackFn_) {
+                    result.callbackFn_(cursor);
+                }
+            }
+            else {
+                if (result.completeFn_) {
+                    result.completeFn_();
+                }
+            }
+        };
+        return result;
+    };
+    PromiseDB.prototype.cursor = function (container, range, direction) {
+        var cursorReq = container.openCursor(range, direction);
+        return this.cursorImpl(cursorReq);
+    };
+    PromiseDB.prototype.keyCursor = function (index, range, direction) {
+        var cursorReq = index.openKeyCursor(range, direction);
+        return this.cursorImpl(cursorReq);
+    };
+    PromiseDB.prototype.getAll = function (container, range, direction, limit) {
+        var _this = this;
+        return new Promise(function (resolve, reject) {
+            var result = [];
+            _this.cursor(container, range, direction)
+                .next(function (cur) {
+                result.push(cur.value);
+                if (limit && (result.length === limit)) {
+                    resolve(result);
+                }
+                else {
+                    cur.continue();
+                }
+            })
+                .complete(function () {
+                resolve(result);
+            })
+                .catch(function (error) {
+                reject(error);
+            });
+        });
+    };
+    PromiseDB.prototype.getAllKeys = function (container, range, direction, limit) {
+        var _this = this;
+        return new Promise(function (resolve, reject) {
+            var result = [];
+            _this.keyCursor(container, range, direction)
+                .next(function (cur) {
+                result.push(cur.key);
+                if (limit && (result.length === limit)) {
+                    resolve(result);
+                }
+                else {
+                    cur.continue();
+                }
+            })
+                .complete(function () {
+                resolve(result);
+            })
+                .catch(function (error) {
+                reject(error);
+            });
+        });
+    };
+    return PromiseDB;
+}());
+
+var CatalogPersistence = (function () {
+    function CatalogPersistence() {
+        this.db_ = new PromiseDB("dtbb", 1, function (db, _oldVersion, _newVersion) {
+            console.info("Creating stores and indexes...");
+            var headers = db.createObjectStore("headers", { keyPath: "issue" });
+            var textindexes = db.createObjectStore("textindexes", { keyPath: "issue" });
+            var entries = db.createObjectStore("entries", { keyPath: "docID" });
+            headers.createIndex("issue", "issue", { unique: true });
+            textindexes.createIndex("issue", "issue", { unique: true });
+            entries.createIndex("issue", "ld_issue");
+            entries.createIndex("category", "category");
+            entries.createIndex("platform", "platforms", { multiEntry: true });
+        });
+    }
+    CatalogPersistence.prototype.saveCatalog = function (catalog, indEntries, sti) {
+        var header = {
+            issue: catalog.issue,
+            theme: catalog.theme,
+            stats: catalog.stats
+        };
+        return this.db_.transaction(["headers", "entries", "textindexes"], "readwrite", function (tr, _a) {
+            var request = _a.request;
+            console.info("Storing issue " + header.issue + " with " + indEntries.length + " entries and textindex");
+            var headers = tr.objectStore("headers");
+            var entries = tr.objectStore("entries");
+            var textindexes = tr.objectStore("textindexes");
+            request(headers.put(header));
+            var textIndex = {
+                issue: catalog.issue,
+                data: sti
+            };
+            request(textindexes.put(textIndex));
+            for (var _i = 0, indEntries_1 = indEntries; _i < indEntries_1.length; _i++) {
+                var entry = indEntries_1[_i];
+                request(entries.put(entry));
+            }
+        })
+            .catch(function (error) {
+            console.warn("Error saving catalog " + catalog.issue, error);
+            throw error;
+        });
+    };
+    CatalogPersistence.prototype.saveCatalogTextIndex = function (issue, sti) {
+        var data = {
+            issue: issue,
+            data: sti
+        };
+        return this.db_.transaction("textindexes", "readwrite", function (tr, _a) {
+            var request = _a.request;
+            var textindexes = tr.objectStore("textindexes");
+            request(textindexes.put(data));
+        })
+            .catch(function (error) {
+            console.warn("Error saving textindex: ", error);
+            throw error;
+        });
+    };
+    CatalogPersistence.prototype.persistedIssues = function () {
+        return this.db_.transaction("headers", "readonly", function (tr, _a) {
+            var getAllKeys = _a.getAllKeys;
+            var issueIndex = tr.objectStore("headers").index("issue");
+            return getAllKeys(issueIndex, undefined, "nextunique");
+        })
+            .catch(function () { return []; });
+    };
+    CatalogPersistence.prototype.loadCatalog = function (issue) {
+        return this.db_.transaction(["headers", "entries", "textindexes"], "readonly", function (tr, _a) {
+            var request = _a.request, getAll = _a.getAll;
+            var headerP = request(tr.objectStore("headers").get(issue));
+            var issueIndex = tr.objectStore("entries").index("issue");
+            var entriesP = getAll(issueIndex, issue);
+            var ptiP = request(tr.objectStore("textindexes").get(issue));
+            return Promise.all([headerP, entriesP, ptiP])
+                .then(function (result) {
+                var pti = result[2];
+                return {
+                    header: result[0],
+                    entries: result[1],
+                    sti: pti && pti.data
+                };
+            });
+        })
+            .catch(function () { return null; });
+    };
+    return CatalogPersistence;
 }());
 
 function intersectSet(a, b) {
@@ -366,231 +576,73 @@ var TextIndex = (function () {
     return TextIndex;
 }());
 
-var PromiseDB = (function () {
-    function PromiseDB(name, version, upgrade) {
-        this.db_ = this.request(indexedDB.open(name, version), function (openReq) {
-            openReq.onupgradeneeded = function (upgradeEvt) {
-                var db = openReq.result;
-                upgrade(db, upgradeEvt.oldVersion, upgradeEvt.newVersion || version);
-            };
-        })
-            .catch(function (error) {
-            console.warn("Failed to open / upgrade database '" + name + "'", error);
-        });
-        this.tctx_ = {
-            request: this.request.bind(this),
-            cursor: this.cursor.bind(this),
-            keyCursor: this.keyCursor.bind(this),
-            getAll: this.getAll.bind(this),
-            getAllKeys: this.getAllKeys.bind(this)
+function loadTypedJSON(url) {
+    return new Promise(function (resolve, reject) {
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", url);
+        xhr.overrideMimeType("application/json");
+        xhr.responseType = "json";
+        xhr.onload = function () {
+            resolve(xhr.response);
         };
-    }
-    PromiseDB.prototype.close = function () {
-        this.db_.then(function (db) {
-            db.close();
-        });
-    };
-    PromiseDB.prototype.transaction = function (storeNames, mode, fn) {
-        var _this = this;
-        return this.db_.then(function (db) {
-            return new Promise(function (resolve, reject) {
-                var tr = db.transaction(storeNames, mode);
-                tr.onerror = function () { reject(tr.error || "transaction failed"); };
-                tr.onabort = function () { reject("aborted"); };
-                var result = fn(tr, _this.tctx_);
-                tr.oncomplete = function () { resolve((result === undefined) ? undefined : result); };
-            });
-        });
-    };
-    PromiseDB.prototype.request = function (req, fn) {
-        var reqProm = new Promise(function (resolve, reject) {
-            req.onerror = function () { reject(req.error || "request failed"); };
-            req.onsuccess = function () { resolve(req.result); };
-            if (fn) {
-                fn(req);
-            }
-        });
-        return this.db_ ? this.db_.then(function () { return reqProm; }) : reqProm;
-    };
-    PromiseDB.prototype.cursorImpl = function (cursorReq) {
-        var result = {
-            next: function (callback) {
-                this.callbackFn_ = callback;
-                return this;
-            },
-            complete: function (callback) {
-                this.completeFn_ = callback;
-                return this;
-            },
-            catch: function (callback) {
-                this.errorFn_ = callback;
-                return this;
-            }
-        };
-        cursorReq.onerror = function () {
-            if (result.errorFn_) {
-                result.errorFn_(cursorReq.error);
-            }
-        };
-        cursorReq.onsuccess = function () {
-            var cursor = cursorReq.result;
-            if (cursor) {
-                if (result.callbackFn_) {
-                    result.callbackFn_(cursor);
-                }
-            }
-            else {
-                if (result.completeFn_) {
-                    result.completeFn_();
-                }
-            }
-        };
-        return result;
-    };
-    PromiseDB.prototype.cursor = function (container, range, direction) {
-        var cursorReq = container.openCursor(range, direction);
-        return this.cursorImpl(cursorReq);
-    };
-    PromiseDB.prototype.keyCursor = function (index, range, direction) {
-        var cursorReq = index.openKeyCursor(range, direction);
-        return this.cursorImpl(cursorReq);
-    };
-    PromiseDB.prototype.getAll = function (container, range, direction, limit) {
-        var _this = this;
-        return new Promise(function (resolve, reject) {
-            var result = [];
-            _this.cursor(container, range, direction)
-                .next(function (cur) {
-                result.push(cur.value);
-                if (limit && (result.length === limit)) {
-                    resolve(result);
-                }
-                else {
-                    cur.continue();
-                }
-            })
-                .complete(function () {
-                resolve(result);
-            })
-                .catch(function (error) {
-                reject(error);
-            });
-        });
-    };
-    PromiseDB.prototype.getAllKeys = function (container, range, direction, limit) {
-        var _this = this;
-        return new Promise(function (resolve, reject) {
-            var result = [];
-            _this.keyCursor(container, range, direction)
-                .next(function (cur) {
-                result.push(cur.key);
-                if (limit && (result.length === limit)) {
-                    resolve(result);
-                }
-                else {
-                    cur.continue();
-                }
-            })
-                .complete(function () {
-                resolve(result);
-            })
-                .catch(function (error) {
-                reject(error);
-            });
-        });
-    };
-    return PromiseDB;
-}());
-
+        xhr.onerror = reject;
+        xhr.send(null);
+    });
+}
 function makeDocID(issue, entryIndex) {
     return (issue << 16) | entryIndex;
 }
-var CatalogPersistence = (function () {
-    function CatalogPersistence() {
-        this.db_ = new PromiseDB("dtbb", 1, function (db, _oldVersion, _newVersion) {
-            console.info("Creating stores and indexes...");
-            var headers = db.createObjectStore("headers", { keyPath: "issue" });
-            var textindexes = db.createObjectStore("textindexes", { keyPath: "issue" });
-            var entries = db.createObjectStore("entries", { keyPath: "docID" });
-            headers.createIndex("issue", "issue", { unique: true });
-            textindexes.createIndex("issue", "issue", { unique: true });
-            entries.createIndex("issue", "ld_issue");
-            entries.createIndex("category", "category");
-            entries.createIndex("platform", "platforms", { multiEntry: true });
-        });
+var CatalogIndexer = (function () {
+    function CatalogIndexer(persist_) {
+        this.persist_ = persist_;
     }
-    CatalogPersistence.prototype.saveCatalog = function (catalog, indEntries, sti) {
-        var header = {
-            issue: catalog.issue,
-            theme: catalog.theme,
-            stats: catalog.stats
-        };
-        return this.db_.transaction(["headers", "entries", "textindexes"], "readwrite", function (tr, _a) {
-            var request = _a.request;
-            console.info("Storing issue " + header.issue + " with " + indEntries.length + " entries and textindex");
-            var headers = tr.objectStore("headers");
-            var entries = tr.objectStore("entries");
-            var textindexes = tr.objectStore("textindexes");
-            request(headers.put(header));
-            var textIndex = {
-                issue: catalog.issue,
-                data: sti
+    CatalogIndexer.prototype.acceptCatalogData = function (catalog) {
+        var entries = catalog.entries.map(function (entry) {
+            var indEntry = entry;
+            indEntry.indexes = {
+                platformMask: 0
             };
-            request(textindexes.put(textIndex));
-            for (var _i = 0, indEntries_1 = indEntries; _i < indEntries_1.length; _i++) {
-                var entry = indEntries_1[_i];
-                request(entries.put(entry));
+            return indEntry;
+        });
+        var count = entries.length;
+        var textIndex = new TextIndex();
+        for (var entryIndex = 0; entryIndex < count; ++entryIndex) {
+            var entry = entries[entryIndex];
+            var docID = makeDocID(catalog.issue, entryIndex);
+            entry.docID = docID;
+            entry.indexes.platformMask = maskForPlatformKeys(entry.platforms);
+            textIndex.indexRawString(entry.title, docID);
+            textIndex.indexRawString(entry.author.name, docID);
+            textIndex.indexRawString(entry.description, docID);
+            for (var _i = 0, _a = entry.links; _i < _a.length; _i++) {
+                var link = _a[_i];
+                textIndex.indexRawString(link.label, docID);
             }
-        })
-            .catch(function (error) {
-            console.warn("Error saving catalog " + catalog.issue, error);
-            throw error;
-        });
-    };
-    CatalogPersistence.prototype.saveCatalogTextIndex = function (issue, sti) {
-        var data = {
-            issue: issue,
-            data: sti
+        }
+        this.storeCatalog(catalog, entries, textIndex);
+        return {
+            entries: entries,
+            textIndex: textIndex
         };
-        return this.db_.transaction("textindexes", "readwrite", function (tr, _a) {
-            var request = _a.request;
-            var textindexes = tr.objectStore("textindexes");
-            request(textindexes.put(data));
-        })
-            .catch(function (error) {
-            console.warn("Error saving textindex: ", error);
-            throw error;
+    };
+    CatalogIndexer.prototype.storeCatalog = function (catalog, indexedEntries, textIndex) {
+        this.persist_.saveCatalog(catalog, indexedEntries, textIndex.export())
+            .then(function () {
+            console.info("saved issue " + catalog.issue);
         });
     };
-    CatalogPersistence.prototype.persistedIssues = function () {
-        return this.db_.transaction("headers", "readonly", function (tr, _a) {
-            var getAllKeys = _a.getAllKeys;
-            var issueIndex = tr.objectStore("headers").index("issue");
-            return getAllKeys(issueIndex, undefined, "nextunique");
-        })
-            .catch(function () { return []; });
+    CatalogIndexer.prototype.loadCatalogFile = function (issue) {
+        var _this = this;
+        var revision = 1;
+        var extension = location.host.toLowerCase() !== "zenmumbler.net" ? ".json" : ".gzjson";
+        var entriesURL = "data/ld" + issue + "_entries" + extension + "?" + revision;
+        return loadTypedJSON(entriesURL).then(function (catalog) {
+            return _this.acceptCatalogData(catalog);
+        });
     };
-    CatalogPersistence.prototype.loadCatalog = function (issue) {
-        return this.db_.transaction(["headers", "entries", "textindexes"], "readonly", function (tr, _a) {
-            var request = _a.request, getAll = _a.getAll;
-            var headerP = request(tr.objectStore("headers").get(issue));
-            var issueIndex = tr.objectStore("entries").index("issue");
-            var entriesP = getAll(issueIndex, issue);
-            var ptiP = request(tr.objectStore("textindexes").get(issue));
-            return Promise.all([headerP, entriesP, ptiP])
-                .then(function (result) {
-                var pti = result[2];
-                return {
-                    header: result[0],
-                    entries: result[1],
-                    sti: pti && pti.data
-                };
-            });
-        })
-            .catch(function () { return null; });
-    };
-    return CatalogPersistence;
+    return CatalogIndexer;
 }());
+
 var CatalogStore = (function () {
     function CatalogStore(state_) {
         var _this = this;
@@ -603,6 +655,7 @@ var CatalogStore = (function () {
         this.platformFilters_ = new Map();
         this.issueFilters_ = new Map();
         this.persist_ = new CatalogPersistence();
+        this.indexer_ = new CatalogIndexer(this.persist_);
         this.loadedIssues_ = new Set();
         for (var pk in Platforms) {
             this.platformFilters_.set(Platforms[pk].mask, new Set());
@@ -674,22 +727,20 @@ var CatalogStore = (function () {
                         }
                         else {
                             console.info("Catalog data smelled funny, fall back to network load.");
-                            _this.loadCatalog(newIssue);
+                            _this.indexer_.loadCatalogFile(newIssue).then(function (data) {
+                                _this.acceptIndexedEntries(data.entries, data.textIndex);
+                            });
                         }
                     });
                 }
                 else {
                     console.info("No entries available locally, fall back to network load.");
-                    _this.loadCatalog(newIssue);
+                    _this.indexer_.loadCatalogFile(newIssue).then(function (data) {
+                        _this.acceptIndexedEntries(data.entries, data.textIndex);
+                    });
                 }
             });
         }
-    };
-    CatalogStore.prototype.storeCatalog = function (catalog, indexedEntries, textIndex) {
-        this.persist_.saveCatalog(catalog, indexedEntries, textIndex.export())
-            .then(function () {
-            console.info("saved issue " + catalog.issue);
-        });
     };
     CatalogStore.prototype.acceptIndexedEntries = function (entries, textIndex) {
         this.entryData_ = new Map();
@@ -727,41 +778,6 @@ var CatalogStore = (function () {
         this.plasticSurge_ = new TextIndex();
         this.plasticSurge_.import(textIndex);
         this.filtersChanged();
-    };
-    CatalogStore.prototype.acceptCatalogData = function (catalog) {
-        var entries = catalog.entries.map(function (entry) {
-            var indEntry = entry;
-            indEntry.indexes = {
-                platformMask: 0
-            };
-            return indEntry;
-        });
-        var count = entries.length;
-        var textIndex = new TextIndex();
-        for (var entryIndex = 0; entryIndex < count; ++entryIndex) {
-            var entry = entries[entryIndex];
-            var docID = makeDocID(catalog.issue, entryIndex);
-            entry.docID = docID;
-            entry.indexes.platformMask = maskForPlatformKeys(entry.platforms);
-            textIndex.indexRawString(entry.title, docID);
-            textIndex.indexRawString(entry.author.name, docID);
-            textIndex.indexRawString(entry.description, docID);
-            for (var _i = 0, _a = entry.links; _i < _a.length; _i++) {
-                var link = _a[_i];
-                textIndex.indexRawString(link.label, docID);
-            }
-        }
-        this.storeCatalog(catalog, entries, textIndex);
-        this.acceptIndexedEntries(entries, textIndex);
-    };
-    CatalogStore.prototype.loadCatalog = function (issue) {
-        var _this = this;
-        var revision = 1;
-        var extension = location.host.toLowerCase() !== "zenmumbler.net" ? ".json" : ".gzjson";
-        var entriesURL = "data/ld" + issue + "_entries" + extension + "?" + revision;
-        return loadTypedJSON(entriesURL).then(function (catalog) {
-            _this.acceptCatalogData(catalog);
-        });
     };
     Object.defineProperty(CatalogStore.prototype, "filteredSet", {
         get: function () { return this.filteredSet_.watchable; },
