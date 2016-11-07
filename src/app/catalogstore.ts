@@ -1,134 +1,21 @@
 // catalogstore.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
-import { CatalogHeader, Catalog, IndexedEntry, Platforms, maskForPlatformKeys } from "../lib/catalog";
+import { IndexedEntry, Platforms } from "../lib/catalog";
+import { CatalogPersistence } from "../lib/catalogpersistence";
+import { CatalogIndexer } from "../lib/catalogindexer";
 import { SerializedTextIndex, TextIndex } from "../lib/textindex";
 import { intersectSet } from "../lib/setutil";
-import { PromiseDB } from "../lib/promisedb";
-import { loadTypedJSON } from "./domutil";
 import { WatchableValue } from "../lib/watchable";
 import { GamesBrowserState } from "./state";
 
-function makeDocID(issue: number, entryIndex: number) {
-	// this imposes a limit of 65536 entries per issue
-	return (issue << 16) | entryIndex;
-}
-
-interface PersistedTextIndex {
-	issue: number;
-	data: SerializedTextIndex;
-}
-
-class CatalogPersistence {
-	private db_: PromiseDB;
-
-	constructor() {
-		this.db_ = new PromiseDB("dtbb", 1,
-			(db, _oldVersion, _newVersion) => {
-				console.info("Creating stores and indexes...");
-				const headers = db.createObjectStore("headers", { keyPath: "issue" });
-				const textindexes = db.createObjectStore("textindexes", { keyPath: "issue" });
-				const entries = db.createObjectStore("entries", { keyPath: "docID" });
-
-				// duplicates of primary index to allow for keyCursor ops
-				headers.createIndex("issue", "issue", { unique: true });
-				textindexes.createIndex("issue", "issue", { unique: true });
-
-				// these indexes are not currently used, but adding them now anyway
-				// this app needs a composite index over these 3 fields but composite + multiEntry is not allowed...
-				entries.createIndex("issue", "ld_issue");
-				entries.createIndex("category", "category");
-				entries.createIndex("platform", "platforms", { multiEntry: true });
-			});
-	}
-
-	saveCatalog(catalog: Catalog, indEntries: IndexedEntry[], sti: SerializedTextIndex) {
-		const header: CatalogHeader = {
-			issue: catalog.issue,
-			theme: catalog.theme,
-			stats: catalog.stats
-		};
-
-		return this.db_.transaction(["headers", "entries", "textindexes"], "readwrite",
-			(tr, {request}) => {
-				console.info(`Storing issue ${header.issue} with ${indEntries.length} entries and textindex`);
-				const headers = tr.objectStore("headers");
-				const entries = tr.objectStore("entries");
-				const textindexes = tr.objectStore("textindexes");
-
-				request(headers.put(header));
-
-				const textIndex: PersistedTextIndex = {
-					issue: catalog.issue,
-					data: sti
-				};
-				request(textindexes.put(textIndex));
-
-				for (const entry of indEntries) {
-					request(entries.put(entry));
-				}
-			})
-			.catch(error => {
-				console.warn(`Error saving catalog ${catalog.issue}`, error);
-				throw error;
-			});
-	}
-
-	saveCatalogTextIndex(issue: number, sti: SerializedTextIndex) {
-		const data: PersistedTextIndex = {
-			issue,
-			data: sti
-		};
-
-		return this.db_.transaction("textindexes", "readwrite",
-			(tr, {request}) => {
-				const textindexes = tr.objectStore("textindexes");
-				request(textindexes.put(data));
-			})
-			.catch(error => {
-				console.warn("Error saving textindex: ", error);
-				throw error;
-			});
-	}
-
-	persistedIssues() {
-		return this.db_.transaction("headers", "readonly",
-			(tr, {getAllKeys}) => {
-				const issueIndex = tr.objectStore("headers").index("issue");
-				return getAllKeys<number>(issueIndex, undefined, "nextunique"); // while the key is "unique", a bug in Saf10 makes multiple indexes. Fixed in STP.
-			})
-			.catch(() => [] as number[]);
-	}
-
-	loadCatalog(issue: number) {
-		return this.db_.transaction(["headers", "entries", "textindexes"], "readonly",
-			(tr, {request, getAll}) => {
-				const headerP = request(tr.objectStore("headers").get(issue));
-				const issueIndex = tr.objectStore("entries").index("issue");
-				const entriesP = getAll<IndexedEntry>(issueIndex, issue);
-				const ptiP = request(tr.objectStore("textindexes").get(issue));
-
-				return Promise.all([headerP, entriesP, ptiP])
-					.then((result) => {
-						const pti = result[2] as PersistedTextIndex | undefined;
-						return {
-							header: result[0] as CatalogHeader,
-							entries: result[1] as IndexedEntry[],
-							sti: pti && pti.data
-						};
-					});
-			})
-			.catch(() => null);
-	}
-}
-
-
 export class CatalogStore {
 	private persist_: CatalogPersistence;
+	private indexer_: CatalogIndexer;
 	private loadedIssues_: Set<number>;
 	private plasticSurge_ = new TextIndex();
 
-	// static data
+	// cached data
 	private entryData_ = new Map<number, IndexedEntry>();
 	private allSet_ = new Set<number>();
 	private compoFilter_ = new Set<number>();
@@ -136,11 +23,12 @@ export class CatalogStore {
 	private platformFilters_ = new Map<number, Set<number>>();
 	private issueFilters_ = new Map<number, Set<number>>();
 
-	// derived data
+	// derived public data
 	private filteredSet_: WatchableValue<Set<number>>;
 
 	constructor(private state_: GamesBrowserState) {
 		this.persist_ = new CatalogPersistence();
+		this.indexer_ = new CatalogIndexer(this.persist_);
 		this.loadedIssues_ = new Set<number>();
 
 		for (const pk in Platforms) {
@@ -231,23 +119,20 @@ export class CatalogStore {
 								}
 								else {
 									console.info(`Catalog data smelled funny, fall back to network load.`);
-									this.loadCatalog(newIssue);
+									this.indexer_.importCatalogFile(newIssue).then(data => {
+										this.acceptIndexedEntries(data.entries, data.textIndex);
+									});
 								}
 							});
 					}
 					else {
 						console.info(`No entries available locally, fall back to network load.`);
-						this.loadCatalog(newIssue);
+						this.indexer_.importCatalogFile(newIssue).then(data => {
+							this.acceptIndexedEntries(data.entries, data.textIndex);
+						});
 					}
 				});
 		}
-	}
-
-	private storeCatalog(catalog: Catalog, indexedEntries: IndexedEntry[], textIndex: TextIndex) {
-		this.persist_.saveCatalog(catalog, indexedEntries, textIndex.export())
-			.then(() => {
-				console.info(`saved issue ${catalog.issue}`);
-			});
 	}
 
 	private acceptIndexedEntries(entries: IndexedEntry[], textIndex: TextIndex | SerializedTextIndex) {
@@ -298,50 +183,6 @@ export class CatalogStore {
 		this.plasticSurge_.import(textIndex);
 
 		this.filtersChanged();
-	}
-
-	private acceptCatalogData(catalog: Catalog) {
-		const entries = catalog.entries.map(entry => {
-			const indEntry = entry as IndexedEntry;
-			indEntry.indexes = {
-				platformMask: 0
-			};
-			return indEntry;
-		});
-
-		// index catalog
-		const count = entries.length;
-		const textIndex = new TextIndex();
-		for (let entryIndex = 0; entryIndex < count; ++entryIndex) {
-			const entry = entries[entryIndex];
-			const docID = makeDocID(catalog.issue, entryIndex);
-			entry.docID = docID;
-			entry.indexes.platformMask = maskForPlatformKeys(entry.platforms);
-
-			// index text of entry
-			textIndex.indexRawString(entry.title, docID);
-			textIndex.indexRawString(entry.author.name, docID);
-			textIndex.indexRawString(entry.description, docID);
-			for (const link of entry.links) {
-				textIndex.indexRawString(link.label, docID);
-			}
-		}
-
-		// persist indexed catalog in local db
-		this.storeCatalog(catalog, entries, textIndex);
-
-		// integrate indexed catalog in memory
-		this.acceptIndexedEntries(entries, textIndex);
-	}
-
-	private loadCatalog(issue: number) {
-		const revision = 1;
-		const extension = location.host.toLowerCase() !== "zenmumbler.net" ? ".json" : ".gzjson";
-		const entriesURL = `data/ld${issue}_entries${extension}?${revision}`;
-
-		return loadTypedJSON<Catalog>(entriesURL).then(catalog => {
-			this.acceptCatalogData(catalog);
-		});
 	}
 
 	// static
