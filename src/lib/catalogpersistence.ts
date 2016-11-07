@@ -111,4 +111,24 @@ export class CatalogPersistence {
 			})
 			.catch(() => null);
 	}
+
+	destroyCatalog(issue: number) {
+		return this.db_.transaction(["headers", "entries", "textindexes"], "readwrite",
+			(tr, {request, getAllKeys}) => {
+				const headers = tr.objectStore("headers");
+				const entries = tr.objectStore("entries");
+				const issueIndex = entries.index("issue");
+				const indexes = tr.objectStore("textindexes");
+
+				getAllKeys<number>(issueIndex, issue)
+					.then(entryKeys => {
+						for (const key of entryKeys) {
+							request(entries.delete(key));
+						}
+					});
+
+				request(headers.delete(issue));
+				request(indexes.delete(issue));
+			});
+	}
 }
