@@ -338,7 +338,84 @@ var CatalogPersistence = (function () {
         })
             .catch(function () { return null; });
     };
+    CatalogPersistence.prototype.destroyCatalog = function (issue) {
+        return this.db_.transaction(["headers", "entries", "textindexes"], "readwrite", function (tr, _a) {
+            var request = _a.request, getAllKeys = _a.getAllKeys;
+            var headers = tr.objectStore("headers");
+            var entries = tr.objectStore("entries");
+            var issueIndex = entries.index("issue");
+            var indexes = tr.objectStore("textindexes");
+            getAllKeys(issueIndex, issue)
+                .then(function (entryKeys) {
+                for (var _i = 0, entryKeys_1 = entryKeys; _i < entryKeys_1.length; _i++) {
+                    var key = entryKeys_1[_i];
+                    request(entries.delete(key));
+                }
+            });
+            request(headers.delete(issue));
+            request(indexes.delete(issue));
+        });
+    };
     return CatalogPersistence;
+}());
+
+var IndexerAPI = (function () {
+    function IndexerAPI() {
+        var _this = this;
+        this.promFuncs_ = new Map();
+        this.nextIndex_ = 0;
+        this.worker_ = new Worker("workers/task_indexer.js");
+        this.worker_.onerror = function (event) {
+            console.warn("An internal error occurred inside the indexer task: " + event.error + " @ " + event.lineno + ":" + event.colno);
+        };
+        this.worker_.onmessage = function (event) {
+            var response = event.data;
+            if (response && typeof response.status === "string" && typeof response.reqIndex === "number") {
+                var funcs = _this.promFuncs_.get(response.reqIndex);
+                if (funcs) {
+                    console.info("IndexerAPI: received valid response for request #" + response.reqIndex, response);
+                    if (response.status === "success") {
+                        funcs.resolve(response);
+                    }
+                    else {
+                        funcs.reject(response);
+                    }
+                    _this.promFuncs_.delete(response.reqIndex);
+                }
+                else {
+                    console.warn("IndexerAPI: Cannot find the functions for request #" + response.reqIndex);
+                }
+            }
+            else {
+                console.warn("IndexerAPI: Got an invalid response from the server: " + response);
+            }
+        };
+    }
+    IndexerAPI.prototype.promisedCall = function (req) {
+        var _this = this;
+        return new Promise(function (resolve, reject) {
+            _this.promFuncs_.set(req.reqIndex, { resolve: resolve, reject: reject });
+            _this.worker_.postMessage(req);
+        });
+    };
+    IndexerAPI.prototype.open = function () {
+        this.nextIndex_ += 1;
+        var req = {
+            what: "open",
+            reqIndex: this.nextIndex_
+        };
+        return this.promisedCall(req);
+    };
+    IndexerAPI.prototype.index = function (issue) {
+        this.nextIndex_ += 1;
+        var req = {
+            what: "index",
+            reqIndex: this.nextIndex_,
+            issue: issue
+        };
+        return this.promisedCall(req);
+    };
+    return IndexerAPI;
 }());
 
 function intersectSet(a, b) {
@@ -593,8 +670,16 @@ function makeDocID(issue, entryIndex) {
     return (issue << 16) | entryIndex;
 }
 var CatalogIndexer = (function () {
-    function CatalogIndexer(persist_) {
+    function CatalogIndexer(persist_, mode) {
+        var _this = this;
         this.persist_ = persist_;
+        if (mode === "worker") {
+            this.api_ = new IndexerAPI();
+            this.api_.open().catch(function () {
+                console.warn("Got a failure when trying to connect to Indexer API, disabling");
+                _this.api_ = undefined;
+            });
+        }
     }
     CatalogIndexer.prototype.acceptCatalogData = function (catalog) {
         var entries = catalog.entries.map(function (entry) {
@@ -631,14 +716,26 @@ var CatalogIndexer = (function () {
             console.info("saved issue " + catalog.issue);
         });
     };
-    CatalogIndexer.prototype.loadCatalogFile = function (issue) {
+    CatalogIndexer.prototype.importCatalogFile = function (issue) {
         var _this = this;
-        var revision = 1;
-        var extension = location.host.toLowerCase() !== "zenmumbler.net" ? ".json" : ".gzjson";
-        var entriesURL = "data/ld" + issue + "_entries" + extension + "?" + revision;
-        return loadTypedJSON(entriesURL).then(function (catalog) {
-            return _this.acceptCatalogData(catalog);
-        });
+        if (this.api_) {
+            return this.api_.index(issue).then(function (response) {
+                var textIndex = new TextIndex();
+                textIndex.import(response.textIndex);
+                return { entries: response.entries, textIndex: textIndex };
+            });
+        }
+        else {
+            var revision = 1;
+            var extension = location.host.toLowerCase() !== "zenmumbler.net" ? ".json" : ".gzjson";
+            var entriesURL = "data/ld" + issue + "_entries" + extension + "?" + revision;
+            if (location.pathname.indexOf("/workers") > -1) {
+                entriesURL = "../" + entriesURL;
+            }
+            return loadTypedJSON(entriesURL).then(function (catalog) {
+                return _this.acceptCatalogData(catalog);
+            });
+        }
     };
     return CatalogIndexer;
 }());
@@ -654,8 +751,9 @@ var CatalogStore = (function () {
         this.jamFilter_ = new Set();
         this.platformFilters_ = new Map();
         this.issueFilters_ = new Map();
+        var isMobile = navigator.userAgent.toLowerCase().match(/android|iphone|ipad|ipod|windows phone/) !== null;
         this.persist_ = new CatalogPersistence();
-        this.indexer_ = new CatalogIndexer(this.persist_);
+        this.indexer_ = new CatalogIndexer(this.persist_, isMobile ? "local" : "worker");
         this.loadedIssues_ = new Set();
         for (var pk in Platforms) {
             this.platformFilters_.set(Platforms[pk].mask, new Set());
@@ -727,7 +825,7 @@ var CatalogStore = (function () {
                         }
                         else {
                             console.info("Catalog data smelled funny, fall back to network load.");
-                            _this.indexer_.loadCatalogFile(newIssue).then(function (data) {
+                            _this.indexer_.importCatalogFile(newIssue).then(function (data) {
                                 _this.acceptIndexedEntries(data.entries, data.textIndex);
                             });
                         }
@@ -735,7 +833,7 @@ var CatalogStore = (function () {
                 }
                 else {
                     console.info("No entries available locally, fall back to network load.");
-                    _this.indexer_.loadCatalogFile(newIssue).then(function (data) {
+                    _this.indexer_.importCatalogFile(newIssue).then(function (data) {
                         _this.acceptIndexedEntries(data.entries, data.textIndex);
                     });
                 }
@@ -1030,7 +1128,7 @@ var GamesGrid = (function () {
         }
     };
     GamesGrid.prototype.resized = function () {
-        var OVERFLOW_ROWS = 2;
+        var OVERFLOW_ROWS = 6;
         var width = this.scrollingElem_.offsetWidth - this.gridOffsetX - 4;
         var height = this.scrollingElem_.offsetHeight - this.gridOffsetY;
         var cols = Math.floor(width / (this.cellWidth_ + this.cellMargin_));
