@@ -3,53 +3,11 @@
 
 // this is a WebWorker
 
-import { IndexedEntry } from "../lib/catalog";
-import { TextIndex } from "../lib/textindex";
 import { CatalogPersistence } from "../lib/catalogpersistence";
 import { CatalogIndexer } from "../lib/catalogindexer";
+import { Request, Response, IndexSuccessResponse } from "./indexerapi";
 
 declare function postMessage(response: Response): void;
-
-// ----
-
-interface BasicRequest {
-	reqIndex: number;
-}
-
-interface OpenRequest extends BasicRequest {
-	what: "open";
-}
-
-interface IndexRequest extends BasicRequest {
-	what: "index";
-	issue: number;
-}
-
-type Request = OpenRequest | IndexRequest;
-
-// ----
-
-interface BasicResponse {
-	reqIndex: number | null;
-}
-
-interface SuccessResponse extends BasicResponse {
-	status: "success";
-}
-
-interface IndexSuccessResponse extends SuccessResponse {
-	entries: IndexedEntry[];
-	textIndex: TextIndex;
-}
-
-interface ErrorResponse extends BasicResponse {
-	status: "error";
-	message: string;
-}
-
-type Response = SuccessResponse | IndexSuccessResponse | ErrorResponse;
-
-// ----
 
 let db: CatalogPersistence | undefined;
 let indexer: CatalogIndexer | undefined;
@@ -69,7 +27,7 @@ self.onmessage = (evt: MessageEvent) => {
 		if (req.what === "open") {
 			if (db === undefined) {
 				db = new CatalogPersistence();
-				indexer = new CatalogIndexer(db);
+				indexer = new CatalogIndexer(db, "local");
 				postMessage({ status: "success", reqIndex: req.reqIndex });
 			}
 			else {
@@ -84,8 +42,8 @@ self.onmessage = (evt: MessageEvent) => {
 							status: "success",
 							reqIndex: req.reqIndex,
 							entries: data.entries,
-							textIndex: data.textIndex
-						});
+							textIndex: data.textIndex.export()
+						} as IndexSuccessResponse);
 					});
 				}
 				else {

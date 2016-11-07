@@ -28,7 +28,7 @@ export class CatalogStore {
 
 	constructor(private state_: GamesBrowserState) {
 		this.persist_ = new CatalogPersistence();
-		this.indexer_ = new CatalogIndexer(this.persist_);
+		this.indexer_ = new CatalogIndexer(this.persist_, "worker");
 		this.loadedIssues_ = new Set<number>();
 
 		for (const pk in Platforms) {

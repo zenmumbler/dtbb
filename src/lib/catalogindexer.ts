@@ -3,6 +3,7 @@
 
 import { Catalog, IndexedEntry, maskForPlatformKeys } from "../lib/catalog";
 import { CatalogPersistence } from "../lib/catalogpersistence";
+import { IndexerAPI } from "../workers/indexerapi";
 import { TextIndex } from "../lib/textindex";
 
 function loadTypedJSON<T>(url: string): Promise<T> {
@@ -30,7 +31,16 @@ export interface IndexedCatalogData {
 }
 
 export class CatalogIndexer {
-	constructor(private persist_: CatalogPersistence) {
+	private api_?: IndexerAPI;
+
+	constructor(private persist_: CatalogPersistence, mode: "worker" | "local") {
+		if (mode === "worker") {
+			this.api_ = new IndexerAPI();
+			this.api_.open().catch(() => {
+				console.warn("Got a failure when trying to connect to Indexer API, disabling");
+				this.api_ = undefined;
+			});
+		}
 	}
 
 	private acceptCatalogData(catalog: Catalog): IndexedCatalogData {
@@ -77,13 +87,26 @@ export class CatalogIndexer {
 			});
 	}
 
-	importCatalogFile(issue: number) {
-		const revision = 1;
-		const extension = location.host.toLowerCase() !== "zenmumbler.net" ? ".json" : ".gzjson";
-		const entriesURL = `data/ld${issue}_entries${extension}?${revision}`;
+	importCatalogFile(issue: number): Promise<IndexedCatalogData> {
+		if (this.api_) {
+			return this.api_.index(issue).then(response => {
+				const textIndex = new TextIndex();
+				textIndex.import(response.textIndex);
+				return { entries: response.entries, textIndex };
+			});
+		}
+		else {
+			// yeah..
+			const revision = 1;
+			const extension = location.host.toLowerCase() !== "zenmumbler.net" ? ".json" : ".gzjson";
+			let entriesURL = `data/ld${issue}_entries${extension}?${revision}`;
+			if (location.pathname.indexOf("/workers") > -1) {
+				entriesURL = "../" + entriesURL;
+			}
 
-		return loadTypedJSON<Catalog>(entriesURL).then(catalog => {
-			return this.acceptCatalogData(catalog);
-		});
+			return loadTypedJSON<Catalog>(entriesURL).then(catalog => {
+				return this.acceptCatalogData(catalog);
+			});
+		}
 	}
 }
