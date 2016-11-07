@@ -27,8 +27,12 @@ export class CatalogStore {
 	private filteredSet_: WatchableValue<Set<number>>;
 
 	constructor(private state_: GamesBrowserState) {
+		// this is a rather basic test, but this site can become a right old pig
+		// and I'm not going to do advanced testing for memory, big iPads, etc.
+		const isMobile = navigator.userAgent.toLowerCase().match(/android|iphone|ipad|ipod|windows phone/) !== null;
+
 		this.persist_ = new CatalogPersistence();
-		this.indexer_ = new CatalogIndexer(this.persist_, "worker");
+		this.indexer_ = new CatalogIndexer(this.persist_, isMobile ? "local" : "worker");
 		this.loadedIssues_ = new Set<number>();
 
 		for (const pk in Platforms) {
