@@ -110,7 +110,7 @@ function createEntry(relURI: string, issue: number, uid: number, thumbImg: strin
 		ld_issue: issue,
 
 		title: titleElem.textContent || "<no title>",
-		category: categoryStr === "compo" ? "compo" : "jam",
+		category: categoryStr.indexOf("jam") > -1 ? "jam" : "compo",
 		description: description,
 
 		thumbnail_url: thumbImg,
