@@ -10,7 +10,6 @@ import { Request, Response, IndexSuccessResponse } from "./indexerapi";
 declare function postMessage(response: Response): void;
 
 let db: CatalogPersistence | undefined;
-let indexer: CatalogIndexer | undefined;
 
 self.onmessage = (evt: MessageEvent) => {
 	const req = evt.data as Request;
@@ -27,7 +26,6 @@ self.onmessage = (evt: MessageEvent) => {
 		if (req.what === "open") {
 			if (db === undefined) {
 				db = new CatalogPersistence();
-				indexer = new CatalogIndexer(db, "local");
 				postMessage({ status: "success", reqIndex: req.reqIndex });
 			}
 			else {
@@ -35,8 +33,18 @@ self.onmessage = (evt: MessageEvent) => {
 			}
 		}
 		else if (req.what === "index") {
-			if (indexer !== undefined) {
+			if (db !== undefined) {
 				if (typeof req.issue === "number" && req.issue >= 15 && req.issue <= 40) {
+					const indexer = new CatalogIndexer(db, "local");
+					indexer.onProgress = function(completed, total) {
+						if (completed % 100 === 0) {
+							postMessage({
+								status: "status",
+								reqIndex: req.reqIndex,
+								progress: completed / total
+							});
+						}
+					};
 					indexer.importCatalogFile(req.issue).then(data => {
 						postMessage({
 							status: "success",
