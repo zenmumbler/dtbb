@@ -6,6 +6,8 @@ import { Watchable } from "../lib/watchable";
 export class WatchableInputBinding<T extends (string | number | boolean)> {
 	private broadcastFn_?: (v: T) => void;
 	private acceptFn_?: (v: T) => void;
+	private getFn_?: (e: HTMLElement) => T;
+	private setFn_?: (e: HTMLElement, v: T) => void;
 
 	constructor(private watchable_: Watchable<T>, private elems_: HTMLElement[]) {
 		for (const elem of elems_) {
@@ -24,6 +26,16 @@ export class WatchableInputBinding<T extends (string | number | boolean)> {
 
 	accept(fn: (v: T) => void) {
 		this.acceptFn_ = fn;
+		return this;
+	}
+
+	get(fn: (e: HTMLElement) => T) {
+		this.getFn_ = fn;
+		return this;
+	}
+
+	set(fn: (e: HTMLElement, v: T) => void) {
+		this.setFn_ = fn;
 		return this;
 	}
 
@@ -50,6 +62,10 @@ export class WatchableInputBinding<T extends (string | number | boolean)> {
 	}
 
 	private getElementValue(elem: HTMLElement): string | undefined {
+		if (this.getFn_) {
+			return String(this.getFn_(elem));
+		}
+
 		const tag = elem.nodeName.toLowerCase();
 		switch (tag) {
 			case "select":
@@ -69,6 +85,11 @@ export class WatchableInputBinding<T extends (string | number | boolean)> {
 	}
 
 	private setElementValue(elem: HTMLElement, newValue: T) {
+		if (this.setFn_) {
+			this.setFn_(elem, newValue);
+			return;
+		}
+
 		const tag = elem.nodeName.toLowerCase();
 		switch (tag) {
 			case "select":
@@ -112,7 +133,7 @@ export class WatchableInputBinding<T extends (string | number | boolean)> {
 			const watchableType = typeof this.watchable_.get();
 			if (watchableType === "number") {
 				let value: number;
-				value = parseInt(valueStr);
+				value = parseFloat(valueStr);
 				this.broadcastChange(value as T);
 			}
 			else if (watchableType === "boolean") {
