@@ -144,6 +144,12 @@ export class CatalogStore {
 		// but needs different method as it's too heavy
 		this.entryData_ = new Map();
 		this.allSet_ = new Set();
+		this.compoFilter_ = new Set();
+		this.jamFilter_ = new Set();
+		for (const pk in Platforms) {
+			const plat = Platforms[pk];
+			this.platformFilters_.set(plat.mask, new Set());
+		}
 
 		// cache entries in memory and update filter sets
 		let updateIssueSet = false;
