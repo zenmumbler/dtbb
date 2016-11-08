@@ -37,7 +37,8 @@ export class CatalogPersistence {
 		const header: CatalogHeader = {
 			issue: catalog.issue,
 			theme: catalog.theme,
-			stats: catalog.stats
+			stats: catalog.stats,
+			savedAt: new Date()
 		};
 
 		return this.db_.transaction(["headers", "entries", "textindexes"], "readwrite",

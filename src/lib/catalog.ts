@@ -153,6 +153,7 @@ export interface CatalogHeader {
 	issue: number;
 	theme: string;
 	stats: IssueStats;
+	savedAt?: Date;
 }
 
 export interface Catalog extends CatalogHeader {
