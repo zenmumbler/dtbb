@@ -2,7 +2,6 @@
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
 import { watchableBinding } from "./watchablebinding";
-import { elem } from "./domutil";
 import { GamesBrowserState } from "./state";
 
 export class LoadingWall {
@@ -23,12 +22,11 @@ export class LoadingWall {
 			}
 			else {
 				containerElem_.classList.remove("active");
-				elem("#terms").focus();
 				hideTimer_ = window.setTimeout(() => { containerElem_.style.display = "none"; }, 500);
 			}
 		});
 
-		watchableBinding(state_.loadingRatio, elem(".bar .progress"))
+		watchableBinding(state_.loadingRatio, ".bar .progress", containerElem_)
 			.get(el => parseInt(el.style.width || "0") / 100)
 			.set((el, ratio) => { el.style.width = `${Math.round(ratio * 100)}%`; });
 	}

@@ -3,6 +3,7 @@
 
 import { watchableBinding } from "./watchablebinding";
 import { GamesBrowserState } from "./state";
+import { elem } from "./domutil";
 
 export class FilterControls {
 	constructor(containerElem_: HTMLElement, state_: GamesBrowserState) {
@@ -21,5 +22,11 @@ export class FilterControls {
 		// query terms
 		watchableBinding(state_.query, "#terms", containerElem_)
 			.broadcast(query => { state_.setQuery(query); });
+
+		state_.loading.watch(loading => {
+			if (! loading) {
+				elem<HTMLInputElement>("#terms").focus();
+			}
+		});
 	}
 }
