@@ -4,7 +4,7 @@
 import * as mkdirp from "mkdirp";
 
 export function listingDirPath() {
-	return `spider_data/listings/`;
+	return `../spider_data/listings/`;
 }
 
 export function listingPath(issue: number) {
@@ -12,7 +12,7 @@ export function listingPath(issue: number) {
 }
 
 export function entryPagesDirPath(issue: number) {
-	return `spider_data/entry_pages/entries_${issue}/`;
+	return `../spider_data/entry_pages/entries_${issue}/`;
 }
 
 export function entryPageFilePath(issue: number, uid: number) {
@@ -20,11 +20,11 @@ export function entryPageFilePath(issue: number, uid: number) {
 }
 
 export function entriesCatalogPath(issue: number) {
-	return `../data/ld${issue}_entries.json`;
+	return `../../data/ld${issue}_entries.json`;
 }
 
 export function gzippedEntriesCatalogPath(issue: number) {
-	return `../data/ld${issue}_entries.gzjson`;
+	return `../../data/ld${issue}_entries.gzjson`;
 }
 
 

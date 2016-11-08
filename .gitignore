@@ -1,8 +1,4 @@
-import/spider_data/entry_pages/**/*.html
 node_modules
-import/**/*.js
-lib/**/*.js
-js/**/*.js
-workers/**/*.js
-!js/dtbb.js
-!workers/task_indexer.js
+import/spider_data/entry_pages/**/*.html
+import/build/**/*
+site/build/**/*
