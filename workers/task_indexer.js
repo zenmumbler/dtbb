@@ -287,14 +287,20 @@ var IndexerAPI = (function () {
             if (response && typeof response.status === "string" && typeof response.reqIndex === "number") {
                 var funcs = _this.promFuncs_.get(response.reqIndex);
                 if (funcs) {
-                    console.info("IndexerAPI: received valid response for request #" + response.reqIndex, response);
-                    if (response.status === "success") {
-                        funcs.resolve(response);
+                    if (response.status === "status") {
+                        if (funcs.progress) {
+                            funcs.progress(response.progress);
+                        }
                     }
                     else {
-                        funcs.reject(response);
+                        if (response.status === "success") {
+                            funcs.resolve(response);
+                        }
+                        else if (response.status === "error") {
+                            funcs.reject(response);
+                        }
+                        _this.promFuncs_.delete(response.reqIndex);
                     }
-                    _this.promFuncs_.delete(response.reqIndex);
                 }
                 else {
                     console.warn("IndexerAPI: Cannot find the functions for request #" + response.reqIndex);
@@ -305,10 +311,10 @@ var IndexerAPI = (function () {
             }
         };
     }
-    IndexerAPI.prototype.promisedCall = function (req) {
+    IndexerAPI.prototype.promisedCall = function (req, progress) {
         var _this = this;
         return new Promise(function (resolve, reject) {
-            _this.promFuncs_.set(req.reqIndex, { resolve: resolve, reject: reject });
+            _this.promFuncs_.set(req.reqIndex, { resolve: resolve, reject: reject, progress: progress });
             _this.worker_.postMessage(req);
         });
     };
@@ -320,14 +326,14 @@ var IndexerAPI = (function () {
         };
         return this.promisedCall(req);
     };
-    IndexerAPI.prototype.index = function (issue) {
+    IndexerAPI.prototype.index = function (issue, progress) {
         this.nextIndex_ += 1;
         var req = {
             what: "index",
             reqIndex: this.nextIndex_,
             issue: issue
         };
-        return this.promisedCall(req);
+        return this.promisedCall(req, progress);
     };
     return IndexerAPI;
 }());
@@ -612,6 +618,9 @@ var CatalogIndexer = (function () {
                 var link = _a[_i];
                 textIndex.indexRawString(link.label, docID);
             }
+            if (this.onProgress) {
+                this.onProgress(entryIndex, count);
+            }
         }
         this.storeCatalog(catalog, entries, textIndex);
         return {
@@ -625,10 +634,11 @@ var CatalogIndexer = (function () {
             console.info("saved issue " + catalog.issue);
         });
     };
-    CatalogIndexer.prototype.importCatalogFile = function (issue) {
+    CatalogIndexer.prototype.importCatalogFile = function (issue, progress) {
         var _this = this;
         if (this.api_) {
-            return this.api_.index(issue).then(function (response) {
+            return this.api_.index(issue, progress)
+                .then(function (response) {
                 var textIndex = new TextIndex();
                 textIndex.import(response.textIndex);
                 return { entries: response.entries, textIndex: textIndex };
@@ -650,7 +660,6 @@ var CatalogIndexer = (function () {
 }());
 
 var db;
-var indexer;
 self.onmessage = function (evt) {
     var req = evt.data;
     var error = function (message) {
@@ -664,7 +673,6 @@ self.onmessage = function (evt) {
         if (req.what === "open") {
             if (db === undefined) {
                 db = new CatalogPersistence();
-                indexer = new CatalogIndexer(db, "local");
                 postMessage({ status: "success", reqIndex: req.reqIndex });
             }
             else {
@@ -672,8 +680,18 @@ self.onmessage = function (evt) {
             }
         }
         else if (req.what === "index") {
-            if (indexer !== undefined) {
+            if (db !== undefined) {
                 if (typeof req.issue === "number" && req.issue >= 15 && req.issue <= 40) {
+                    var indexer = new CatalogIndexer(db, "local");
+                    indexer.onProgress = function (completed, total) {
+                        if (completed % 100 === 0) {
+                            postMessage({
+                                status: "status",
+                                reqIndex: req.reqIndex,
+                                progress: completed / total
+                            });
+                        }
+                    };
                     indexer.importCatalogFile(req.issue).then(function (data) {
                         postMessage({
                             status: "success",

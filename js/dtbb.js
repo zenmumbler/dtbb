@@ -373,14 +373,20 @@ var IndexerAPI = (function () {
             if (response && typeof response.status === "string" && typeof response.reqIndex === "number") {
                 var funcs = _this.promFuncs_.get(response.reqIndex);
                 if (funcs) {
-                    console.info("IndexerAPI: received valid response for request #" + response.reqIndex, response);
-                    if (response.status === "success") {
-                        funcs.resolve(response);
+                    if (response.status === "status") {
+                        if (funcs.progress) {
+                            funcs.progress(response.progress);
+                        }
                     }
                     else {
-                        funcs.reject(response);
+                        if (response.status === "success") {
+                            funcs.resolve(response);
+                        }
+                        else if (response.status === "error") {
+                            funcs.reject(response);
+                        }
+                        _this.promFuncs_.delete(response.reqIndex);
                     }
-                    _this.promFuncs_.delete(response.reqIndex);
                 }
                 else {
                     console.warn("IndexerAPI: Cannot find the functions for request #" + response.reqIndex);
@@ -391,10 +397,10 @@ var IndexerAPI = (function () {
             }
         };
     }
-    IndexerAPI.prototype.promisedCall = function (req) {
+    IndexerAPI.prototype.promisedCall = function (req, progress) {
         var _this = this;
         return new Promise(function (resolve, reject) {
-            _this.promFuncs_.set(req.reqIndex, { resolve: resolve, reject: reject });
+            _this.promFuncs_.set(req.reqIndex, { resolve: resolve, reject: reject, progress: progress });
             _this.worker_.postMessage(req);
         });
     };
@@ -406,14 +412,14 @@ var IndexerAPI = (function () {
         };
         return this.promisedCall(req);
     };
-    IndexerAPI.prototype.index = function (issue) {
+    IndexerAPI.prototype.index = function (issue, progress) {
         this.nextIndex_ += 1;
         var req = {
             what: "index",
             reqIndex: this.nextIndex_,
             issue: issue
         };
-        return this.promisedCall(req);
+        return this.promisedCall(req, progress);
     };
     return IndexerAPI;
 }());
@@ -703,6 +709,9 @@ var CatalogIndexer = (function () {
                 var link = _a[_i];
                 textIndex.indexRawString(link.label, docID);
             }
+            if (this.onProgress) {
+                this.onProgress(entryIndex, count);
+            }
         }
         this.storeCatalog(catalog, entries, textIndex);
         return {
@@ -716,10 +725,11 @@ var CatalogIndexer = (function () {
             console.info("saved issue " + catalog.issue);
         });
     };
-    CatalogIndexer.prototype.importCatalogFile = function (issue) {
+    CatalogIndexer.prototype.importCatalogFile = function (issue, progress) {
         var _this = this;
         if (this.api_) {
-            return this.api_.index(issue).then(function (response) {
+            return this.api_.index(issue, progress)
+                .then(function (response) {
                 var textIndex = new TextIndex();
                 textIndex.import(response.textIndex);
                 return { entries: response.entries, textIndex: textIndex };
@@ -759,6 +769,8 @@ var CatalogStore = (function () {
             this.platformFilters_.set(Platforms[pk].mask, new Set());
         }
         this.filteredSet_ = new WatchableValue(new Set());
+        this.loading_ = new WatchableValue(false);
+        this.loadingRatio_ = new WatchableValue(0);
         state_.query.watch(function (_) { return _this.filtersChanged(); });
         state_.category.watch(function (_) { return _this.filtersChanged(); });
         state_.platform.watch(function (_) { return _this.filtersChanged(); });
@@ -812,6 +824,19 @@ var CatalogStore = (function () {
             this.filtersChanged();
         }
         else {
+            this.loadingRatio_.set(0);
+            this.loading_.set(true);
+            var finished_1 = function (entries, textIndex) {
+                _this.acceptIndexedEntries(entries, textIndex);
+                _this.loadingRatio_.set(1);
+                _this.loading_.set(false);
+            };
+            var loadRemote_1 = function () {
+                _this.indexer_.importCatalogFile(newIssue, function (ratio) { _this.loadingRatio_.set(ratio); })
+                    .then(function (data) {
+                    finished_1(data.entries, data.textIndex);
+                });
+            };
             this.persist_.persistedIssues()
                 .then(function (issues) {
                 console.info("Checking persisted issues: " + issues);
@@ -821,21 +846,17 @@ var CatalogStore = (function () {
                         console.info("Got catalog from local DB");
                         if (catalog && catalog.header && catalog.entries && catalog.sti && catalog.entries.length === catalog.header.stats.entries) {
                             console.info("Catalog looks good, loading entries and textindex");
-                            _this.acceptIndexedEntries(catalog.entries, catalog.sti);
+                            finished_1(catalog.entries, catalog.sti);
                         }
                         else {
                             console.info("Catalog data smelled funny, fall back to network load.");
-                            _this.indexer_.importCatalogFile(newIssue).then(function (data) {
-                                _this.acceptIndexedEntries(data.entries, data.textIndex);
-                            });
+                            loadRemote_1();
                         }
                     });
                 }
                 else {
                     console.info("No entries available locally, fall back to network load.");
-                    _this.indexer_.importCatalogFile(newIssue).then(function (data) {
-                        _this.acceptIndexedEntries(data.entries, data.textIndex);
-                    });
+                    loadRemote_1();
                 }
             });
         }
@@ -843,6 +864,12 @@ var CatalogStore = (function () {
     CatalogStore.prototype.acceptIndexedEntries = function (entries, textIndex) {
         this.entryData_ = new Map();
         this.allSet_ = new Set();
+        this.compoFilter_ = new Set();
+        this.jamFilter_ = new Set();
+        for (var pk in Platforms) {
+            var plat = Platforms[pk];
+            this.platformFilters_.set(plat.mask, new Set());
+        }
         var updateIssueSet = false;
         var issueSet;
         if (entries.length > 0) {
@@ -879,6 +906,16 @@ var CatalogStore = (function () {
     };
     Object.defineProperty(CatalogStore.prototype, "filteredSet", {
         get: function () { return this.filteredSet_.watchable; },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(CatalogStore.prototype, "loading", {
+        get: function () { return this.loading_.watchable; },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(CatalogStore.prototype, "loadingRatio", {
+        get: function () { return this.loadingRatio_.watchable; },
         enumerable: true,
         configurable: true
     });
@@ -934,6 +971,16 @@ var GamesBrowserState = (function () {
     };
     Object.defineProperty(GamesBrowserState.prototype, "filteredSet", {
         get: function () { return this.catalogStore_.filteredSet; },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(GamesBrowserState.prototype, "loading", {
+        get: function () { return this.catalogStore_.loading; },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(GamesBrowserState.prototype, "loadingRatio", {
+        get: function () { return this.catalogStore_.loadingRatio; },
         enumerable: true,
         configurable: true
     });
@@ -1159,6 +1206,14 @@ var WatchableInputBinding = (function () {
         this.acceptFn_ = fn;
         return this;
     };
+    WatchableInputBinding.prototype.get = function (fn) {
+        this.getFn_ = fn;
+        return this;
+    };
+    WatchableInputBinding.prototype.set = function (fn) {
+        this.setFn_ = fn;
+        return this;
+    };
     WatchableInputBinding.prototype.broadcastChange = function (newValue) {
         if (this.broadcastFn_) {
             this.broadcastFn_(newValue);
@@ -1180,6 +1235,9 @@ var WatchableInputBinding = (function () {
         }
     };
     WatchableInputBinding.prototype.getElementValue = function (elem) {
+        if (this.getFn_) {
+            return String(this.getFn_(elem));
+        }
         var tag = elem.nodeName.toLowerCase();
         switch (tag) {
             case "select":
@@ -1197,6 +1255,10 @@ var WatchableInputBinding = (function () {
         }
     };
     WatchableInputBinding.prototype.setElementValue = function (elem, newValue) {
+        if (this.setFn_) {
+            this.setFn_(elem, newValue);
+            return;
+        }
         var tag = elem.nodeName.toLowerCase();
         switch (tag) {
             case "select":
@@ -1237,7 +1299,7 @@ var WatchableInputBinding = (function () {
             var watchableType = typeof _this.watchable_.get();
             if (watchableType === "number") {
                 var value = void 0;
-                value = parseInt(valueStr);
+                value = parseFloat(valueStr);
                 _this.broadcastChange(value);
             }
             else if (watchableType === "boolean") {
@@ -1278,10 +1340,39 @@ var FilterControls = (function () {
     return FilterControls;
 }());
 
+var LoadingWall = (function () {
+    function LoadingWall(containerElem_, state_) {
+        var hideTimer_ = -1;
+        state_.loading.watch(function (loading) {
+            if (loading) {
+                if (hideTimer_ > -1) {
+                    clearTimeout(hideTimer_);
+                    hideTimer_ = -1;
+                }
+                containerElem_.style.display = "block";
+                containerElem_.classList.add("active");
+                if (document.activeElement) {
+                    document.activeElement.blur();
+                }
+            }
+            else {
+                containerElem_.classList.remove("active");
+                elem("#terms").focus();
+                hideTimer_ = window.setTimeout(function () { containerElem_.style.display = "none"; }, 500);
+            }
+        });
+        watchableBinding(state_.loadingRatio, elem(".bar .progress"))
+            .get(function (el) { return parseInt(el.style.width || "0") / 100; })
+            .set(function (el, ratio) { el.style.width = Math.round(ratio * 100) + "%"; });
+    }
+    return LoadingWall;
+}());
+
 var state = new GamesBrowserState();
 document.addEventListener("DOMContentLoaded", function (_) {
     new GamesGrid(elem(".entries"), state);
     new FilterControls(elem(".filters"), state);
+    new LoadingWall(elem("#smokedglass"), state);
     state.setIssue(36);
 });
 
