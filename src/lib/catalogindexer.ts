@@ -43,6 +43,8 @@ export class CatalogIndexer {
 		}
 	}
 
+	public onProgress?: (done: number, total: number) => void;
+
 	private acceptCatalogData(catalog: Catalog): IndexedCatalogData {
 		const entries = catalog.entries.map(entry => {
 			const indEntry = entry as IndexedEntry;
@@ -68,6 +70,10 @@ export class CatalogIndexer {
 			for (const link of entry.links) {
 				textIndex.indexRawString(link.label, docID);
 			}
+
+			if (this.onProgress) {
+				this.onProgress(entryIndex, count);
+			}
 		}
 
 		// persist indexed catalog in local db
@@ -87,9 +93,10 @@ export class CatalogIndexer {
 			});
 	}
 
-	importCatalogFile(issue: number): Promise<IndexedCatalogData> {
+	importCatalogFile(issue: number, progress?: (r: number) => void): Promise<IndexedCatalogData> {
 		if (this.api_) {
-			return this.api_.index(issue).then(response => {
+			return this.api_.index(issue, progress)
+			.then(response => {
 				const textIndex = new TextIndex();
 				textIndex.import(response.textIndex);
 				return { entries: response.entries, textIndex };
