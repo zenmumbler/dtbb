@@ -1,7 +1,7 @@
 // importutil - part of dtbb
 // by Arthur Langereis - @zenmumbler
 
-import * as mkdirp from "mkdirp";
+import mkdirp from "mkdirp";
 
 export function listingDirPath() {
 	return `../spider_data/listings/`;

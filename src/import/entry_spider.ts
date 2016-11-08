@@ -2,7 +2,7 @@
 // by Arthur Langereis - @zenmumbler
 
 import * as fs from "fs";
-import * as request from "request";
+import request from "request";
 
 import { EntryListing } from "../lib/catalog";
 import { ensureDirectory, issueBaseURL, listingPath, entryPagesDirPath, entryPageFilePath, timeoutPromise } from "./importutil";
