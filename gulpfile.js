@@ -5,6 +5,8 @@ const gulp = require("gulp");
 const rollup = require("rollup-stream");
 const source = require("vinyl-source-stream");
 const uglify = require("gulp-uglify");
+const gzip = require("gulp-gzip");
+const rename = require("gulp-rename");
 
 // bundle main site code
 gulp.task("rollsite", function() {
@@ -52,4 +54,18 @@ gulp.task("default", ["rollsite", "rollworker", "rollimport"], () => {});
 gulp.task("watchroll", function() {
 	gulp.watch("site/build/**/*.js", ["rollsite", "rollworker"]);
 	gulp.watch("import/build/**/*.js", ["rollimport"]);
+});
+
+// catalog data compressor
+gulp.task("compressdata", function() {
+	return gulp.src("site/data/*.json")
+	.pipe(gzip({
+		append: false,
+		extension: "gzjson",
+		gzipOptions: { level: 9 }
+	}))
+	.pipe(rename(function (path) {
+		path.basename = path.basename.replace(".json", "");
+	}))
+	.pipe(gulp.dest("site/data"));
 });
