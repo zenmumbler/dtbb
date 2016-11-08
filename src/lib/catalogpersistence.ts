@@ -132,4 +132,10 @@ export class CatalogPersistence {
 				request(indexes.delete(issue));
 			});
 	}
+
+	purgeAll() {
+		return this.persistedIssues().then(issues => {
+			return Promise.all(issues.map(issue => this.destroyCatalog(issue)));
+		});
+	}
 }
