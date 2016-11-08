@@ -51,5 +51,7 @@ export class GamesBrowserState {
 
 	// pass along properties from catalogstore
 	get filteredSet() { return this.catalogStore_.filteredSet; }
+	get loading() { return this.catalogStore_.loading; }
+	get loadingRatio() { return this.catalogStore_.loadingRatio; }
 	get entries() { return this.catalogStore_.entries; }
 }

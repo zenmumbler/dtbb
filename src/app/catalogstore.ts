@@ -25,6 +25,8 @@ export class CatalogStore {
 
 	// derived public data
 	private filteredSet_: WatchableValue<Set<number>>;
+	private loading_: WatchableValue<boolean>;
+	private loadingRatio_: WatchableValue<number>;
 
 	constructor(private state_: GamesBrowserState) {
 		// this is a rather basic test, but this site can become a right old pig
@@ -40,6 +42,8 @@ export class CatalogStore {
 		}
 
 		this.filteredSet_ = new WatchableValue(new Set<number>());
+		this.loading_ = new WatchableValue(false);
+		this.loadingRatio_ = new WatchableValue(0);
 
 		// watch some other state data
 		state_.query.watch(_ => this.filtersChanged());
@@ -110,6 +114,22 @@ export class CatalogStore {
 		else {
 			// Disable multiple loaded issues for now
 			// this.loadedIssues_.add(newIssue);
+
+			this.loadingRatio_.set(0);
+			this.loading_.set(true);
+			const finished = (entries: IndexedEntry[], textIndex: TextIndex | SerializedTextIndex) => {
+				this.acceptIndexedEntries(entries, textIndex);
+				this.loadingRatio_.set(1);
+				this.loading_.set(false);
+			};
+
+			const loadRemote = () => {
+				this.indexer_.importCatalogFile(newIssue, ratio => { this.loadingRatio_.set(ratio); })
+					.then(data => {
+						finished(data.entries, data.textIndex);
+					});
+			};
+
 			this.persist_.persistedIssues()
 				.then(issues => {
 					console.info(`Checking persisted issues: ${issues}`);
@@ -119,21 +139,17 @@ export class CatalogStore {
 								console.info(`Got catalog from local DB`);
 								if (catalog && catalog.header && catalog.entries && catalog.sti && catalog.entries.length === catalog.header.stats.entries) {
 									console.info(`Catalog looks good, loading entries and textindex`);
-									this.acceptIndexedEntries(catalog.entries, catalog.sti);
+									finished(catalog.entries, catalog.sti);
 								}
 								else {
 									console.info(`Catalog data smelled funny, fall back to network load.`);
-									this.indexer_.importCatalogFile(newIssue).then(data => {
-										this.acceptIndexedEntries(data.entries, data.textIndex);
-									});
+									loadRemote();
 								}
 							});
 					}
 					else {
 						console.info(`No entries available locally, fall back to network load.`);
-						this.indexer_.importCatalogFile(newIssue).then(data => {
-							this.acceptIndexedEntries(data.entries, data.textIndex);
-						});
+						loadRemote();
 					}
 				});
 		}
@@ -195,7 +211,9 @@ export class CatalogStore {
 		this.filtersChanged();
 	}
 
-	// static
+	// watchables and local data
 	get filteredSet() { return this.filteredSet_.watchable; }
+	get loading() { return this.loading_.watchable; }
+	get loadingRatio() { return this.loadingRatio_.watchable; }
 	get entries() { return this.entryData_; }
 }
