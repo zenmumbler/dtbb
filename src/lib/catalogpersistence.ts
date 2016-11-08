@@ -1,9 +1,9 @@
 // catalogpersistence.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
-import { CatalogHeader, Catalog, IndexedEntry } from "../lib/catalog";
-import { SerializedTextIndex } from "../lib/textindex";
-import { PromiseDB } from "../lib/promisedb";
+import { CatalogHeader, Catalog, IndexedEntry } from "./catalog";
+import { SerializedTextIndex } from "./textindex";
+import { PromiseDB } from "./promisedb";
 
 interface PersistedTextIndex {
 	issue: number;

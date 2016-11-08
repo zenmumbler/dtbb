@@ -1,10 +1,10 @@
 // catalogindexer.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
-import { Catalog, IndexedEntry, maskForPlatformKeys } from "../lib/catalog";
-import { CatalogPersistence } from "../lib/catalogpersistence";
+import { TextIndex } from "./textindex";
+import { Catalog, IndexedEntry, maskForPlatformKeys } from "./catalog";
+import { CatalogPersistence } from "./catalogpersistence";
 import { IndexerAPI } from "../workers/indexerapi";
-import { TextIndex } from "../lib/textindex";
 
 function loadTypedJSON<T>(url: string): Promise<T> {
 	return new Promise<T>((resolve, reject) => {

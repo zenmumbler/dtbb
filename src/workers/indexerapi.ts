@@ -65,7 +65,7 @@ export class IndexerAPI {
 	private nextIndex_ = 0;
 
 	constructor() {
-		this.worker_ = new Worker("workers/task_indexer.js");
+		this.worker_ = new Worker("task_indexer.js");
 
 		this.worker_.onerror = event => {
 			console.warn(`An internal error occurred inside the indexer task: ${event.error} @ ${event.lineno}:${event.colno}`);
