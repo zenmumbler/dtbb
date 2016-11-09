@@ -3,8 +3,8 @@
 function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
 
 var fs = require('fs');
-var request = _interopDefault(require('request'));
-var mkdirp = _interopDefault(require('mkdirp'));
+var request = _interopDefault(require('./request'));
+var mkdirp = _interopDefault(require('./mkdirp'));
 var jsdom = require('jsdom');
 
 function listingDirPath() {
@@ -139,7 +139,7 @@ function load(state) {
                 if (!error && response.statusCode === 200) {
                     fs.writeFile(filePath, body, function (err) {
                         if (err) {
-                            console.log("Failed to write file for uid: " + uid, err);
+                            console.info("Failed to write file for uid: " + uid, err);
                             state.failures += 1;
                         }
                         else {
@@ -149,7 +149,7 @@ function load(state) {
                     });
                 }
                 else {
-                    console.log("Failed to load entry page for uid: " + uid, error, response ? response.statusCode : "-");
+                    console.info("Failed to load entry page for uid: " + uid, error, response ? response.statusCode : "-");
                     state.failures += 1;
                     resolve(next());
                 }
