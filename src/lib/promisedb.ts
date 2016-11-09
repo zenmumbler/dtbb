@@ -197,7 +197,7 @@ export class PromiseDB {
 
 			this.keyCursor(container, range, direction)
 				.next(cur => {
-					result.push(cur.key as K);
+					result.push(cur.primaryKey);
 					if (limit && (result.length === limit)) {
 						resolve(result);
 					}
