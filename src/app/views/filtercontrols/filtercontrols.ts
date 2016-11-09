@@ -1,9 +1,9 @@
 // filtercontrols.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
-import { watchableBinding } from "./watchablebinding";
-import { GamesBrowserState } from "./state";
-import { elem } from "./domutil";
+import { watchableBinding } from "../../watchablebinding";
+import { GamesBrowserState } from "../../state";
+import { elem } from "../../domutil";
 
 export class FilterControls {
 	constructor(containerElem_: HTMLElement, state_: GamesBrowserState) {

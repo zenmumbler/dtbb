@@ -1,4 +1,5 @@
 node_modules
+*.sublime-workspace
 import/spider_data/entry_pages/**/*.html
 import/build/**/*
 site/build/**/*

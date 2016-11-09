@@ -1,10 +1,10 @@
 // gamesgrid.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
-import { Platforms } from "../lib/catalog";
-import { arrayFromSet } from "../lib/setutil";
-import { elem, elemList } from "./domutil";
-import { GamesBrowserState } from "./state";
+import { Platforms } from "../../../lib/catalog";
+import { arrayFromSet } from "../../../lib/setutil";
+import { elem, elemList } from "../../domutil";
+import { GamesBrowserState } from "../../state";
 
 interface GameCell {
 	tile: HTMLDivElement;

@@ -4,9 +4,9 @@
 import { elem } from "./domutil";
 
 import { GamesBrowserState } from "./state";
-import { GamesGrid } from "./gamesgrid";
-import { FilterControls } from "./filtercontrols";
-import { LoadingWall } from "./loadingwall";
+import { GamesGrid } from "./views/gamesgrid/gamesgrid";
+import { FilterControls } from "./views/filtercontrols/filtercontrols";
+import { LoadingWall } from "./views/loadingwall/loadingwall";
 
 export const state = new GamesBrowserState();
 

@@ -1,8 +1,8 @@
 // loadingwall.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
-import { watchableBinding } from "./watchablebinding";
-import { GamesBrowserState } from "./state";
+import { watchableBinding } from "../../watchablebinding";
+import { GamesBrowserState } from "../../state";
 
 export class LoadingWall {
 	constructor(containerElem_: HTMLElement, state_: GamesBrowserState) {

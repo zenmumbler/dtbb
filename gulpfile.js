@@ -4,6 +4,7 @@
 const gulp = require("gulp");
 const rollup = require("rollup-stream");
 const source = require("vinyl-source-stream");
+const buffer = require("vinyl-buffer");
 const uglify = require("gulp-uglify");
 const gzip = require("gulp-gzip");
 const rename = require("gulp-rename");
@@ -13,9 +14,10 @@ gulp.task("rollsite", function() {
 	return rollup({
 		entry: "site/build/app/app/app.js",
 		format: "iife",
-		moduleName: "dtbb"
+		moduleName: "dtbb",
 	})
 	.pipe(source("dtbb.js"))
+	.pipe(buffer())
 	.pipe(uglify({
 		mangle: false,
 		compress: true
@@ -30,8 +32,9 @@ gulp.task("rollworker", function() {
 		format: "iife",
 	})
 	.pipe(source("task_indexer.js"))
+	.pipe(buffer())
 	.pipe(uglify({
-		mangle: false,
+		mangle: true,
 		compress: true
 	}))
 	.pipe(gulp.dest("site"));
@@ -42,6 +45,7 @@ gulp.task("rollimport", function() {
 	return rollup({
 		entry: "import/build/import/import.js",
 		format: "cjs",
+		external: ["fs", "mkdirp", "request", "jsdom"]
 	})
 	.pipe(source("import.js"))
 	.pipe(gulp.dest("import"));
