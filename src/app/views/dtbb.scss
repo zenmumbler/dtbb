@@ -1,0 +1,52 @@
+// common
+html, body {
+	height: 100%;
+	margin: 0;
+	padding: 0;
+}
+
+body, input {
+	font-family: sans-serif;
+}
+
+p {
+	margin: 0 0 1em 0;
+	padding: 0;
+}
+
+a {
+	color: currentColor;
+}
+
+.no-select {
+	-webkit-user-select: none;
+	user-select: none;
+}
+
+.no-text-wrap {
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	overflow: hidden;
+}
+
+#dtbb {
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: 0;
+	bottom: 0;
+	min-width: 960px;
+	background-color: white;
+}
+
+
+// variables
+$brandColor: #CC5B13;
+$compoColor: #45B236;
+$jamColor: #3C4CFF;
+
+
+// views
+@import "gamesgrid/gamesgrid";
+@import "filtercontrols/filtercontrols";
+@import "loadingwall/loadingwall";
