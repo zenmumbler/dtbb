@@ -8,9 +8,26 @@ const buffer = require("vinyl-buffer");
 const uglify = require("gulp-uglify");
 const gzip = require("gulp-gzip");
 const rename = require("gulp-rename");
+const sass = require("gulp-sass");
+
+// ---- site
+
+// compile styles
+gulp.task("styles", function() {
+	return gulp.src("src/app/views/dtbb.scss")
+		.pipe(sass({
+			outputStyle: "expanded",
+			indentType: "tab",
+			indentWidth: 1
+		}).on("error", sass.logError))
+		.pipe(gulp.dest("site"));
+		// .pipe(rename({suffix: ".min"}))
+		// .pipe(cssnano())
+		// .pipe(gulp.dest("dist/assets/css"));
+});
 
 // bundle main site code
-gulp.task("rollsite", function() {
+gulp.task("app", function() {
 	return rollup({
 		entry: "site/build/app/app/app.js",
 		format: "iife",
@@ -26,7 +43,7 @@ gulp.task("rollsite", function() {
 });
 
 // bundle site worker
-gulp.task("rollworker", function() {
+gulp.task("worker", function() {
 	return rollup({
 		entry: "site/build/workers/workers/task_indexer.js",
 		format: "iife",
@@ -40,8 +57,14 @@ gulp.task("rollworker", function() {
 	.pipe(gulp.dest("site"));
 });
 
+// site composite task
+gulp.task("site", ["styles", "app", "worker"], () => {});
+
+
+// ---- import
+
 // bundle import node app
-gulp.task("rollimport", function() {
+gulp.task("import", function() {
 	return rollup({
 		entry: "import/build/import/import.js",
 		format: "cjs",
@@ -51,14 +74,8 @@ gulp.task("rollimport", function() {
 	.pipe(gulp.dest("import"));
 });
 
-// roll all 3 by default
-gulp.task("default", ["rollsite", "rollworker", "rollimport"], () => {});
 
-// auto-roller
-gulp.task("watchroll", function() {
-	gulp.watch("site/build/**/*.js", ["rollsite", "rollworker"]);
-	gulp.watch("import/build/**/*.js", ["rollimport"]);
-});
+// ---- data
 
 // catalog data compressor
 gulp.task("compressdata", function() {
@@ -72,4 +89,14 @@ gulp.task("compressdata", function() {
 		path.basename = path.basename.replace(".json", "");
 	}))
 	.pipe(gulp.dest("site/data"));
+});
+
+
+// ---- global watch
+
+// auto-roller
+gulp.task("watch", function() {
+	gulp.watch("src/**/*.scss", ["styles"]);
+	gulp.watch("site/build/**/*.js", ["app", "worker"]);
+	gulp.watch("import/build/**/*.js", ["import"]);
 });
