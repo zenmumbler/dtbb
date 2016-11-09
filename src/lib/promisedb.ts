@@ -5,12 +5,15 @@ type IDBUpgradeCallback = (db: IDBDatabase, fromVersion: number, toVersion: numb
 
 type IDBTransactionMode = "readonly" | "readwrite";
 type IDBTransactionRequestFn = (req: IDBRequest, fn?: (req: IDBRequest) => void) => Promise<any>;
-interface IDBTransactionContext {
-	request: IDBTransactionRequestFn;
-	cursor: (container: IDBIndex | IDBObjectStore, range?: IDBKeyRange | IDBValidKey, direction?: IDBCursorDirection) => IDBCursorResult<IDBCursorWithValue>;
-	keyCursor: (index: IDBIndex, range?: IDBKeyRange | IDBValidKey, direction?: IDBCursorDirection) => IDBCursorResult<IDBCursor>;
-	getAll: <T>(container: IDBIndex | IDBObjectStore, range?: IDBKeyRange | IDBValidKey, direction?: IDBCursorDirection, limit?: number) => Promise<T[]>;
-	getAllKeys: <K extends IDBValidKey>(index: IDBIndex, range?: IDBKeyRange | IDBValidKey, direction?: IDBCursorDirection, limit?: number) => Promise<K[]>;
+interface IDBTransactionContextBase {
+	readonly request: IDBTransactionRequestFn;
+	readonly cursor: (container: IDBIndex | IDBObjectStore, range?: IDBKeyRange | IDBValidKey, direction?: IDBCursorDirection) => IDBCursorResult<IDBCursorWithValue>;
+	readonly keyCursor: (index: IDBIndex, range?: IDBKeyRange | IDBValidKey, direction?: IDBCursorDirection) => IDBCursorResult<IDBCursor>;
+	readonly getAll: <T>(container: IDBIndex | IDBObjectStore, range?: IDBKeyRange | IDBValidKey, direction?: IDBCursorDirection, limit?: number) => Promise<T[]>;
+	readonly getAllKeys: <K extends IDBValidKey>(index: IDBIndex, range?: IDBKeyRange | IDBValidKey, direction?: IDBCursorDirection, limit?: number) => Promise<K[]>;
+}
+interface IDBTransactionContext extends IDBTransactionContextBase {
+	readonly timeout: (ms: number) => void;
 }
 
 type IDBCursorDirection = "next" | "prev" | "nextunique" | "prevunique";
@@ -29,7 +32,7 @@ interface IDBCursorBuilder<C extends IDBCursor> extends IDBCursorResult<C> {
 
 export class PromiseDB {
 	private db_: Promise<IDBDatabase>;
-	private tctx_: IDBTransactionContext;
+	private tctx_: IDBTransactionContextBase;
 
 	constructor(name: string, version: number, upgrade: IDBUpgradeCallback) {
 		this.db_ = this.request(indexedDB.open(name, version),
@@ -64,11 +67,41 @@ export class PromiseDB {
 		return this.db_.then(db => {
 			return new Promise<T>((resolve, reject) => {
 				const tr = db.transaction(storeNames, mode);
-				tr.onerror = () => { reject(tr.error || "transaction failed"); };
-				tr.onabort = () => { reject("aborted"); };
+				tr.onerror = () => {
+					cancelTimeout();
+					reject(tr.error || "transaction failed");
+				};
+				tr.onabort = () => {
+					cancelTimeout();
+					reject("aborted");
+				};
 
-				const result = fn(tr, this.tctx_);
-				tr.oncomplete = () => { resolve((result === undefined) ? undefined : result); };
+				let timeoutID: number | NodeJS.Timer | null = null;
+				const cancelTimeout = function() {
+					if (timeoutID !== null) {
+						clearTimeout(<any>timeoutID); // make timeouts work for both web and node contexts
+						timeoutID = null;
+					}
+				};
+
+				const tc: IDBTransactionContext = Object.create(this.tctx_, {
+					timeout: {
+						value: function(ms: number) {
+							console.info(`transaction will time out in ${ms}ms`);
+							timeoutID = setTimeout(function() {
+								console.warn(`transaction timed out after ${ms}ms`);
+								timeoutID = null;
+								tr.abort();
+							}, ms);
+						}
+					}
+				});
+
+				const result = fn(tr, tc);
+				tr.oncomplete = () => {
+					cancelTimeout();
+					resolve((result === undefined) ? undefined : result);
+				};
 			});
 		});
 	}
