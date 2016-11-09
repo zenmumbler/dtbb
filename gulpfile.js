@@ -9,6 +9,7 @@ const uglify = require("gulp-uglify");
 const gzip = require("gulp-gzip");
 const rename = require("gulp-rename");
 const sass = require("gulp-sass");
+const path = require("path");
 
 // ---- site
 
@@ -35,10 +36,10 @@ gulp.task("app", function() {
 	})
 	.pipe(source("dtbb.js"))
 	.pipe(buffer())
-	.pipe(uglify({
-		mangle: false,
-		compress: true
-	}))
+	// .pipe(uglify({
+	// 	mangle: false,
+	// 	compress: false
+	// }))
 	.pipe(gulp.dest("site"));
 });
 
@@ -50,10 +51,10 @@ gulp.task("worker", function() {
 	})
 	.pipe(source("task_indexer.js"))
 	.pipe(buffer())
-	.pipe(uglify({
-		mangle: true,
-		compress: true
-	}))
+	// .pipe(uglify({
+	// 	mangle: true,
+	// 	compress: false
+	// }))
 	.pipe(gulp.dest("site"));
 });
 
@@ -68,7 +69,7 @@ gulp.task("import", function() {
 	return rollup({
 		entry: "import/build/import/import.js",
 		format: "cjs",
-		external: ["fs", "mkdirp", "request", "jsdom"]
+		external: ["fs", "mkdirp", "request", "jsdom", path.resolve("import/build/import/request"), path.resolve("import/build/import/mkdirp")]
 	})
 	.pipe(source("import.js"))
 	.pipe(gulp.dest("import"));
@@ -97,6 +98,7 @@ gulp.task("compressdata", function() {
 // auto-roller
 gulp.task("watch", function() {
 	gulp.watch("src/**/*.scss", ["styles"]);
-	gulp.watch("site/build/**/*.js", ["app", "worker"]);
+	gulp.watch("site/build/app/**/*.js", ["app"]);
+	gulp.watch("site/build/workers/**/*.js", ["worker"]);
 	gulp.watch("import/build/**/*.js", ["import"]);
 });
