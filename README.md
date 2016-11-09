@@ -4,7 +4,7 @@ Ludum Dare Games Browser
 Live at: http://zenmumbler.net/dtbb
 
 This is a website concept I made to quickly search through the many entries submitted for
-the [Ludum Dare](ld) game jams. A new site is now nearly done (as per LD37), but the old
+the [Ludum Dare][ld] game jams. A new site is now nearly done (as per LD37), but the old
 site was not great at doing this.
 
 Site features:
@@ -16,7 +16,7 @@ Site features:
 * Directly link (in a new tab) to any game that you want to play (links to the LD entry page)
 * A horrendous visual design
 
-[Try it now!](dtbb)
+[Try it now!][dtbb]
 
 Details
 -------
@@ -30,7 +30,7 @@ it changed into a project where I could explore and practice with several web (d
 that I had not done much with. So if things are a bit more complex than they need to be for
 an app this small, then that's why. To whit, I've made/done the following:
 
-- A full [node-based site scraper](scrape) that retrieves listings and single entry pages and
+- A full [node-based site scraper][scrape] that retrieves listings and single entry pages and
   extracts out the data from those pages (using jsdom) into JSON catalog files.
 - I researched and experimented with most web build systems out there and settled on a
   gulp + rollup combination for code as it is straightforward and it produces clean and
@@ -43,16 +43,16 @@ an app this small, then that's why. To whit, I've made/done the following:
 - The indexer can be used locally or as a WebWorker for asynchronous processing of data
   freeing up the UI thread. A simple API wrapper allows for Promise-based request/response
   usage of the worker.
-- A nice [Promise-based typed workflow wrapper around IndexedDB](pdb). This is used to store
+- A nice [Promise-based typed workflow wrapper around IndexedDB][pdb]. This is used to store
   cached catalog and text index data allowing offline browsing of entries.
-- In lieu of using a big templating engine, I made simple [watchable](ww) and
-  [watchablebinding](wb) types that encourage the same props-down, methods-up paradigm as
+- In lieu of using a big templating engine, I made simple [watchable][ww] and
+  [watchablebinding][wb] types that encourage the same props-down, methods-up paradigm as
   e.g. Vue. The site State employs the same concepts that Vue uses, etc.
 
 Disclaimer
 ----------
 
-The data in [the live site](dtbb) was scraped from the main (now old) Ludum Dare website
+The data in [the live site][dtbb] was scraped from the main (now old) Ludum Dare website
 most recently in November 2016. 
 
 The categorising of entries is based on their download links and titles. I tried to be
@@ -65,7 +65,7 @@ Neither this project nor I are not affiliated with or endorsed by Ludum Dare sta
 not own or claim to own the data extracted from the LD site. In fact, if you want to make
 something cool yourself, use the ldXY-entries.json files in the data dir and have a go.
 
-Now go and [make, play and rate](ld) games.
+Now go and [make, play and rate][ld] games.
 
 [dtbb]: http://zenmumbler.net/dtbb/
 [ld]: http://ludumdare.com/
