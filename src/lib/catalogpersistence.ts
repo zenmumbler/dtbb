@@ -42,22 +42,24 @@ export class CatalogPersistence {
 		};
 
 		return this.db_.transaction(["headers", "entries", "textindexes"], "readwrite",
-			(tr, {request}) => {
+			(tr, { timeout }) => {
 				console.info(`Storing issue ${header.issue} with ${indEntries.length} entries and textindex`);
+				timeout(8000);
+
 				const headers = tr.objectStore("headers");
 				const entries = tr.objectStore("entries");
 				const textindexes = tr.objectStore("textindexes");
 
-				request(headers.put(header));
+				headers.put(header);
 
 				const textIndex: PersistedTextIndex = {
 					issue: catalog.issue,
 					data: sti
 				};
-				request(textindexes.put(textIndex));
+				textindexes.put(textIndex);
 
 				for (const entry of indEntries) {
-					request(entries.put(entry));
+					entries.put(entry);
 				}
 			})
 			.catch(error => {
@@ -73,9 +75,9 @@ export class CatalogPersistence {
 		};
 
 		return this.db_.transaction("textindexes", "readwrite",
-			(tr, {request}) => {
+			(tr, {}) => {
 				const textindexes = tr.objectStore("textindexes");
-				request(textindexes.put(data));
+				textindexes.put(data);
 			})
 			.catch(error => {
 				console.warn("Error saving textindex: ", error);
@@ -94,7 +96,8 @@ export class CatalogPersistence {
 
 	loadCatalog(issue: number) {
 		return this.db_.transaction(["headers", "entries", "textindexes"], "readonly",
-			(tr, {request, getAll}) => {
+			(tr, {request, getAll, timeout}) => {
+				timeout(5000);
 				const headerP = request(tr.objectStore("headers").get(issue));
 				const issueIndex = tr.objectStore("entries").index("issue");
 				const entriesP = getAll<IndexedEntry>(issueIndex, issue);
@@ -115,21 +118,23 @@ export class CatalogPersistence {
 
 	destroyCatalog(issue: number) {
 		return this.db_.transaction(["headers", "entries", "textindexes"], "readwrite",
-			(tr, {request, getAllKeys}) => {
-				const headers = tr.objectStore("headers");
-				const entries = tr.objectStore("entries");
-				const issueIndex = entries.index("issue");
-				const indexes = tr.objectStore("textindexes");
+			(tr, {getAllKeys}) => {
+				const issueIndex = tr.objectStore("entries").index("issue");
+				return getAllKeys<number>(issueIndex, issue);
+			})
+			.then(entryKeys => {
+				console.info("entryKeys", entryKeys);
+				return this.db_.transaction(["headers", "entries", "textindexes"], "readwrite",
+					(tr, {}) => {
+						const headers = tr.objectStore("headers");
+						const entries = tr.objectStore("entries");
+						const indexes = tr.objectStore("textindexes");
 
-				getAllKeys<number>(issueIndex, issue)
-					.then(entryKeys => {
-						for (const key of entryKeys) {
-							request(entries.delete(key));
-						}
+						entries.delete(entryKeys);
+
+						headers.delete(issue);
+						indexes.delete(issue);
 					});
-
-				request(headers.delete(issue));
-				request(indexes.delete(issue));
 			});
 	}
 
