@@ -2,7 +2,7 @@
 // by Arthur Langereis - @zenmumbler
 
 import * as fs from "fs";
-import request from "request";
+import request from "./request";
 
 import { EntryListing } from "../lib/catalog";
 import { ensureDirectory, issueBaseURL, listingPath, entryPagesDirPath, entryPageFilePath, timeoutPromise } from "./importutil";
@@ -52,7 +52,7 @@ function load(state: EntrySpiderState) {
 					if (!error && response.statusCode === 200) {
 						fs.writeFile(filePath, body, (err) => {
 							if (err) {
-								console.log(`Failed to write file for uid: ${uid}`, err);
+								console.info(`Failed to write file for uid: ${uid}`, err);
 								state.failures += 1;
 							}
 							else {
@@ -62,7 +62,7 @@ function load(state: EntrySpiderState) {
 						});
 					}
 					else {
-						console.log(`Failed to load entry page for uid: ${uid}`, error, response ? response.statusCode : "-");
+						console.info(`Failed to load entry page for uid: ${uid}`, error, response ? response.statusCode : "-");
 						state.failures += 1;
 						resolve(next());
 					}

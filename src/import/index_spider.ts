@@ -2,8 +2,8 @@
 // by Arthur Langereis - @zenmumbler
 
 import * as fs from "fs";
-import request from "request";
 import * as http from "http";
+import request from "./request";
 
 import { ensureDirectory, listingDirPath, listingPath, issueBaseURL, timeoutPromise } from "./importutil";
 
