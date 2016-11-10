@@ -292,8 +292,6 @@ var CatalogPersistence = (function () {
             headers.createIndex("issue", "issue", { unique: true });
             textindexes.createIndex("issue", "issue", { unique: true });
             entries.createIndex("issue", "ld_issue");
-            entries.createIndex("category", "category");
-            entries.createIndex("platform", "platforms", { multiEntry: true });
         });
     }
     CatalogPersistence.prototype.saveCatalog = function (catalog, indEntries, sti) {
@@ -306,7 +304,7 @@ var CatalogPersistence = (function () {
         return this.db_.transaction(["headers", "entries", "textindexes"], "readwrite", function (tr, _a) {
             var timeout = _a.timeout;
             console.info("Storing issue " + header.issue + " with " + indEntries.length + " entries and textindex");
-            timeout(2000);
+            timeout(10000);
             var headers = tr.objectStore("headers");
             var entries = tr.objectStore("entries");
             var textindexes = tr.objectStore("textindexes");
@@ -370,20 +368,20 @@ var CatalogPersistence = (function () {
     };
     CatalogPersistence.prototype.destroyCatalog = function (issue) {
         var _this = this;
-        return this.db_.transaction(["headers", "entries", "textindexes"], "readwrite", function (tr, _a) {
+        return this.db_.transaction(["entries"], "readonly", function (tr, _a) {
             var getAllKeys = _a.getAllKeys;
             var issueIndex = tr.objectStore("entries").index("issue");
             return getAllKeys(issueIndex, issue);
         })
             .then(function (entryKeys) {
             console.info("entryKeys", entryKeys);
-            _this.db_.transaction(["headers", "entries", "textindexes"], "readwrite", function (tr, _a) {
+            return _this.db_.transaction(["headers", "entries", "textindexes"], "readwrite", function (tr, _a) {
                 var headers = tr.objectStore("headers");
                 var entries = tr.objectStore("entries");
                 var indexes = tr.objectStore("textindexes");
-                for (var _i = 0, entryKeys_1 = entryKeys; _i < entryKeys_1.length; _i++) {
-                    var key = entryKeys_1[_i];
-                    entries.delete(key);
+                if (entryKeys.length > 0) {
+                    var range = IDBKeyRange.bound(entryKeys[0], entryKeys[entryKeys.length - 1]);
+                    entries.delete(range);
                 }
                 headers.delete(issue);
                 indexes.delete(issue);
@@ -391,9 +389,13 @@ var CatalogPersistence = (function () {
         });
     };
     CatalogPersistence.prototype.purgeAll = function () {
-        var _this = this;
-        return this.persistedIssues().then(function (issues) {
-            return Promise.all(issues.map(function (issue) { return _this.destroyCatalog(issue); }));
+        return this.db_.transaction(["headers", "entries", "textindexes"], "readwrite", function (tr, _a) {
+            var headers = tr.objectStore("headers");
+            var entries = tr.objectStore("entries");
+            var indexes = tr.objectStore("textindexes");
+            headers.clear();
+            entries.clear();
+            indexes.clear();
         });
     };
     return CatalogPersistence;

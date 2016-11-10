@@ -24,12 +24,7 @@ export class CatalogPersistence {
 				// duplicates of primary index to allow for keyCursor ops
 				headers.createIndex("issue", "issue", { unique: true });
 				textindexes.createIndex("issue", "issue", { unique: true });
-
-				// these indexes are not currently used, but adding them now anyway
-				// this app needs a composite index over these 3 fields but composite + multiEntry is not allowed...
 				entries.createIndex("issue", "ld_issue");
-				entries.createIndex("category", "category");
-				entries.createIndex("platform", "platforms", { multiEntry: true });
 			});
 	}
 
@@ -44,7 +39,7 @@ export class CatalogPersistence {
 		return this.db_.transaction(["headers", "entries", "textindexes"], "readwrite",
 			(tr, { timeout }) => {
 				console.info(`Storing issue ${header.issue} with ${indEntries.length} entries and textindex`);
-				timeout(8000);
+				timeout(10000);
 
 				const headers = tr.objectStore("headers");
 				const entries = tr.objectStore("entries");
@@ -117,7 +112,7 @@ export class CatalogPersistence {
 	}
 
 	destroyCatalog(issue: number) {
-		return this.db_.transaction(["headers", "entries", "textindexes"], "readwrite",
+		return this.db_.transaction(["entries"], "readonly",
 			(tr, {getAllKeys}) => {
 				const issueIndex = tr.objectStore("entries").index("issue");
 				return getAllKeys<number>(issueIndex, issue);
@@ -130,7 +125,10 @@ export class CatalogPersistence {
 						const entries = tr.objectStore("entries");
 						const indexes = tr.objectStore("textindexes");
 
-						entries.delete(entryKeys);
+						if (entryKeys.length > 0) {
+							const range = IDBKeyRange.bound(entryKeys[0], entryKeys[entryKeys.length - 1]);
+							entries.delete(range);
+						}
 
 						headers.delete(issue);
 						indexes.delete(issue);
@@ -139,8 +137,15 @@ export class CatalogPersistence {
 	}
 
 	purgeAll() {
-		return this.persistedIssues().then(issues => {
-			return Promise.all(issues.map(issue => this.destroyCatalog(issue)));
-		});
+		return this.db_.transaction(["headers", "entries", "textindexes"], "readwrite",
+			(tr, {}) => {
+				const headers = tr.objectStore("headers");
+				const entries = tr.objectStore("entries");
+				const indexes = tr.objectStore("textindexes");
+
+				headers.clear();
+				entries.clear();
+				indexes.clear();
+			});
 	}
 }
