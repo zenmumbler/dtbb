@@ -165,9 +165,10 @@ var PromiseDB = (function () {
     return PromiseDB;
 }());
 
+var DB_NAME = "dtbb";
 var CatalogPersistence = (function () {
     function CatalogPersistence() {
-        this.db_ = new PromiseDB("dtbb", 1, function (db, _oldVersion, _newVersion) {
+        this.db_ = new PromiseDB(DB_NAME, 1, function (db, _oldVersion, _newVersion) {
             console.info("Creating stores and indexes...");
             var headers = db.createObjectStore("headers", { keyPath: "issue" });
             var textindexes = db.createObjectStore("textindexes", { keyPath: "issue" });
@@ -175,8 +176,6 @@ var CatalogPersistence = (function () {
             headers.createIndex("issue", "issue", { unique: true });
             textindexes.createIndex("issue", "issue", { unique: true });
             entries.createIndex("issue", "ld_issue");
-            entries.createIndex("category", "category");
-            entries.createIndex("platform", "platforms", { multiEntry: true });
         });
     }
     CatalogPersistence.prototype.saveCatalog = function (catalog, indEntries, sti) {
@@ -189,7 +188,7 @@ var CatalogPersistence = (function () {
         return this.db_.transaction(["headers", "entries", "textindexes"], "readwrite", function (tr, _a) {
             var timeout = _a.timeout;
             console.info("Storing issue " + header.issue + " with " + indEntries.length + " entries and textindex");
-            timeout(8000);
+            timeout(10000);
             var headers = tr.objectStore("headers");
             var entries = tr.objectStore("entries");
             var textindexes = tr.objectStore("textindexes");
@@ -273,7 +272,7 @@ var CatalogPersistence = (function () {
             });
         });
     };
-    CatalogPersistence.prototype.purgeAll = function () {
+    CatalogPersistence.prototype.purgeAllData = function () {
         return this.db_.transaction(["headers", "entries", "textindexes"], "readwrite", function (tr, _a) {
             var headers = tr.objectStore("headers");
             var entries = tr.objectStore("entries");
@@ -281,6 +280,14 @@ var CatalogPersistence = (function () {
             headers.clear();
             entries.clear();
             indexes.clear();
+        });
+    };
+    CatalogPersistence.prototype.deleteDatabase = function () {
+        this.db_.close();
+        return new Promise(function (resolve, reject) {
+            var req = indexedDB.deleteDatabase(DB_NAME);
+            req.onerror = function (err) { reject(err); };
+            req.onsuccess = function () { resolve(); };
         });
     };
     return CatalogPersistence;
@@ -609,6 +616,9 @@ var IndexerAPI = (function () {
         };
         return this.promisedCall(req, progress);
     };
+    IndexerAPI.prototype.exit = function () {
+        this.worker_.terminate();
+    };
     return IndexerAPI;
 }());
 
@@ -689,15 +699,16 @@ var CatalogIndexer = (function () {
             });
         }
         else {
-            var revision = 1;
-            var extension = location.host.toLowerCase() !== "zenmumbler.net" ? ".json" : ".gzjson";
-            var entriesURL = "data/ld" + issue + "_entries" + extension + "?" + revision;
-            if (location.pathname.indexOf("/workers") > -1) {
-                entriesURL = "../" + entriesURL;
-            }
+            var urlPrefix = (location.pathname.indexOf("/workers") > -1) ? "../" : "";
+            var entriesURL = urlPrefix + "data/ld" + issue + "_entries.json";
             return loadTypedJSON(entriesURL).then(function (catalog) {
                 return _this.acceptCatalogData(catalog);
             });
+        }
+    };
+    CatalogIndexer.prototype.stop = function () {
+        if (this.api_) {
+            this.api_.exit();
         }
     };
     return CatalogIndexer;
