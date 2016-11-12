@@ -10,11 +10,13 @@ interface PersistedTextIndex {
 	data: SerializedTextIndex;
 }
 
+const DB_NAME = "dtbb";
+
 export class CatalogPersistence {
 	private db_: PromiseDB;
 
 	constructor() {
-		this.db_ = new PromiseDB("dtbb", 1,
+		this.db_ = new PromiseDB(DB_NAME, 1,
 			(db, _oldVersion, _newVersion) => {
 				console.info("Creating stores and indexes...");
 				const headers = db.createObjectStore("headers", { keyPath: "issue" });
@@ -136,7 +138,7 @@ export class CatalogPersistence {
 			});
 	}
 
-	purgeAll() {
+	purgeAllData() {
 		return this.db_.transaction(["headers", "entries", "textindexes"], "readwrite",
 			(tr, {}) => {
 				const headers = tr.objectStore("headers");
@@ -147,5 +149,14 @@ export class CatalogPersistence {
 				entries.clear();
 				indexes.clear();
 			});
+	}
+
+	deleteDatabase() {
+		this.db_.close();
+		return new Promise((resolve, reject) => {
+			const req = indexedDB.deleteDatabase(DB_NAME);
+			req.onerror = (err) => { reject(err); };
+			req.onsuccess = () => { resolve(); };
+		});
 	}
 }

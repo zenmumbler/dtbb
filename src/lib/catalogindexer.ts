@@ -111,4 +111,10 @@ export class CatalogIndexer {
 			});
 		}
 	}
+
+	stop() {
+		if (this.api_) {
+			this.api_.exit();
+		}
+	}
 }

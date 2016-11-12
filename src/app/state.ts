@@ -49,6 +49,10 @@ export class GamesBrowserState {
 		}
 	}
 
+	clearLocalData() {
+		return this.catalogStore_.nukeAndPave();
+	}
+
 	// pass along properties from catalogstore
 	get filteredSet() { return this.catalogStore_.filteredSet; }
 	get loading() { return this.catalogStore_.loading; }

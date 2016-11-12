@@ -286,9 +286,10 @@ var PromiseDB = (function () {
     return PromiseDB;
 }());
 
+var DB_NAME = "dtbb";
 var CatalogPersistence = (function () {
     function CatalogPersistence() {
-        this.db_ = new PromiseDB("dtbb", 1, function (db, _oldVersion, _newVersion) {
+        this.db_ = new PromiseDB(DB_NAME, 1, function (db, _oldVersion, _newVersion) {
             console.info("Creating stores and indexes...");
             var headers = db.createObjectStore("headers", { keyPath: "issue" });
             var textindexes = db.createObjectStore("textindexes", { keyPath: "issue" });
@@ -392,7 +393,7 @@ var CatalogPersistence = (function () {
             });
         });
     };
-    CatalogPersistence.prototype.purgeAll = function () {
+    CatalogPersistence.prototype.purgeAllData = function () {
         return this.db_.transaction(["headers", "entries", "textindexes"], "readwrite", function (tr, _a) {
             var headers = tr.objectStore("headers");
             var entries = tr.objectStore("entries");
@@ -400,6 +401,14 @@ var CatalogPersistence = (function () {
             headers.clear();
             entries.clear();
             indexes.clear();
+        });
+    };
+    CatalogPersistence.prototype.deleteDatabase = function () {
+        this.db_.close();
+        return new Promise(function (resolve, reject) {
+            var req = indexedDB.deleteDatabase(DB_NAME);
+            req.onerror = function (err) { reject(err); };
+            req.onsuccess = function () { resolve(); };
         });
     };
     return CatalogPersistence;
@@ -702,6 +711,9 @@ var IndexerAPI = (function () {
         };
         return this.promisedCall(req, progress);
     };
+    IndexerAPI.prototype.exit = function () {
+        this.worker_.terminate();
+    };
     return IndexerAPI;
 }());
 
@@ -787,6 +799,11 @@ var CatalogIndexer = (function () {
             return loadTypedJSON(entriesURL).then(function (catalog) {
                 return _this.acceptCatalogData(catalog);
             });
+        }
+    };
+    CatalogIndexer.prototype.stop = function () {
+        if (this.api_) {
+            this.api_.exit();
         }
     };
     return CatalogIndexer;
@@ -966,6 +983,10 @@ var CatalogStore = (function () {
         enumerable: true,
         configurable: true
     });
+    CatalogStore.prototype.nukeAndPave = function () {
+        this.indexer_.stop();
+        return this.persist_.deleteDatabase();
+    };
     return CatalogStore;
 }());
 
@@ -1010,6 +1031,9 @@ var GamesBrowserState = (function () {
         if (newIssue !== this.issue_.get() && (newIssue in IssueThemeNames)) {
             this.issue_.set(newIssue);
         }
+    };
+    GamesBrowserState.prototype.clearLocalData = function () {
+        return this.catalogStore_.nukeAndPave();
     };
     Object.defineProperty(GamesBrowserState.prototype, "filteredSet", {
         get: function () { return this.catalogStore_.filteredSet; },
@@ -1415,6 +1439,9 @@ var LoadingWall = (function () {
 }());
 
 var state = new GamesBrowserState();
+function reset() {
+    state.clearLocalData().then(function () { console.info("Local database deleted."); }, function (err) { console.warn("Could not delete local database. Error:", err); });
+}
 document.addEventListener("DOMContentLoaded", function (_) {
     new GamesGrid(elem(".entries"), state);
     new FilterControls(elem(".filters"), state);
@@ -1423,5 +1450,6 @@ document.addEventListener("DOMContentLoaded", function (_) {
 });
 
 exports.state = state;
+exports.reset = reset;
 
 }((this.dtbb = this.dtbb || {})));

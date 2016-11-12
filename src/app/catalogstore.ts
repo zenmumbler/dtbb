@@ -216,4 +216,10 @@ export class CatalogStore {
 	get loading() { return this.loading_.watchable; }
 	get loadingRatio() { return this.loadingRatio_.watchable; }
 	get entries() { return this.entryData_; }
+
+	// commands
+	nukeAndPave() {
+		this.indexer_.stop();
+		return this.persist_.deleteDatabase();
+	}
 }

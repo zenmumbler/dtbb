@@ -10,6 +10,13 @@ import { LoadingWall } from "./views/loadingwall/loadingwall";
 
 export const state = new GamesBrowserState();
 
+export function reset() {
+	state.clearLocalData().then(
+		() => { console.info("Local database deleted."); },
+		(err) => { console.warn("Could not delete local database. Error:", err); }
+	);
+}
+
 document.addEventListener("DOMContentLoaded", _ => {
 	new GamesGrid(elem(".entries"), state);
 	new FilterControls(elem(".filters"), state);

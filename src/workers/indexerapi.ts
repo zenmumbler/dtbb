@@ -127,4 +127,8 @@ export class IndexerAPI {
 		};
 		return this.promisedCall<IndexSuccessResponse>(req, progress);
 	}
+
+	exit() {
+		this.worker_.terminate();
+	}
 }
