@@ -1440,13 +1440,18 @@ var LoadingWall = (function () {
 
 var state = new GamesBrowserState();
 function reset() {
-    state.clearLocalData().then(function () { console.info("Local database deleted."); }, function (err) { console.warn("Could not delete local database. Error:", err); });
+    elemList("select").forEach(function (e) { return e.disabled = true; });
+    elem("#smokedglass").style.display = "block";
+    elem(".status").style.display = "none";
+    elem("#smokedglass").classList.add("active");
+    state.clearLocalData().then(function () { console.info("Local database deleted, when you reload the page a new database will be created."); }, function (err) { console.warn("Could not delete local database. Error:", err); });
 }
 document.addEventListener("DOMContentLoaded", function (_) {
     new GamesGrid(elem(".entries"), state);
     new FilterControls(elem(".filters"), state);
     new LoadingWall(elem("#smokedglass"), state);
     state.setIssue(36);
+    console.info("Hi! If you ever need to delete all local data cached by DTBB just run: `dtbb.reset()` in your console while on this page. Have fun!");
 });
 
 exports.state = state;
