@@ -65,6 +65,10 @@ var IssueThemeNames = {
     36: "Ancient Technology",
     37: "?",
 };
+function localThumbURL(issue, ldThumbURL) {
+    var fileName = ldThumbURL.split("/").splice(-1);
+    return "data/thumbs/" + issue + "/" + fileName;
+}
 
 var WatchableValue = (function () {
     function WatchableValue(initial) {
@@ -778,12 +782,8 @@ var CatalogIndexer = (function () {
             });
         }
         else {
-            var revision = 1;
-            var extension = location.host.toLowerCase() !== "zenmumbler.net" ? ".json" : ".gzjson";
-            var entriesURL = "data/ld" + issue + "_entries" + extension + "?" + revision;
-            if (location.pathname.indexOf("/workers") > -1) {
-                entriesURL = "../" + entriesURL;
-            }
+            var urlPrefix = (location.pathname.indexOf("/workers") > -1) ? "../" : "";
+            var entriesURL = urlPrefix + "data/ld" + issue + "_entries.json";
             return loadTypedJSON(entriesURL).then(function (catalog) {
                 return _this.acceptCatalogData(catalog);
             });
@@ -1141,7 +1141,7 @@ var GamesGrid = (function () {
             if (entry) {
                 cell.link.href = entry.entry_url;
                 cell.link.className = entry.category;
-                cell.thumb.style.backgroundImage = "url(" + entry.thumbnail_url + ")";
+                cell.thumb.style.backgroundImage = "url(" + localThumbURL(entry.ld_issue, entry.thumbnail_url) + ")";
                 cell.title.textContent = entry.title;
                 cell.author.textContent = entry.author.name;
                 for (var platKey in Platforms) {
