@@ -68,7 +68,7 @@ a go.
 
 Now go and [make, play and rate][ld] games.
 
-[dtbb]: http://zenmumbler.net/dtbb/
+[dtbb]: https://zenmumbler.net/dtbb/
 [ld]: http://ludumdare.com/
 [pdb]: https://github.com/zenmumbler/dtbb/blob/master/src/lib/promisedb.ts
 [ww]: https://github.com/zenmumbler/dtbb/blob/master/src/lib/watchable.ts
