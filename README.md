@@ -18,6 +18,77 @@ Site features:
 
 [Try it now!][dtbb]
 
+
+Building
+--------
+
+If you want to try this locally then host the `site` directory using your manner of choice.
+I just have it symlinked as `/Library/WebServer/Documents/dtbb` on macOS. The repo includes
+the built js and css files so you can try it immediately.
+
+To modify things, you'll need to install some packages, run `yarn` or `npm install` inside
+the main directory. All the code is written in [TypeScript][ts] and it is assumed you have
+TS 2.x installed globally. I keep TS updated to whatever RC or release version is available
+which currently is 2.1.1. TS 2.0 is currently the minimum supported version.
+
+There are 3 targets in this project: the main site code, the worker and the import node app.
+I compile the code inside Sublime Text using the [TypeScript package][stts]. This code ends
+up either in `site/build/app/`, `site/build/workers/` or `import/build/` depending on what
+you compiled. I've got a gulp task running to watch these dirs that will package them up
+as single JS files. Run `gulp watch` in a terminal while developing or run `gulp site` to
+explicitly rebuild all site related things or `gulp import` to rebuild the import code.
+
+The site styles are contained in `scss` files inside `site/views` with `dtbb.scss` being the
+entrypoint. `gulp watch` includes rebuilding the css or run `gulp styles` manually.
+
+### Import code caveat
+
+The import script uses the `request` and `mkdirp` packages with corresponding typings in
+`@types/request` and `@types/mkdirp`. Sadly, these packages export the functions using
+`export = func;` and what I need (mostly for rollup to not complain) is
+`export default func`.
+
+I messed around for a while while with various workarounds but I've spent way too
+much time on this side-project already so I just modified the `index.d.ts` files inside
+the packages themselves. Until you do this you won't be able to fully build the import
+script. If you feel like fixing this, be my guest.
+
+
+Importing Data
+--------------
+
+**NOTE WELL**: the _full processed data_ for all supported events is already present in the
+`site/data/ldXY_entries.json` files. Only mess with this import stuff if you find it
+interesting for some reason.
+
+In the `import` folder run `node import` to get a list of commands available, right now they
+are `listing`, `entries`, `thumbs` and `extract`. Each of these commands takes 1 or 2 numbers
+as parameters, they are the starting and ending indexes of LD event numbers ("issues") to
+process.
+
+`listing 15` gets the entry listing for LD 15.<br>
+`entries 20 25` downloads the entry pages for LDs 20 through 25 inclusive.<br>
+etc.
+
+`entries` and `thumbs` require the data downloaded by `listing` and `extract` requires the
+entry pages downloaded by `entries`. So to download and process all the data you'd do
+something like:
+
+    node import listing 15 36
+    node import entries 15 36
+    node import thumbs 15 36
+    node import extract 15 36
+
+Note that each of these operations will take quite some time. The scraping happens
+sequentially, both for simplicity reasons and not to hammer the LD site too much and a
+full extract of all ~35k entries will take around 20-30 minutes.
+
+Given that PoV has announced that new events will be hosted on a new server with new visual
+design etc. that means that until this scraper code is updated it will only work for LD
+issues 15 through 36. LDs before #15 did not have a structured submission system in place and
+are not supported.
+
+
 Details
 -------
 
@@ -51,6 +122,7 @@ an app this small, then that's why. To whit, I've made/done the following:
   [watchablebinding][wb] types that encourage the same props-down, methods-up paradigm as
   e.g. [Vue][vue]. The site State employs the same concepts that Vue uses, etc.
 
+
 Disclaimer
 ----------
 
@@ -77,3 +149,5 @@ Now go and [make, play and rate][ld] games.
 [s3]: https://aws.amazon.com/s3/
 [cf]: https://www.cloudflare.com/
 [vue]: http://vuejs.org/
+[ts]: http://www.typescriptlang.org/
+[stts]: https://packagecontrol.io/packages/TypeScript
