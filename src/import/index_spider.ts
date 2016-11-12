@@ -3,7 +3,7 @@
 
 import * as fs from "fs";
 import * as http from "http";
-import request from "./request";
+import request from "request";
 
 import { ensureDirectory, listingDirPath, listingPath, issueBaseURL, timeoutPromise } from "./importutil";
 
@@ -18,7 +18,7 @@ interface SpiderState {
 }
 
 function next(state: SpiderState) {
-	return new Promise((resolve, reject) => {
+	return new Promise<void>((resolve, reject) => {
 		request(
 			`${issueBaseURL(state.issue)}/?action=preview&start=${state.offset}`,
 			(error: any, response: http.IncomingMessage, body: string) => {

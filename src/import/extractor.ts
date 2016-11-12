@@ -41,7 +41,7 @@ function loadCatalog(issue: number): Promise<EntryListing> {
 }
 
 
-function extractRatings(table: HTMLTableElement): EntryRating[] {
+function extractRatings(table: HTMLTableElement | null): EntryRating[] {
 	const ratings: EntryRating[] = [];
 	if (table) {
 		const trs = [].slice.call(table.querySelectorAll("tr")) as HTMLTableRowElement[];
@@ -95,21 +95,25 @@ function createEntry(relURI: string, issue: number, uid: number, thumbImg: strin
 
 	const titleElem = base.querySelector("h2");
 	const avatarImg = base.querySelector("img.avatar") as HTMLImageElement;
-	const authorLink = titleElem.parentElement.querySelector("a");
-	const categoryText = titleElem.parentElement.querySelector("i").textContent || "";
-	const authorName = authorLink.querySelector("strong").textContent || "";
+	const authorLink = titleElem && titleElem.parentElement.querySelector("a");
+	const categoryText = (titleElem && titleElem.parentElement.querySelector("i")!.textContent) || "";
+	const authorName = (authorLink && authorLink.querySelector("strong")!.textContent) || "";
 	const screensArrayElem = base.querySelector(".shot-nav");
-	const screensArray = [].slice.call(screensArrayElem.querySelectorAll("img")) as HTMLImageElement[];
+	const screensArray = [].slice.call((screensArrayElem && screensArrayElem.querySelectorAll("img")) || []) as HTMLImageElement[];
 	const linksArray = [].slice.call(base.querySelectorAll(".links a")) as HTMLAnchorElement[];
-	const description = screensArrayElem.nextSibling.textContent || "";
+	const description = screensArrayElem && screensArrayElem.nextSibling.textContent || "";
 	const ratingTable = base.querySelector("table");
+
+	if ([titleElem, avatarImg, authorLink, categoryText, authorName, screensArrayElem].some(t => t == null)) {
+		throw new Error(`can't get all relevant elements from page source of uid ${uid}`);
+	}
 
 	const categoryStr = categoryText.split(" ")[0].toLowerCase().replace("competition", "compo");
 
 	const entry: Entry = {
 		ld_issue: issue,
 
-		title: titleElem.textContent || "<no title>",
+		title: titleElem!.textContent || "<no title>",
 		category: categoryStr.indexOf("jam") > -1 ? "jam" : "compo",
 		description: description,
 
@@ -120,7 +124,7 @@ function createEntry(relURI: string, issue: number, uid: number, thumbImg: strin
 			name: authorName,
 			uid: uid,
 			avatar_url: avatarImg.src,
-			home_url: ldBaseURL + authorLink.getAttribute("href")!.substr(3)
+			home_url: ldBaseURL + authorLink!.getAttribute("href")!.substr(3)
 		},
 
 		screens: screensArray.map(
@@ -162,7 +166,7 @@ interface ExtractState {
 	issue: number;
 	done: boolean;
 	completionPromise?: Promise<void>;
-	inFlight: Promise<Entry>[];
+	inFlight: Promise<void>[];
 	source: EntryListing;
 	stats: IssueStats;
 	entries: Entry[];
@@ -248,7 +252,7 @@ function tryNext(state: ExtractState): Promise<void> {
 		const link = state.source.links.shift()!;
 		const thumb = state.source.thumbs.shift()!;
 
-		const unqueueSelf = function(prom: Promise<Entry>) {
+		const unqueueSelf = function(prom: Promise<void>) {
 			const promIx = state.inFlight.indexOf(prom);
 			if (promIx < 0) {
 				console.error("Can't find myself in the inFlight array!", state.inFlight, prom);
