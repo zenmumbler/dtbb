@@ -4,9 +4,6 @@
 const gulp = require("gulp");
 const rollup = require("rollup-stream");
 const source = require("vinyl-source-stream");
-const buffer = require("vinyl-buffer");
-const uglify = require("gulp-uglify");
-const gzip = require("gulp-gzip");
 const rename = require("gulp-rename");
 const sass = require("gulp-sass");
 const path = require("path");
@@ -22,9 +19,6 @@ gulp.task("styles", function() {
 			indentWidth: 1
 		}).on("error", sass.logError))
 		.pipe(gulp.dest("site"));
-		// .pipe(rename({suffix: ".min"}))
-		// .pipe(cssnano())
-		// .pipe(gulp.dest("dist/assets/css"));
 });
 
 // bundle main site code
@@ -35,11 +29,6 @@ gulp.task("app", function() {
 		moduleName: "dtbb",
 	})
 	.pipe(source("dtbb.js"))
-	.pipe(buffer())
-	// .pipe(uglify({
-	// 	mangle: false,
-	// 	compress: false
-	// }))
 	.pipe(gulp.dest("site"));
 });
 
@@ -50,11 +39,6 @@ gulp.task("worker", function() {
 		format: "iife",
 	})
 	.pipe(source("task_indexer.js"))
-	.pipe(buffer())
-	// .pipe(uglify({
-	// 	mangle: true,
-	// 	compress: false
-	// }))
 	.pipe(gulp.dest("site"));
 });
 
@@ -73,23 +57,6 @@ gulp.task("import", function() {
 	})
 	.pipe(source("import.js"))
 	.pipe(gulp.dest("import"));
-});
-
-
-// ---- data
-
-// catalog data compressor
-gulp.task("compressdata", function() {
-	return gulp.src("site/data/*.json")
-	.pipe(gzip({
-		append: false,
-		extension: "gzjson",
-		gzipOptions: { level: 9 }
-	}))
-	.pipe(rename(function (path) {
-		path.basename = path.basename.replace(".json", "");
-	}))
-	.pipe(gulp.dest("site/data"));
 });
 
 

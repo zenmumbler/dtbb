@@ -103,13 +103,8 @@ export class CatalogIndexer {
 			});
 		}
 		else {
-			// yeah..
-			const revision = 1;
-			const extension = location.host.toLowerCase() !== "zenmumbler.net" ? ".json" : ".gzjson";
-			let entriesURL = `data/ld${issue}_entries${extension}?${revision}`;
-			if (location.pathname.indexOf("/workers") > -1) {
-				entriesURL = "../" + entriesURL;
-			}
+			const urlPrefix = (location.pathname.indexOf("/workers") > -1) ? "../" : "";
+			const entriesURL = `${urlPrefix}data/ld${issue}_entries.json`;
 
 			return loadTypedJSON<Catalog>(entriesURL).then(catalog => {
 				return this.acceptCatalogData(catalog);
