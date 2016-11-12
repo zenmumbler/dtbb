@@ -1,30 +1,34 @@
 // importutil - part of dtbb
 // by Arthur Langereis - @zenmumbler
 
-import mkdirp from "./mkdirp";
+import mkdirp from "mkdirp";
 
 export function listingDirPath() {
-	return `../spider_data/listings/`;
+	return `./spider_data/listings/`;
 }
 
 export function listingPath(issue: number) {
-	return `${listingDirPath()}/listing_${issue}.json`;
+	return `${listingDirPath()}listing_${issue}.json`;
+}
+
+export function thumbsDirPath(issue: number) {
+	return `../site/data/thumbs/${issue}/`;
+}
+
+export function localThumbPathForLDURL(issue: number, ldThumb: string) {
+	const fileName = ldThumb.split("/").splice(-1);
+	return thumbsDirPath(issue) + fileName;
 }
 
 export function entryPagesDirPath(issue: number) {
-	return `../spider_data/entry_pages/entries_${issue}/`;
+	return `./spider_data/entry_pages/entries_${issue}/`;
 }
-
 export function entryPageFilePath(issue: number, uid: number) {
 	return `${entryPagesDirPath(issue)}entry_${uid}.html`;
 }
 
 export function entriesCatalogPath(issue: number) {
-	return `../../data/ld${issue}_entries.json`;
-}
-
-export function gzippedEntriesCatalogPath(issue: number) {
-	return `../../data/ld${issue}_entries.gzjson`;
+	return `../site/data/ld${issue}_entries.json`;
 }
 
 
@@ -46,7 +50,7 @@ export function ensureDirectory(dir: string) {
 }
 
 export function timeoutPromise(delayMS: number) {
-	return new Promise(resolve => {
+	return new Promise<void>(resolve => {
 		setTimeout(resolve, delayMS);
 	});
 }
