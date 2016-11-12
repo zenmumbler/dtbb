@@ -1,7 +1,7 @@
 // gamesgrid.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
-import { Platforms } from "../../../lib/catalog";
+import { Platforms, localThumbURL } from "../../../lib/catalog";
 import { arrayFromSet } from "../../../lib/setutil";
 import { elem, elemList } from "../../domutil";
 import { GamesBrowserState } from "../../state";
@@ -153,7 +153,7 @@ export class GamesGrid {
 			if (entry) {
 				cell.link.href = entry.entry_url;
 				cell.link.className = entry.category;
-				cell.thumb.style.backgroundImage = "url(" + entry.thumbnail_url + ")";
+				cell.thumb.style.backgroundImage = "url(" + localThumbURL(entry.ld_issue, entry.thumbnail_url) + ")";
 				cell.title.textContent = entry.title;
 				cell.author.textContent = entry.author.name;
 

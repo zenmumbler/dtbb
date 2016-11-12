@@ -124,6 +124,11 @@ export interface Author {
 	home_url: string;
 }
 
+export function localThumbURL(issue: number, ldThumbURL: string) {
+	const fileName = ldThumbURL.split("/").splice(-1);
+	return `data/thumbs/${issue}/${fileName}`;
+}
+
 export interface Entry {
 	ld_issue: number;
 
