@@ -3,26 +3,32 @@
 function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
 
 var fs = require('fs');
-var request = _interopDefault(require('./request'));
-var mkdirp = _interopDefault(require('./mkdirp'));
+var request = _interopDefault(require('request'));
+var mkdirp = _interopDefault(require('mkdirp'));
 var jsdom = require('jsdom');
 
 function listingDirPath() {
-    return "../spider_data/listings/";
+    return "./spider_data/listings/";
 }
 function listingPath(issue) {
-    return listingDirPath() + "/listing_" + issue + ".json";
+    return listingDirPath() + "listing_" + issue + ".json";
+}
+function thumbsDirPath(issue) {
+    return "../site/data/thumbs/" + issue + "/";
+}
+function localThumbPathForLDURL(issue, ldThumb) {
+    var fileName = ldThumb.split("/").splice(-1);
+    return thumbsDirPath(issue) + fileName;
 }
 function entryPagesDirPath(issue) {
-    return "../spider_data/entry_pages/entries_" + issue + "/";
+    return "./spider_data/entry_pages/entries_" + issue + "/";
 }
 function entryPageFilePath(issue, uid) {
     return entryPagesDirPath(issue) + "entry_" + uid + ".html";
 }
 function entriesCatalogPath(issue) {
-    return "../../data/ld" + issue + "_entries.json";
+    return "../site/data/ld" + issue + "_entries.json";
 }
-
 function issueBaseURL(issue) {
     return "http://ludumdare.com/compo/ludum-dare-" + issue + "/";
 }
@@ -183,6 +189,82 @@ function fetchEntryPages(issue) {
             })
                 .catch(function (dirErr) {
                 reject("Could not create entries directory: " + dirErr);
+            }));
+        });
+    });
+}
+
+var DELAY_BETWEEN_REQUESTS_MS$2 = 10;
+function load$1(state) {
+    if (state.index >= state.urlList.length) {
+        console.info("Done (wrote " + state.thumbsWritten + " thumbs, " + state.failures + " failures)");
+        return Promise.resolve();
+    }
+    var url = state.urlList[state.index];
+    var localPath = localThumbPathForLDURL(state.issue, url);
+    var next = function (overrideDelay) {
+        if (state.index % 10 === 0) {
+            console.info((100 * (state.index / state.urlList.length)).toFixed(1) + "%");
+        }
+        state.index += 1;
+        return timeoutPromise(overrideDelay || DELAY_BETWEEN_REQUESTS_MS$2)
+            .then(function (_) { return load$1(state); });
+    };
+    if (fs.existsSync(localPath)) {
+        return next(1);
+    }
+    else {
+        return new Promise(function (resolve) {
+            request({
+                url: url,
+                encoding: null,
+                timeout: 3000
+            }, function (error, response, body) {
+                if (!error && response.statusCode === 200) {
+                    fs.writeFile(localPath, body, function (err) {
+                        if (err) {
+                            console.info("Failed to write thumb: " + localPath, err);
+                            state.failures += 1;
+                        }
+                        else {
+                            state.thumbsWritten += 1;
+                        }
+                        resolve(next());
+                    });
+                }
+                else {
+                    console.info("Failed to load thumb " + url, error, response ? response.statusCode : "-");
+                    state.failures += 1;
+                    resolve(next());
+                }
+            });
+        });
+    }
+}
+function fetchThumbs(issue) {
+    if (isNaN(issue) || issue < 15 || issue > 99) {
+        return Promise.reject("issue must be (15 <= issue <= 99)");
+    }
+    console.info("Fetching thumbs for issue " + issue);
+    return new Promise(function (resolve, reject) {
+        fs.readFile(listingPath(issue), "utf8", function (listingErr, data) {
+            if (listingErr) {
+                reject("Could not load listing for issue " + issue + ": " + listingErr);
+                return;
+            }
+            return (ensureDirectory(thumbsDirPath(issue))
+                .then(function () {
+                var json = JSON.parse(data);
+                resolve(load$1({
+                    issue: issue,
+                    index: 0,
+                    urlList: json.thumbs,
+                    thumbsWritten: 0,
+                    failures: 0
+                }));
+            })
+                .catch(function (dirErr) {
+                reject("Could not create thumbs directory: " + dirErr);
             }));
         });
     });
@@ -438,14 +520,17 @@ function createEntry(relURI, issue, uid, thumbImg, doc) {
     }
     var titleElem = base.querySelector("h2");
     var avatarImg = base.querySelector("img.avatar");
-    var authorLink = titleElem.parentElement.querySelector("a");
-    var categoryText = titleElem.parentElement.querySelector("i").textContent || "";
-    var authorName = authorLink.querySelector("strong").textContent || "";
+    var authorLink = titleElem && titleElem.parentElement.querySelector("a");
+    var categoryText = (titleElem && titleElem.parentElement.querySelector("i").textContent) || "";
+    var authorName = (authorLink && authorLink.querySelector("strong").textContent) || "";
     var screensArrayElem = base.querySelector(".shot-nav");
-    var screensArray = [].slice.call(screensArrayElem.querySelectorAll("img"));
+    var screensArray = [].slice.call((screensArrayElem && screensArrayElem.querySelectorAll("img")) || []);
     var linksArray = [].slice.call(base.querySelectorAll(".links a"));
-    var description = screensArrayElem.nextSibling.textContent || "";
+    var description = screensArrayElem && screensArrayElem.nextSibling.textContent || "";
     var ratingTable = base.querySelector("table");
+    if ([titleElem, avatarImg, authorLink, categoryText, authorName, screensArrayElem].some(function (t) { return t == null; })) {
+        throw new Error("can't get all relevant elements from page source of uid " + uid);
+    }
     var categoryStr = categoryText.split(" ")[0].toLowerCase().replace("competition", "compo");
     var entry = {
         ld_issue: issue,
@@ -673,6 +758,9 @@ task("listing", function (f, t) {
 });
 task("entries", function (f, t) {
     return rangedTaskPerIssue(f, t, fetchEntryPages);
+});
+task("thumbs", function (f, t) {
+    return rangedTaskPerIssue(f, t, fetchThumbs);
 });
 task("extract", function (f, t) {
     return rangedTaskPerIssue(f, t, extractEntries);

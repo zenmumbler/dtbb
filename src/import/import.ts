@@ -3,6 +3,7 @@
 
 import { fetchListing } from "./index_spider";
 import { fetchEntryPages } from "./entry_spider";
+import { fetchThumbs } from "./thumb_spider";
 import { extractEntries } from "./extractor";
 import { task, runt } from "./runt";
 
@@ -55,6 +56,10 @@ task("listing", function(f: string, t: string) {
 
 task("entries", function(f: string, t: string) {
 	return rangedTaskPerIssue(f, t, fetchEntryPages);
+});
+
+task("thumbs", function(f: string, t: string) {
+	return rangedTaskPerIssue(f, t, fetchThumbs);
 });
 
 task("extract", function(f: string, t: string) {
