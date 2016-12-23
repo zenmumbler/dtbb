@@ -84,11 +84,11 @@ export class CatalogPersistence {
 
 	persistedIssues() {
 		return this.db_.transaction("headers", "readonly",
-			(tr, {getAllKeys}) => {
+			(tr, {getAll}) => {
 				const issueIndex = tr.objectStore("headers").index("issue");
-				return getAllKeys<number>(issueIndex, undefined, "nextunique"); // while the key is "unique", a bug in Saf10 makes multiple indexes. Fixed in STP.
+				return getAll<CatalogHeader>(issueIndex, undefined, "nextunique"); // while the key is "unique", a bug in Saf10 makes multiple indexes. Fixed in STP.
 			})
-			.catch(() => [] as number[]);
+			.catch(() => []);
 	}
 
 	loadCatalog(issue: number) {
@@ -120,7 +120,6 @@ export class CatalogPersistence {
 				return getAllKeys<number>(issueIndex, issue);
 			})
 			.then(entryKeys => {
-				console.info("entryKeys", entryKeys);
 				return this.db_.transaction(["headers", "entries", "textindexes"], "readwrite",
 					(tr, {}) => {
 						const headers = tr.objectStore("headers");

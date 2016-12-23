@@ -318,11 +318,13 @@ var IssueThemeNames = {
     34: "Two Button Controls, Growing",
     35: "Shapeshift",
     36: "Ancient Technology",
-    37: "?",
+    37: "One Room"
 };
 
 function mergeSet(dest, source) {
-    source.forEach(function (val) { return dest.add(val); });
+    if (source && source.forEach) {
+        source.forEach(function (val) { return dest.add(val); });
+    }
 }
 function newSetFromArray(source) {
     var set = new Set();
@@ -526,7 +528,7 @@ function createEntry(relURI, issue, uid, thumbImg, doc) {
     var screensArrayElem = base.querySelector(".shot-nav");
     var screensArray = [].slice.call((screensArrayElem && screensArrayElem.querySelectorAll("img")) || []);
     var linksArray = [].slice.call(base.querySelectorAll(".links a"));
-    var description = screensArrayElem && screensArrayElem.nextSibling.textContent || "";
+    var description = (screensArrayElem && screensArrayElem.nextSibling && screensArrayElem.nextSibling.textContent) || "";
     var ratingTable = base.querySelector("table");
     if ([titleElem, avatarImg, authorLink, categoryText, authorName, screensArrayElem].some(function (t) { return t == null; })) {
         throw new Error("can't get all relevant elements from page source of uid " + uid);

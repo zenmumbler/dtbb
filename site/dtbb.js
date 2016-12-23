@@ -63,7 +63,7 @@ var IssueThemeNames = {
     34: "Two Button Controls, Growing",
     35: "Shapeshift",
     36: "Ancient Technology",
-    37: "?",
+    37: "One Room"
 };
 function localThumbURL(issue, ldThumbURL) {
     var fileName = ldThumbURL.split("/").splice(-1);
@@ -121,6 +121,20 @@ var WatchableValue = (function () {
     });
     return WatchableValue;
 }());
+
+function loadTypedJSON(url) {
+    return new Promise(function (resolve, reject) {
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", url);
+        xhr.overrideMimeType("application/json");
+        xhr.responseType = "json";
+        xhr.onload = function () {
+            resolve(xhr.response);
+        };
+        xhr.onerror = reject;
+        xhr.send(null);
+    });
+}
 
 var PromiseDB = (function () {
     function PromiseDB(name, version, upgrade) {
@@ -345,9 +359,9 @@ var CatalogPersistence = (function () {
     };
     CatalogPersistence.prototype.persistedIssues = function () {
         return this.db_.transaction("headers", "readonly", function (tr, _a) {
-            var getAllKeys = _a.getAllKeys;
+            var getAll = _a.getAll;
             var issueIndex = tr.objectStore("headers").index("issue");
-            return getAllKeys(issueIndex, undefined, "nextunique");
+            return getAll(issueIndex, undefined, "nextunique");
         })
             .catch(function () { return []; });
     };
@@ -379,7 +393,6 @@ var CatalogPersistence = (function () {
             return getAllKeys(issueIndex, issue);
         })
             .then(function (entryKeys) {
-            console.info("entryKeys", entryKeys);
             return _this.db_.transaction(["headers", "entries", "textindexes"], "readwrite", function (tr, _a) {
                 var headers = tr.objectStore("headers");
                 var entries = tr.objectStore("entries");
@@ -434,7 +447,9 @@ function intersectSet(a, b) {
 }
 
 function mergeSet(dest, source) {
-    source.forEach(function (val) { return dest.add(val); });
+    if (source && source.forEach) {
+        source.forEach(function (val) { return dest.add(val); });
+    }
 }
 function newSetFromArray(source) {
     var set = new Set();
@@ -717,19 +732,6 @@ var IndexerAPI = (function () {
     return IndexerAPI;
 }());
 
-function loadTypedJSON(url) {
-    return new Promise(function (resolve, reject) {
-        var xhr = new XMLHttpRequest();
-        xhr.open("GET", url);
-        xhr.overrideMimeType("application/json");
-        xhr.responseType = "json";
-        xhr.onload = function () {
-            resolve(xhr.response);
-        };
-        xhr.onerror = reject;
-        xhr.send(null);
-    });
-}
 function makeDocID(issue, entryIndex) {
     return (issue << 16) | entryIndex;
 }
@@ -823,7 +825,14 @@ var CatalogStore = (function () {
         var isMobile = navigator.userAgent.toLowerCase().match(/android|iphone|ipad|ipod|windows phone/) !== null;
         this.persist_ = new CatalogPersistence();
         this.indexer_ = new CatalogIndexer(this.persist_, isMobile ? "local" : "worker");
-        this.loadedIssues_ = new Set();
+        this.manifest_ = loadTypedJSON("data/manifest.json")
+            .then(function (mdata) {
+            mdata.issues = mdata.issues.map(function (mentry) {
+                mentry.updatedAt = new Date(Date.parse(mentry.updatedAt));
+                return mentry;
+            });
+            return mdata;
+        });
         for (var pk in Platforms) {
             this.platformFilters_.set(Platforms[pk].mask, new Set());
         }
@@ -878,47 +887,49 @@ var CatalogStore = (function () {
     };
     CatalogStore.prototype.issueChanged = function (newIssue) {
         var _this = this;
-        if (this.loadedIssues_.has(newIssue)) {
-            console.info("Already have this issue " + newIssue + " loaded");
-            this.filtersChanged();
-        }
-        else {
-            this.loadingRatio_.set(0);
-            this.loading_.set(true);
-            var finished_1 = function (entries, textIndex) {
-                _this.acceptIndexedEntries(entries, textIndex);
-                _this.loadingRatio_.set(1);
-                _this.loading_.set(false);
-            };
-            var loadRemote_1 = function () {
-                _this.indexer_.importCatalogFile(newIssue, function (ratio) { _this.loadingRatio_.set(ratio); })
-                    .then(function (data) {
-                    finished_1(data.entries, data.textIndex);
-                });
-            };
-            this.persist_.persistedIssues()
-                .then(function (issues) {
-                console.info("Checking persisted issues: " + issues);
-                if (issues.indexOf(newIssue) > -1) {
+        this.loadingRatio_.set(0);
+        this.loading_.set(true);
+        var finished = function (entries, textIndex) {
+            _this.acceptIndexedEntries(entries, textIndex);
+            _this.loadingRatio_.set(1);
+            _this.loading_.set(false);
+        };
+        var loadRemote = function () {
+            _this.indexer_.importCatalogFile(newIssue, function (ratio) { _this.loadingRatio_.set(ratio); })
+                .then(function (data) {
+                finished(data.entries, data.textIndex);
+            });
+        };
+        Promise.all([this.persist_.persistedIssues(), this.manifest_])
+            .then(function (_a) {
+            var headers = _a[0], manifest = _a[1];
+            var local = headers.find(function (h) { return h.issue === newIssue; });
+            var remote = manifest.issues.find(function (me) { return me.issue === newIssue; });
+            if (local && remote) {
+                if (local.savedAt < remote.updatedAt) {
+                    console.info("The server copy of issue " + newIssue + " is newer than the local copy, fall back to network load.");
+                    loadRemote();
+                }
+                else {
                     _this.persist_.loadCatalog(newIssue)
                         .then(function (catalog) {
                         console.info("Got catalog from local DB");
                         if (catalog && catalog.header && catalog.entries && catalog.sti && catalog.entries.length === catalog.header.stats.entries) {
                             console.info("Catalog looks good, loading entries and textindex");
-                            finished_1(catalog.entries, catalog.sti);
+                            finished(catalog.entries, catalog.sti);
                         }
                         else {
                             console.info("Catalog data smelled funny, fall back to network load.");
-                            loadRemote_1();
+                            loadRemote();
                         }
                     });
                 }
-                else {
-                    console.info("No entries available locally, fall back to network load.");
-                    loadRemote_1();
-                }
-            });
-        }
+            }
+            else {
+                console.info("No entries available locally, fall back to network load.");
+                loadRemote();
+            }
+        });
     };
     CatalogStore.prototype.acceptIndexedEntries = function (entries, textIndex) {
         this.entryData_ = new Map();
@@ -1450,7 +1461,7 @@ document.addEventListener("DOMContentLoaded", function (_) {
     new GamesGrid(elem(".entries"), state);
     new FilterControls(elem(".filters"), state);
     new LoadingWall(elem("#smokedglass"), state);
-    state.setIssue(36);
+    state.setIssue(37);
     console.info("Hi! If you ever need to delete all local data cached by DTBB just run: `dtbb.reset()` in your console while on this page. Have fun!");
 });
 

@@ -92,7 +92,7 @@ export const IssueThemeNames: { readonly [issue: number]: string } = {
 
 	35: "Shapeshift",
 	36: "Ancient Technology",
-	37: "?",
+	37: "One Room"
 };
 
 // ----
@@ -174,4 +174,16 @@ export interface EntryIndexes {
 export interface IndexedEntry extends Entry {
 	docID: number;
 	indexes: EntryIndexes;
+}
+
+
+// ----
+
+export interface ManifestEntry {
+	issue: number;
+	updatedAt: Date;
+}
+
+export interface Manifest {
+	issues: ManifestEntry[];
 }

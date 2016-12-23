@@ -42,8 +42,10 @@ export function unionSet<T>(a: Set<T>, b: Set<T>) {
 
 
 export function mergeSet<T>(dest: Set<T>, source: Set<T> | T[]) {
-	// some type annotations to soothe TS's worries about forEach being uncallable
-	(source.forEach as (callback: (val: T) => void) => void)(val => dest.add(val));
+	if (source && source.forEach) {
+		// some type annotations to soothe TS's worries about forEach being uncallable
+		(source.forEach as (callback: (val: T) => void) => void)(val => dest.add(val));
+	}
 }
 
 

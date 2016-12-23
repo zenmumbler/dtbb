@@ -95,13 +95,13 @@ function createEntry(relURI: string, issue: number, uid: number, thumbImg: strin
 
 	const titleElem = base.querySelector("h2");
 	const avatarImg = base.querySelector("img.avatar") as HTMLImageElement;
-	const authorLink = titleElem && titleElem.parentElement.querySelector("a");
-	const categoryText = (titleElem && titleElem.parentElement.querySelector("i")!.textContent) || "";
+	const authorLink = titleElem && titleElem.parentElement!.querySelector("a");
+	const categoryText = (titleElem && titleElem.parentElement!.querySelector("i")!.textContent) || "";
 	const authorName = (authorLink && authorLink.querySelector("strong")!.textContent) || "";
 	const screensArrayElem = base.querySelector(".shot-nav");
 	const screensArray = [].slice.call((screensArrayElem && screensArrayElem.querySelectorAll("img")) || []) as HTMLImageElement[];
 	const linksArray = [].slice.call(base.querySelectorAll(".links a")) as HTMLAnchorElement[];
-	const description = screensArrayElem && screensArrayElem.nextSibling.textContent || "";
+	const description = (screensArrayElem && screensArrayElem.nextSibling && screensArrayElem.nextSibling.textContent) || "";
 	const ratingTable = base.querySelector("table");
 
 	if ([titleElem, avatarImg, authorLink, categoryText, authorName, screensArrayElem].some(t => t == null)) {

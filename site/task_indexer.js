@@ -313,7 +313,9 @@ function intersectSet(a, b) {
 }
 
 function mergeSet(dest, source) {
-    source.forEach(function (val) { return dest.add(val); });
+    if (source && source.forEach) {
+        source.forEach(function (val) { return dest.add(val); });
+    }
 }
 function newSetFromArray(source) {
     var set = new Set();

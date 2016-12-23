@@ -1,7 +1,8 @@
 // catalogstore.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
-import { IndexedEntry, Platforms } from "../lib/catalog";
+import { loadTypedJSON } from "../lib/fileutil";
+import { CatalogHeader, IndexedEntry, Platforms, Manifest } from "../lib/catalog";
 import { CatalogPersistence } from "../lib/catalogpersistence";
 import { CatalogIndexer } from "../lib/catalogindexer";
 import { SerializedTextIndex, TextIndex } from "../lib/textindex";
@@ -12,8 +13,8 @@ import { GamesBrowserState } from "./state";
 export class CatalogStore {
 	private persist_: CatalogPersistence;
 	private indexer_: CatalogIndexer;
-	private loadedIssues_: Set<number>;
 	private plasticSurge_ = new TextIndex();
+	private manifest_: Promise<Manifest>;
 
 	// cached data
 	private entryData_ = new Map<number, IndexedEntry>();
@@ -35,7 +36,14 @@ export class CatalogStore {
 
 		this.persist_ = new CatalogPersistence();
 		this.indexer_ = new CatalogIndexer(this.persist_, isMobile ? "local" : "worker");
-		this.loadedIssues_ = new Set<number>();
+		this.manifest_ = loadTypedJSON<Manifest>("data/manifest.json")
+			.then(mdata => {
+				mdata.issues = mdata.issues.map(mentry => {
+					mentry.updatedAt = new Date(Date.parse(<any>mentry.updatedAt as string)); // convert ISO string from JSON into Date
+					return mentry;
+				});
+				return mdata;
+			});
 
 		for (const pk in Platforms) {
 			this.platformFilters_.set(Platforms[pk].mask, new Set<number>());
@@ -52,6 +60,7 @@ export class CatalogStore {
 
 		state_.issue.watch(issue => this.issueChanged(issue));
 	}
+
 
 	private filtersChanged() {
 		const restrictionSets: Set<number>[] = [];
@@ -106,34 +115,35 @@ export class CatalogStore {
 		this.filteredSet_.set(resultSet);
 	}
 
+
 	private issueChanged(newIssue: number) {
-		if (this.loadedIssues_.has(newIssue)) {
-			console.info(`Already have this issue ${newIssue} loaded`);
-			this.filtersChanged();
-		}
-		else {
-			// Disable multiple loaded issues for now
-			// this.loadedIssues_.add(newIssue);
+		this.loadingRatio_.set(0);
+		this.loading_.set(true);
 
-			this.loadingRatio_.set(0);
-			this.loading_.set(true);
-			const finished = (entries: IndexedEntry[], textIndex: TextIndex | SerializedTextIndex) => {
-				this.acceptIndexedEntries(entries, textIndex);
-				this.loadingRatio_.set(1);
-				this.loading_.set(false);
-			};
+		const finished = (entries: IndexedEntry[], textIndex: TextIndex | SerializedTextIndex) => {
+			this.acceptIndexedEntries(entries, textIndex);
+			this.loadingRatio_.set(1);
+			this.loading_.set(false);
+		};
 
-			const loadRemote = () => {
-				this.indexer_.importCatalogFile(newIssue, ratio => { this.loadingRatio_.set(ratio); })
-					.then(data => {
-						finished(data.entries, data.textIndex);
-					});
-			};
+		const loadRemote = () => {
+			this.indexer_.importCatalogFile(newIssue, ratio => { this.loadingRatio_.set(ratio); })
+				.then(data => {
+					finished(data.entries, data.textIndex);
+				});
+		};
 
-			this.persist_.persistedIssues()
-				.then(issues => {
-					console.info(`Checking persisted issues: ${issues}`);
-					if (issues.indexOf(newIssue) > -1) {
+		Promise.all<CatalogHeader[], Manifest>([this.persist_.persistedIssues(), this.manifest_])
+			.then(([headers, manifest]) => {
+				const local = headers.find(h => h.issue === newIssue);
+				const remote = manifest.issues.find(me => me.issue === newIssue);
+
+				if (local && remote) {
+					if (local.savedAt < remote.updatedAt) {
+						console.info(`The server copy of issue ${newIssue} is newer than the local copy, fall back to network load.`);
+						loadRemote();
+					}
+					else {
 						this.persist_.loadCatalog(newIssue)
 							.then(catalog => {
 								console.info(`Got catalog from local DB`);
@@ -147,13 +157,14 @@ export class CatalogStore {
 								}
 							});
 					}
-					else {
-						console.info(`No entries available locally, fall back to network load.`);
-						loadRemote();
-					}
-				});
-		}
+				}
+				else {
+					console.info(`No entries available locally, fall back to network load.`);
+					loadRemote();
+				}
+			});
 	}
+
 
 	private acceptIndexedEntries(entries: IndexedEntry[], textIndex: TextIndex | SerializedTextIndex) {
 		// reset allSet and entryData, once we support searching over all sets this can change
