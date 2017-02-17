@@ -1,3 +1,35 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:bb8d8a7d359308028a9e4766f135a596b0ec957c2355b98307420397a5f9bfb8
-size 961
+{
+  "name": "dtbb",
+  "version": "1.0.0",
+  "description": "Ludum Dare Games Browser",
+  "main": "src/app/app.ts",
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zenmumbler/dtbb.git"
+  },
+  "author": "Arthur Langereis",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/zenmumbler/dtbb/issues"
+  },
+  "homepage": "https://github.com/zenmumbler/dtbb#readme",
+  "devDependencies": {
+    "@types/jsdom": "^2.0.30",
+    "@types/mkdirp": "^0.3.29",
+    "@types/request": "^0.0.33",
+    "gulp": "^3.9.1",
+    "gulp-gzip": "^1.4.0",
+    "gulp-rename": "^1.2.2",
+    "gulp-sass": "^2.3.2",
+    "jsdom": "^9.11.0",
+    "mkdirp": "^0.5.1",
+    "request": "^2.79.0",
+    "rollup-stream": "^1.14.0",
+    "vinyl-source-stream": "^1.1.0"
+  },
+  "dependencies": {
+    "rollup-plugin-commonjs": "^7.0.0",
+    "rollup-plugin-node-resolve": "^2.0.0"
+  }
+}
