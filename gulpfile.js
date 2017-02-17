@@ -7,6 +7,9 @@ const source = require("vinyl-source-stream");
 const rename = require("gulp-rename");
 const sass = require("gulp-sass");
 const path = require("path");
+const nodeResolve = require("rollup-plugin-node-resolve");
+const commonjs = require("rollup-plugin-commonjs");
+
 
 // ---- site
 
@@ -27,6 +30,24 @@ gulp.task("app", function() {
 		entry: "site/build/app/app/app.js",
 		format: "iife",
 		moduleName: "dtbb",
+		plugins: [
+			nodeResolve({
+				jsnext: true,
+				main: true
+			}),
+			commonjs({
+				// non-CommonJS modules will be ignored, but you can also
+				// specifically include/exclude files
+				include: 'node_modules/**',  // Default: undefined
+
+				// if false then skip sourceMap generation for CommonJS modules
+				sourceMap: false,  // Default: true
+
+				// explicitly specify unresolvable named exports
+				// (see below for more details)
+				namedExports: { 'node_modules/promised-db/promised-db.js': ['PromisedDB' ] }  // Default: undefined 
+			})
+		]
 	})
 	.pipe(source("dtbb.js"))
 	.pipe(gulp.dest("site"));

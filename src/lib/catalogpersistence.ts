@@ -1,9 +1,11 @@
 // catalogpersistence.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
+/// <reference path="../../node_modules/promised-db/typings.d.ts" />
+
 import { CatalogHeader, Catalog, IndexedEntry } from "./catalog";
 import { SerializedTextIndex } from "./textindex";
-import { PromiseDB } from "./promisedb";
+import { PromisedDB } from "promised-db";
 
 interface PersistedTextIndex {
 	issue: number;
@@ -13,10 +15,10 @@ interface PersistedTextIndex {
 const DB_NAME = "dtbb";
 
 export class CatalogPersistence {
-	private db_: PromiseDB;
+	private db_: PromisedDB;
 
 	constructor() {
-		this.db_ = new PromiseDB(DB_NAME, 1,
+		this.db_ = new PromisedDB(DB_NAME, 1,
 			(db, _oldVersion, _newVersion) => {
 				console.info("Creating stores and indexes...");
 				const headers = db.createObjectStore("headers", { keyPath: "issue" });
