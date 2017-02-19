@@ -1,174 +1,10 @@
-(function () {
+(function (promisedDb) {
 'use strict';
-
-var PromiseDB = (function () {
-    function PromiseDB(name, version, upgrade) {
-        this.db_ = this.request(indexedDB.open(name, version), function (openReq) {
-            openReq.onupgradeneeded = function (upgradeEvt) {
-                var db = openReq.result;
-                upgrade(db, upgradeEvt.oldVersion, upgradeEvt.newVersion || version);
-            };
-        })
-            .catch(function (error) {
-            console.warn("Failed to open / upgrade database '" + name + "'", error);
-        });
-        this.tctx_ = {
-            request: this.request.bind(this),
-            cursor: this.cursor.bind(this),
-            keyCursor: this.keyCursor.bind(this),
-            getAll: this.getAll.bind(this),
-            getAllKeys: this.getAllKeys.bind(this)
-        };
-    }
-    PromiseDB.prototype.close = function () {
-        this.db_.then(function (db) {
-            db.close();
-        });
-    };
-    PromiseDB.prototype.transaction = function (storeNames, mode, fn) {
-        var _this = this;
-        return this.db_.then(function (db) {
-            return new Promise(function (resolve, reject) {
-                var tr = db.transaction(storeNames, mode);
-                tr.onerror = function () {
-                    cancelTimeout();
-                    reject(tr.error || "transaction failed");
-                };
-                tr.onabort = function () {
-                    cancelTimeout();
-                    reject("aborted");
-                };
-                var timeoutID = null;
-                var cancelTimeout = function () {
-                    if (timeoutID !== null) {
-                        clearTimeout(timeoutID);
-                        timeoutID = null;
-                    }
-                };
-                var tc = Object.create(_this.tctx_, {
-                    timeout: {
-                        value: function (ms) {
-                            console.info("transaction will time out in " + ms + "ms");
-                            timeoutID = setTimeout(function () {
-                                console.warn("transaction timed out after " + ms + "ms");
-                                timeoutID = null;
-                                tr.abort();
-                            }, ms);
-                        }
-                    }
-                });
-                var result = fn(tr, tc);
-                tr.oncomplete = function () {
-                    cancelTimeout();
-                    resolve((result === undefined) ? undefined : result);
-                };
-            });
-        });
-    };
-    PromiseDB.prototype.request = function (req, fn) {
-        var reqProm = new Promise(function (resolve, reject) {
-            req.onerror = function () { reject(req.error || "request failed"); };
-            req.onsuccess = function () { resolve(req.result); };
-            if (fn) {
-                fn(req);
-            }
-        });
-        return this.db_ ? this.db_.then(function () { return reqProm; }) : reqProm;
-    };
-    PromiseDB.prototype.cursorImpl = function (cursorReq) {
-        var result = {
-            next: function (callback) {
-                this.callbackFn_ = callback;
-                return this;
-            },
-            complete: function (callback) {
-                this.completeFn_ = callback;
-                return this;
-            },
-            catch: function (callback) {
-                this.errorFn_ = callback;
-                return this;
-            }
-        };
-        cursorReq.onerror = function () {
-            if (result.errorFn_) {
-                result.errorFn_(cursorReq.error);
-            }
-        };
-        cursorReq.onsuccess = function () {
-            var cursor = cursorReq.result;
-            if (cursor) {
-                if (result.callbackFn_) {
-                    result.callbackFn_(cursor);
-                }
-            }
-            else {
-                if (result.completeFn_) {
-                    result.completeFn_();
-                }
-            }
-        };
-        return result;
-    };
-    PromiseDB.prototype.cursor = function (container, range, direction) {
-        var cursorReq = container.openCursor(range, direction);
-        return this.cursorImpl(cursorReq);
-    };
-    PromiseDB.prototype.keyCursor = function (index, range, direction) {
-        var cursorReq = index.openKeyCursor(range, direction);
-        return this.cursorImpl(cursorReq);
-    };
-    PromiseDB.prototype.getAll = function (container, range, direction, limit) {
-        var _this = this;
-        return new Promise(function (resolve, reject) {
-            var result = [];
-            _this.cursor(container, range, direction)
-                .next(function (cur) {
-                result.push(cur.value);
-                if (limit && (result.length === limit)) {
-                    resolve(result);
-                }
-                else {
-                    cur.continue();
-                }
-            })
-                .complete(function () {
-                resolve(result);
-            })
-                .catch(function (error) {
-                reject(error);
-            });
-        });
-    };
-    PromiseDB.prototype.getAllKeys = function (container, range, direction, limit) {
-        var _this = this;
-        return new Promise(function (resolve, reject) {
-            var result = [];
-            _this.keyCursor(container, range, direction)
-                .next(function (cur) {
-                result.push(cur.primaryKey);
-                if (limit && (result.length === limit)) {
-                    resolve(result);
-                }
-                else {
-                    cur.continue();
-                }
-            })
-                .complete(function () {
-                resolve(result);
-            })
-                .catch(function (error) {
-                reject(error);
-            });
-        });
-    };
-    return PromiseDB;
-}());
 
 var DB_NAME = "dtbb";
 var CatalogPersistence = (function () {
     function CatalogPersistence() {
-        this.db_ = new PromiseDB(DB_NAME, 1, function (db, _oldVersion, _newVersion) {
+        this.db_ = new promisedDb.PromisedDB(DB_NAME, 1, function (db, _oldVersion, _newVersion) {
             console.info("Creating stores and indexes...");
             var headers = db.createObjectStore("headers", { keyPath: "issue" });
             var textindexes = db.createObjectStore("textindexes", { keyPath: "issue" });
@@ -224,9 +60,9 @@ var CatalogPersistence = (function () {
     };
     CatalogPersistence.prototype.persistedIssues = function () {
         return this.db_.transaction("headers", "readonly", function (tr, _a) {
-            var getAllKeys = _a.getAllKeys;
+            var getAll = _a.getAll;
             var issueIndex = tr.objectStore("headers").index("issue");
-            return getAllKeys(issueIndex, undefined, "nextunique");
+            return getAll(issueIndex, undefined, "nextunique");
         })
             .catch(function () { return []; });
     };
@@ -258,7 +94,6 @@ var CatalogPersistence = (function () {
             return getAllKeys(issueIndex, issue);
         })
             .then(function (entryKeys) {
-            console.info("entryKeys", entryKeys);
             return _this.db_.transaction(["headers", "entries", "textindexes"], "readwrite", function (tr, _a) {
                 var headers = tr.objectStore("headers");
                 var entries = tr.objectStore("entries");
@@ -292,6 +127,20 @@ var CatalogPersistence = (function () {
     };
     return CatalogPersistence;
 }());
+
+function loadTypedJSON(url) {
+    return new Promise(function (resolve, reject) {
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", url);
+        xhr.overrideMimeType("application/json");
+        xhr.responseType = "json";
+        xhr.onload = function () {
+            resolve(xhr.response);
+        };
+        xhr.onerror = reject;
+        xhr.send(null);
+    });
+}
 
 function intersectSet(a, b) {
     var intersection = new Set();
@@ -624,19 +473,6 @@ var IndexerAPI = (function () {
     return IndexerAPI;
 }());
 
-function loadTypedJSON(url) {
-    return new Promise(function (resolve, reject) {
-        var xhr = new XMLHttpRequest();
-        xhr.open("GET", url);
-        xhr.overrideMimeType("application/json");
-        xhr.responseType = "json";
-        xhr.onload = function () {
-            resolve(xhr.response);
-        };
-        xhr.onerror = reject;
-        xhr.send(null);
-    });
-}
 function makeDocID(issue, entryIndex) {
     return (issue << 16) | entryIndex;
 }
@@ -775,4 +611,4 @@ self.onmessage = function (evt) {
     }
 };
 
-}());
+}(promisedDb));
