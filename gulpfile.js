@@ -58,6 +58,24 @@ gulp.task("worker", function() {
 	return rollup({
 		entry: "site/build/workers/workers/task_indexer.js",
 		format: "iife",
+		plugins: [
+			nodeResolve({
+				jsnext: true,
+				main: true
+			}),
+			commonjs({
+				// non-CommonJS modules will be ignored, but you can also
+				// specifically include/exclude files
+				include: 'node_modules/**',  // Default: undefined
+
+				// if false then skip sourceMap generation for CommonJS modules
+				sourceMap: false,  // Default: true
+
+				// explicitly specify unresolvable named exports
+				// (see below for more details)
+				namedExports: { 'node_modules/promised-db/promised-db.js': ['PromisedDB' ] }  // Default: undefined 
+			})
+		]
 	})
 	.pipe(source("task_indexer.js"))
 	.pipe(gulp.dest("site"));
