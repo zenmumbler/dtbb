@@ -1,3 +1,32 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:5a5657a7145de04fac15a6e820bb1e8c6a1c67c40a94990f219fd05fc93bacaf
-size 899
+{
+    "compilerOptions": {
+        "module": "es6",
+        "target": "es5",
+        "rootDir": "..",
+        "outDir": "../../site/build/workers/",
+        "noEmitOnError": true,
+        "diagnostics": false,
+        "listFiles": false,
+
+        "noImplicitAny": true,
+        "suppressImplicitAnyIndexErrors": false,
+        "noImplicitReturns": true,
+        "forceConsistentCasingInFileNames": true,
+        "noFallthroughCasesInSwitch": true,
+        "strictNullChecks": true,
+        "noImplicitThis": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+
+        "lib": ["es5", "webworker", "es2015.core", "es2015.iterable", "es2015.collection", "es2015.promise"],
+        "skipLibCheck": true,
+        "skipDefaultLibCheck": false,
+
+        "removeComments": true,
+        "sourceMap": false
+    },
+    "include": [
+        "../lib/**/*.ts",
+        "./**/*.ts"
+    ]
+}

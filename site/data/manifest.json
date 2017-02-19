@@ -1,3 +1,27 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:e5188eed229d85359fbf56170282ebe4d8e068956578278e8b1dff6b58510cfc
-size 1399
+{
+	"issues": [
+		{ "issue": 37, "updatedAt": "2017-01-05T11:00:00.000Z" },
+		{ "issue": 36, "updatedAt": "2016-11-12T12:00:00.000Z" },
+		{ "issue": 35, "updatedAt": "2016-11-12T12:00:00.000Z" },
+		{ "issue": 34, "updatedAt": "2016-11-12T12:00:00.000Z" },
+		{ "issue": 33, "updatedAt": "2016-11-12T12:00:00.000Z" },
+		{ "issue": 32, "updatedAt": "2016-11-12T12:00:00.000Z" },
+		{ "issue": 31, "updatedAt": "2016-11-12T12:00:00.000Z" },
+		{ "issue": 30, "updatedAt": "2016-11-12T12:00:00.000Z" },
+		{ "issue": 29, "updatedAt": "2016-11-12T12:00:00.000Z" },
+		{ "issue": 28, "updatedAt": "2016-11-12T12:00:00.000Z" },
+		{ "issue": 27, "updatedAt": "2016-11-12T12:00:00.000Z" },
+		{ "issue": 26, "updatedAt": "2016-11-12T12:00:00.000Z" },
+		{ "issue": 25, "updatedAt": "2016-11-12T12:00:00.000Z" },
+		{ "issue": 24, "updatedAt": "2016-11-12T12:00:00.000Z" },
+		{ "issue": 23, "updatedAt": "2016-11-12T12:00:00.000Z" },
+		{ "issue": 22, "updatedAt": "2016-11-12T12:00:00.000Z" },
+		{ "issue": 21, "updatedAt": "2016-11-12T12:00:00.000Z" },
+		{ "issue": 20, "updatedAt": "2016-11-12T12:00:00.000Z" },
+		{ "issue": 19, "updatedAt": "2016-11-12T12:00:00.000Z" },
+		{ "issue": 18, "updatedAt": "2016-11-12T12:00:00.000Z" },
+		{ "issue": 17, "updatedAt": "2016-11-12T12:00:00.000Z" },
+		{ "issue": 16, "updatedAt": "2016-11-12T12:00:00.000Z" },
+		{ "issue": 15, "updatedAt": "2016-11-12T12:00:00.000Z" }
+	]
+}

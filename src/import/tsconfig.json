@@ -1,3 +1,33 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:4862c76718678c40183f66e8352dd6edce792f06fd9db5da535dcb8bbdd0f892
-size 922
+{
+    "compilerOptions": {
+        "module": "es6",
+        "moduleResolution": "node",
+        "target": "es5",
+        "rootDir": "..",
+        "outDir": "../../import/build",
+        "noEmitOnError": true,
+        "diagnostics": false,
+        "listFiles": false,
+
+        "noImplicitAny": true,
+        "suppressImplicitAnyIndexErrors": false,
+        "noImplicitReturns": true,
+        "forceConsistentCasingInFileNames": true,
+        "noFallthroughCasesInSwitch": true,
+        "strictNullChecks": true,
+        "noImplicitThis": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+
+        "lib": ["es5", "dom", "es2015.core", "es2015.iterable", "es2015.collection", "es2015.promise"],
+        "skipLibCheck": true,
+        "skipDefaultLibCheck": false,
+
+        "removeComments": true,
+        "sourceMap": false
+    },
+    "include": [
+        "../lib/**/*.ts",
+        "./**/*.ts"
+    ]
+}
