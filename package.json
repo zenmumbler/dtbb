@@ -17,20 +17,20 @@
   "devDependencies": {
     "@types/jsdom": "^2.0.30",
     "@types/mkdirp": "^0.3.29",
-    "@types/request": "^0.0.33",
+    "@types/request": "^0.0.41",
     "gulp": "^3.9.1",
     "gulp-gzip": "^1.4.0",
     "gulp-rename": "^1.2.2",
-    "gulp-sass": "^2.3.2",
-    "jsdom": "^9.11.0",
+    "gulp-sass": "^3.1.0",
+    "jsdom": "^9.12.0",
     "mkdirp": "^0.5.1",
-    "request": "^2.79.0",
-    "rollup-stream": "^1.14.0",
+    "request": "^2.81.0",
+    "rollup-stream": "^1.19.0",
     "vinyl-source-stream": "^1.1.0"
   },
   "dependencies": {
-    "promised-db": "^1.0.0-1",
-    "rollup-plugin-commonjs": "^7.0.0",
+    "promised-db": "^1.0.3",
+    "rollup-plugin-commonjs": "^8.0.2",
     "rollup-plugin-node-resolve": "^2.0.0"
   }
 }
