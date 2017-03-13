@@ -5,7 +5,7 @@
 
 import { CatalogHeader, Catalog, IndexedEntry } from "./catalog";
 import { SerializedTextIndex } from "./textindex";
-import { PromisedDB } from "promised-db";
+import PromisedDB from "promised-db";
 
 interface PersistedTextIndex {
 	issue: number;
