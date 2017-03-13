@@ -72,7 +72,7 @@ export class GamesGrid {
 
 		const pills: { [mask: number]: HTMLSpanElement; } = [];
 		for (const pill of elemList(".pills span", tile)) {
-			pills[parseInt(pill.dataset["mask"])] = pill;
+			pills[parseInt(pill.dataset["mask"]!)] = pill;
 		}
 
 		const cell: GameCell = {

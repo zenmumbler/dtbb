@@ -139,7 +139,7 @@ export class CatalogStore {
 				const remote = manifest.issues.find(me => me.issue === newIssue);
 
 				if (local && remote) {
-					if (local.savedAt < remote.updatedAt) {
+					if ((local.savedAt || 0) < remote.updatedAt) {
 						console.info(`The server copy of issue ${newIssue} is newer than the local copy, fall back to network load.`);
 						loadRemote();
 					}

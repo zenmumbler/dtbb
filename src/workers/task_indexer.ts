@@ -11,7 +11,7 @@ declare function postMessage(response: Response): void;
 
 let db: CatalogPersistence | undefined;
 
-self.onmessage = (evt: MessageEvent) => {
+onmessage = (evt: MessageEvent) => {
 	const req = evt.data as Request;
 
 	const error = function(message: string) {
