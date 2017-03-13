@@ -42,10 +42,6 @@ gulp.task("app", function() {
 
 				// if false then skip sourceMap generation for CommonJS modules
 				sourceMap: false,  // Default: true
-
-				// explicitly specify unresolvable named exports
-				// (see below for more details)
-				namedExports: { 'node_modules/promised-db/promised-db.js': ['PromisedDB' ] }  // Default: undefined 
 			})
 		]
 	})
@@ -70,10 +66,6 @@ gulp.task("worker", function() {
 
 				// if false then skip sourceMap generation for CommonJS modules
 				sourceMap: false,  // Default: true
-
-				// explicitly specify unresolvable named exports
-				// (see below for more details)
-				namedExports: { 'node_modules/promised-db/promised-db.js': ['PromisedDB' ] }  // Default: undefined 
 			})
 		]
 	})
