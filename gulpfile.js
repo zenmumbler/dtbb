@@ -1,14 +1,23 @@
 // gulpfile.js - part of DTBB (https://github.com/zenmumbler/dtbb)
-// (c) 2016 by Arthur Langereis (@zenmumbler)
+// (c) 2016-7 by Arthur Langereis (@zenmumbler)
+// @ts-check
 
 const gulp = require("gulp");
 const rollup = require("rollup-stream");
 const source = require("vinyl-source-stream");
 const rename = require("gulp-rename");
 const sass = require("gulp-sass");
+const tsc = require("gulp-typescript");
 const path = require("path");
 const nodeResolve = require("rollup-plugin-node-resolve");
 const commonjs = require("rollup-plugin-commonjs");
+
+/*
+	TLDR:
+	use `gulp site` to compile and bundle all site code
+	use `gulp import` to compile and bundle the import script
+	use `gulp watch` to set watches on all phases of site and import
+*/
 
 
 // ---- site
@@ -24,8 +33,15 @@ gulp.task("styles", function() {
 		.pipe(gulp.dest("site"));
 });
 
+
+const tscApp = tsc.createProject("src/app/tsconfig.json");
+gulp.task("compile-app", function() {
+	const tsResult = tscApp.src().pipe(tscApp());
+	return tsResult.js.pipe(gulp.dest("site/build/app"));
+});
+
 // bundle main site code
-gulp.task("app", function() {
+gulp.task("app", ["compile-app"], function() {
 	return rollup({
 		entry: "site/build/app/app/app.js",
 		format: "iife",
@@ -49,8 +65,16 @@ gulp.task("app", function() {
 	.pipe(gulp.dest("site"));
 });
 
+
+// compile worker script
+const tscWorkers = tsc.createProject("src/workers/tsconfig.json");
+gulp.task("compile-workers", function() {
+	const tsResult = tscWorkers.src().pipe(tscWorkers());
+	return tsResult.js.pipe(gulp.dest("site/build/workers"));
+});
+
 // bundle site worker
-gulp.task("worker", function() {
+gulp.task("workers", ["compile-workers"], function() {
 	return rollup({
 		entry: "site/build/workers/workers/task_indexer.js",
 		format: "iife",
@@ -74,13 +98,19 @@ gulp.task("worker", function() {
 });
 
 // site composite task
-gulp.task("site", ["styles", "app", "worker"], () => {});
+gulp.task("site", ["styles", "app", "workers"], () => {});
 
 
 // ---- import
 
+const tscImport = tsc.createProject("src/import/tsconfig.json");
+gulp.task("compile-import", function() {
+	const tsResult = tscImport.src().pipe(tscImport());
+	return tsResult.js.pipe(gulp.dest("import/build"));
+});
+
 // bundle import node app
-gulp.task("import", function() {
+gulp.task("import", ["compile-import"], function() {
 	return rollup({
 		entry: "import/build/import/import.js",
 		format: "cjs",
@@ -91,12 +121,13 @@ gulp.task("import", function() {
 });
 
 
-// ---- global watch
 
-// auto-roller
+// ---- global watches
+
 gulp.task("watch", function() {
 	gulp.watch("src/**/*.scss", ["styles"]);
-	gulp.watch("site/build/app/**/*.js", ["app"]);
-	gulp.watch("site/build/workers/**/*.js", ["worker"]);
-	gulp.watch("import/build/**/*.js", ["import"]);
+	gulp.watch("src/lib/**/*.ts", ["app", "workers", "import"]);
+	gulp.watch("src/app/**/*.ts", ["app"]);
+	gulp.watch("src/workers/**/*.ts", ["workers"]);
+	gulp.watch("src/import/**/*.ts", ["import"]);
 });
