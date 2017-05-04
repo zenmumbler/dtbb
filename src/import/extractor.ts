@@ -230,8 +230,8 @@ interface MDRefs {
 function resolveLDJImage(imageRef: string, thumbSize = "480x384"): { thumbnail_url: string; full_url: string; } {
 	const imageRelPath = imageRef.replace("///content", "").replace("///raw", "");
 	return {
-		thumbnail_url: `https://static.jam.vg/content/${imageRelPath}.${thumbSize}.fit.jpg`,
-		full_url: `https://static.jam.vg/raw/${imageRelPath}`
+		thumbnail_url: imageRelPath.length > 0 ? `https://static.jam.vg/content/${imageRelPath}.${thumbSize}.fit.jpg` : "",
+		full_url: imageRelPath.length > 0 ? `https://static.jam.vg/raw/${imageRelPath}` : ""
 	};
 }
 
