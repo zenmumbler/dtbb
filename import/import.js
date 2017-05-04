@@ -484,7 +484,6 @@ function detectPlatforms(entry) {
     }
     if (plats.size === 0) {
         if ((urlTerms.indexOf("itch") > -1) ||
-            (descTerms.indexOf("itch") > -1) ||
             (descTerms.indexOf("wasd") > -1) ||
             (descTerms.indexOf("awsd") > -1) ||
             (descTerms.indexOf("aswd") > -1)) {

@@ -528,7 +528,7 @@ var TextIndex = (function () {
         if (hasEmptyResult) {
             return new Set();
         }
-        if (termIndexSets.length == 0) {
+        if (termIndexSets.length === 0) {
             return null;
         }
         termIndexSets.sort(function (a, b) { return a.size < b.size ? -1 : 1; });

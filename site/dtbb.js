@@ -3,11 +3,11 @@
 
 function elem(sel, base) {
     if (base === void 0) { base = document; }
-    return (base.querySelector(sel));
+    return base.querySelector(sel);
 }
 function elemList(sel, base) {
     if (base === void 0) { base = document; }
-    return ([].slice.call(base.querySelectorAll(sel), 0));
+    return [].slice.call(base.querySelectorAll(sel), 0);
 }
 
 function makePlatformLookup(plats) {
@@ -655,7 +655,7 @@ var TextIndex = (function () {
         if (hasEmptyResult) {
             return new Set();
         }
-        if (termIndexSets.length == 0) {
+        if (termIndexSets.length === 0) {
             return null;
         }
         termIndexSets.sort(function (a, b) { return a.size < b.size ? -1 : 1; });
@@ -1114,7 +1114,7 @@ var GamesGrid = (function () {
         var pills = [];
         for (var _i = 0, _a = elemList(".pills span", tile); _i < _a.length; _i++) {
             var pill = _a[_i];
-            pills[parseInt(pill.dataset["mask"])] = pill;
+            pills[parseInt(pill.dataset.mask)] = pill;
         }
         var cell = {
             tile: tile,
@@ -1176,7 +1176,7 @@ var GamesGrid = (function () {
         if (cell.docID !== docID) {
             cell.docID = docID;
             var entry = this.state_.entries.get(docID);
-            cell.tile.dataset["docId"] = "" + docID;
+            cell.tile.dataset.docId = "" + docID;
             console.assert(entry, "No entry for docID " + docID);
             if (entry) {
                 cell.link.href = entry.entry_url;
@@ -1350,7 +1350,7 @@ var WatchableInputBinding = (function () {
             case "input": {
                 var type = elem.type;
                 if (type === "radio" || type === "checkbox") {
-                    elem.checked = (newValue == elem.value);
+                    elem.checked = (newValue === elem.value);
                 }
                 else {
                     elem.value = String(newValue);
