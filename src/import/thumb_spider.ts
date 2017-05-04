@@ -44,7 +44,7 @@ function load(state: ThumbSpiderState) {
 		return new Promise<void>(resolve => {
 			request(
 				{
-					url: url,
+					url,
 					encoding: null,
 					timeout: 3000
 				},

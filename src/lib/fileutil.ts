@@ -8,7 +8,7 @@ export function loadTypedJSON<T>(url: string): Promise<T> {
 		xhr.overrideMimeType("application/json");
 		xhr.responseType = "json";
 		xhr.onload = function() {
-			resolve(<T>xhr.response);
+			resolve(xhr.response as T);
 		};
 		xhr.onerror = reject;
 		xhr.send(null);

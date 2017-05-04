@@ -2,10 +2,10 @@
 // (c) 2016 by Arthur Langereis (@zenmumbler)
 
 export function elem<T extends HTMLElement>(sel: string, base: NodeSelector = document) {
-	return <T>(base.querySelector(sel));
+	return base.querySelector(sel) as T;
 }
 
 
 export function elemList<T extends HTMLElement>(sel: string, base: NodeSelector = document) {
-	return <T[]>([].slice.call(base.querySelectorAll(sel), 0));
+	return [].slice.call(base.querySelectorAll(sel), 0) as T[];
 }

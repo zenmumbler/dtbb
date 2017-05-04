@@ -63,7 +63,7 @@ onmessage = (evt: MessageEvent) => {
 			}
 		}
 		else {
-			error(`Unknown request type ${(<any>req).what}`);
+			error(`Unknown request type ${(req as any).what}`);
 		}
 	}
 	else {

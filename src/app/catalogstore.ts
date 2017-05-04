@@ -39,7 +39,7 @@ export class CatalogStore {
 		this.manifest_ = loadTypedJSON<Manifest>("data/manifest.json")
 			.then(mdata => {
 				mdata.issues = mdata.issues.map(mentry => {
-					mentry.updatedAt = new Date(Date.parse(<any>mentry.updatedAt as string)); // convert ISO string from JSON into Date
+					mentry.updatedAt = new Date(Date.parse((mentry.updatedAt as any) as string)); // convert ISO string from JSON into Date
 					return mentry;
 				});
 				return mdata;

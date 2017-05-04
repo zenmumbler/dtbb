@@ -45,7 +45,7 @@ export class GamesGrid {
 	constructor(private containerElem_: HTMLElement, private state_: GamesBrowserState) {
 		this.scrollingElem_ = containerElem_.parentElement!;
 		this.scrollingElem_.onscroll = (evt: Event) => {
-			this.scrollPosChanged((<HTMLElement>evt.target).scrollTop);
+			this.scrollPosChanged((evt.target as HTMLElement).scrollTop);
 		};
 
 		state_.filteredSet.watch(filteredSet => {
@@ -68,19 +68,19 @@ export class GamesGrid {
 
 
 	private makeCell() {
-		const tile = <HTMLDivElement>(<Element>this.entryTemplate_.content.cloneNode(true)).firstElementChild;
+		const tile = (this.entryTemplate_.content.cloneNode(true) as Element).firstElementChild as HTMLDivElement;
 
 		const pills: { [mask: number]: HTMLSpanElement; } = [];
 		for (const pill of elemList(".pills span", tile)) {
-			pills[parseInt(pill.dataset["mask"]!)] = pill;
+			pills[parseInt(pill.dataset.mask!)] = pill;
 		}
 
 		const cell: GameCell = {
 			tile,
-			link: <HTMLAnchorElement>tile.querySelector("a"),
-			thumb: <HTMLDivElement>tile.querySelector(".thumb"),
-			title: <HTMLElement>tile.querySelector("h2"),
-			author: <HTMLElement>tile.querySelector("p.author span"),
+			link: tile.querySelector("a") as HTMLAnchorElement,
+			thumb: tile.querySelector(".thumb") as HTMLDivElement,
+			title: tile.querySelector("h2") as HTMLElement,
+			author: tile.querySelector("p.author span") as HTMLElement,
 			pills,
 			position: -1,
 			docID: -1,
@@ -147,7 +147,7 @@ export class GamesGrid {
 			cell.docID = docID;
 			const entry = this.state_.entries.get(docID);
 
-			cell.tile.dataset["docId"] = "" + docID;
+			cell.tile.dataset.docId = "" + docID;
 			console.assert(entry, `No entry for docID ${docID}`);
 
 			if (entry) {

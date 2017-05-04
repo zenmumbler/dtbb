@@ -49,7 +49,6 @@ export function mergeSet<T>(dest: Set<T>, source: Set<T> | T[]) {
 }
 
 
-
 export function newSetFromArray<T>(source: T[]) {
 	// one would think the constructor from an iterable is faster
 	// than just looping over it and doing 100s of 1000s of function calls

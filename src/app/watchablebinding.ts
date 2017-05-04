@@ -100,7 +100,7 @@ export class WatchableInputBinding<T extends (string | number | boolean)> {
 			case "input": {
 				const type = (elem as HTMLInputElement).type;
 				if (type === "radio" || type === "checkbox") {
-					(elem as HTMLInputElement).checked = (newValue == (elem as HTMLInputElement).value);
+					(elem as HTMLInputElement).checked = (newValue === (elem as HTMLInputElement).value);
 				}
 				else {
 					(elem as HTMLInputElement).value = String(newValue);

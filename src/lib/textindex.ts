@@ -5,7 +5,9 @@
 
 import { mergeSet, intersectSet, newSetFromArray } from "./setutil";
 
-export type SerializedTextIndex = { [key: string]: number[] };
+export interface SerializedTextIndex {
+	[key: string]: number[];
+}
 
 const DiacriticCharMapping: { [ch: string]: string } = {
 	"À": "A", // LATIN CAPITAL LETTER A WITH GRAVE
@@ -160,9 +162,9 @@ export class TextIndex {
 	}
 
 	private stripDiacritics(term: string) {
-		var r: RegExpMatchArray | null;
+		let r: RegExpMatchArray | null;
 		// if a mapped character appears anywhere in the term, replace all occurances at once
-		while (r = term.match(DiacriticsMatcher)) {
+		while (r = term.match(DiacriticsMatcher)) { // tslint:disable-line
 			const mc = term[r.index!];
 			term = term.replace(DiacriticCharMatchers[mc], DiacriticCharMapping[mc]);
 		}
@@ -198,7 +200,7 @@ export class TextIndex {
 	query(qs: string): Set<number> | null {
 		const qt = this.tokenizeString(qs);
 		const termIndexSets: Set<number>[] = [];
-		var hasEmptyResult = false;
+		let hasEmptyResult = false;
 		qt.forEach(term => {
 			if (term.length < this.MIN_NGRAM_LENGTH) {
 				return;
@@ -222,13 +224,13 @@ export class TextIndex {
 		}
 
 		// no valid search terms
-		if (termIndexSets.length == 0) {
+		if (termIndexSets.length === 0) {
 			return null;
 		}
 
 		// start with smallest result set
-		termIndexSets.sort((a, b) => { return a.size < b.size ? -1 : 1; });
-		var result = new Set(termIndexSets[0]);
+		termIndexSets.sort((a, b) => a.size < b.size ? -1 : 1);
+		let result = new Set(termIndexSets[0]);
 		for (let tisix = 1; tisix < termIndexSets.length; ++tisix) {
 			result = intersectSet(result, termIndexSets[tisix]);
 		}
