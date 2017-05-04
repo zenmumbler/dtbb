@@ -63,7 +63,8 @@ var IssueThemeNames = {
     34: "Two Button Controls, Growing",
     35: "Shapeshift",
     36: "Ancient Technology",
-    37: "One Room"
+    37: "One Room",
+    38: "A Small World"
 };
 function localThumbURL(issue, ldThumbURL) {
     var fileName = ldThumbURL.split("/").splice(-1);
@@ -1454,6 +1455,7 @@ var LoadingWall = (function () {
 
 var state = new GamesBrowserState();
 function reset() {
+    console.info("Deleting local data, please wait, this can take a while...");
     elemList("select").forEach(function (e) { return e.disabled = true; });
     elem("#smokedglass").style.display = "block";
     elem(".status").style.display = "none";
@@ -1464,7 +1466,7 @@ document.addEventListener("DOMContentLoaded", function (_) {
     new GamesGrid(elem(".entries"), state);
     new FilterControls(elem(".filters"), state);
     new LoadingWall(elem("#smokedglass"), state);
-    state.setIssue(37);
+    state.setIssue(38);
     console.info("Hi! If you ever need to delete all local data cached by DTBB just run: `dtbb.reset()` in your console while on this page. Have fun!");
 });
 
