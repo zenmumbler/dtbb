@@ -5,7 +5,7 @@ import * as fs from "fs";
 import * as jsdom from "jsdom";
 
 import { EntryListing, Entry, Catalog, EntryRating, RatingArea, IssueStats, IssueThemeNames } from "../lib/catalog";
-import { listingPath, issueBaseURL, entryPageFilePath, entriesCatalogPath, timeoutPromise } from "./importutil";
+import { listingPath, issueBaseURL, entryPageFilePath, userJSONFilePath, entriesCatalogPath, timeoutPromise } from "./importutil";
 import { arrayFromSet } from "../lib/setutil";
 import { detectPlatforms } from "./detect_platform";
 
@@ -43,14 +43,13 @@ interface APIEntry {
 		body: string;
 		path: string;
 		meta: {
-			cover: string;
+			cover?: string;
 			love: number;
 			notes: number;
 			"notes-timestamp": string;
 		}
 	}[];
 }
-
 
 function entryJSONDoc(issue: number, gid: number): Promise<APIEntry> {
 	return new Promise((resolve, reject) => {
@@ -66,6 +65,30 @@ function entryJSONDoc(issue: number, gid: number): Promise<APIEntry> {
 	});
 }
 
+interface APIUser {
+	node: {
+		id: number;
+		type: "user";
+		path: string;
+		name: string;
+		meta: {
+			avatar: string;
+		}
+	}[];
+}
+
+function userJSONDoc(issue: number, uid: number): Promise<APIUser> {
+	return new Promise((resolve, reject) => {
+		fs.readFile(userJSONFilePath(issue, uid), "utf8", (err, data) => {
+			if (err) {
+				reject(err);
+			}
+			else {
+				resolve(JSON.parse(data) as APIUser);
+			}
+		});
+	});
+}
 
 function loadCatalog(issue: number): Promise<EntryListing> {
 	return new Promise((resolve, reject) => {
@@ -197,13 +220,44 @@ function createEntry(relURI: string, issue: number, uid: number, thumbImg: strin
 	return entry;
 }
 
-function resolveLDJImage(localURL: string): string {
-	return localURL;
+// ----
+
+interface MDRefs {
+	images: string[];
+	links: { label: string; url: string }[];
 }
 
-function createEntryJSON(issue: number, apiEntry: APIEntry) {
+function resolveLDJImage(imageRef: string, thumbSize = "480x384"): { thumbnail_url: string; full_url: string; } {
+	const imageRelPath = imageRef.replace("///content", "").replace("///raw", "");
+	return {
+		thumbnail_url: `https://static.jam.vg/content/${imageRelPath}.${thumbSize}.fit.jpg`,
+		full_url: `https://static.jam.vg/raw/${imageRelPath}`
+	};
+}
+
+function extractMDRefs(text: string): MDRefs {
+	const refs: MDRefs = { links: [], images: [] };
+	const matcher = /\!?\[([^\]]*)\]\(([^\)]*)\)/g;
+	let links: RegExpExecArray | null;
+	while (links = matcher.exec(text)) { // tslint:disable-line
+		if (links[0].charAt(0) === "!") {
+			refs.images.push(links[2]);
+		}
+		else {
+			refs.links.push({ label: links[1], url: links[2] });
+		}
+	}
+	return refs;
+}
+
+
+function createEntryJSON(issue: number, apiEntry: APIEntry, apiUser: APIUser) {
 	const doc = apiEntry.node[0];
+	const author = apiUser.node[0];
 	const eventBaseURL = "https://ldjam.com";
+
+	const refs = extractMDRefs(doc.body);
+	const screens = refs.images.map(imgRef => resolveLDJImage(imgRef));
 
 	const entry: Entry = {
 		ld_issue: issue,
@@ -212,18 +266,18 @@ function createEntryJSON(issue: number, apiEntry: APIEntry) {
 		category: doc.subsubtype,
 		description: doc.body,
 
-		thumbnail_url: resolveLDJImage(doc.meta.cover),
+		thumbnail_url: resolveLDJImage(doc.meta.cover || "").thumbnail_url,
 		entry_url: eventBaseURL + doc.path,
 
 		author: {
-			name: "?",
-			uid: doc.author,
-			avatar_url: "",
-			home_url: ""
+			name: author.name,
+			uid: author.id,
+			avatar_url: resolveLDJImage(author.meta.avatar || "").full_url,
+			home_url: eventBaseURL + author.path
 		},
 
-		screens: [],
-		links: [],
+		screens,
+		links: refs.links,
 
 		ratings: [],
 		platforms: []
@@ -263,7 +317,10 @@ function extractEntryFromPage(state: ExtractState, link: string, thumb: string) 
 		const gid = parseInt(link.substr(link.lastIndexOf("/") + 1));
 		return entryJSONDoc(state.issue, gid)
 			.then(entry => {
-				return createEntryJSON(state.issue, entry);
+				return userJSONDoc(state.issue, entry.node[0].author).then(user => ({ entry, user }));
+			})
+			.then(({entry, user}) => {
+				return createEntryJSON(state.issue, entry, user);
 			});
 	}
 }

@@ -117,6 +117,13 @@ export function detectPlatforms(entry: Entry) {
 		if (dks) {
 			mergeSet(plats, dks);
 		}
+		if (entry.ld_issue >= 38) {
+			const xlks = linkPlatformMapping[term];
+			if (xlks) {
+				mergeSet(plats, xlks);
+			}
+		}
+
 	}
 
 	if (plats.size === 0) {

@@ -20,13 +20,7 @@ interface EntrySpiderState {
 interface APIMinimal {
 	node: {
 		id: number;
-		type: "item" | "user";
 		author: number;
-		path: string;
-		name: string;
-		meta: {
-			avatar?: string;
-		}
 	}[];
 }
 
