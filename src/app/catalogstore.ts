@@ -135,6 +135,7 @@ export class CatalogStore {
 
 		Promise.all<CatalogHeader[], Manifest>([this.persist_.persistedIssues(), this.manifest_])
 			.then(([headers, manifest]) => {
+				console.info(`Local issues available: ${headers.map(h => h.issue)}`);
 				const local = headers.find(h => h.issue === newIssue);
 				const remote = manifest.issues.find(me => me.issue === newIssue);
 

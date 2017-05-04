@@ -306,19 +306,22 @@ function fetchThumbs(issue) {
         return Promise.reject("issue must be (15 <= issue <= 99)");
     }
     console.info("Fetching thumbs for issue " + issue);
+    var sourcePath = issue <= 37 ? listingPath(issue) : entriesCatalogPath(issue);
     return new Promise(function (resolve, reject) {
-        fs.readFile(listingPath(issue), "utf8", function (listingErr, data) {
+        fs.readFile(sourcePath, "utf8", function (listingErr, data) {
             if (listingErr) {
-                reject("Could not load listing for issue " + issue + ": " + listingErr);
+                reject("Could not load listing/entries for issue " + issue + ": " + listingErr);
                 return;
             }
             return (ensureDirectory(thumbsDirPath(issue))
                 .then(function () {
-                var json = JSON.parse(data);
+                var thumbs = issue <= 37 ?
+                    JSON.parse(data).thumbs :
+                    JSON.parse(data).entries.filter(function (e) { return e.thumbnail_url.length > 0; }).map(function (e) { return e.thumbnail_url; });
                 resolve(load$1({
                     issue: issue,
                     index: 0,
-                    urlList: json.thumbs,
+                    urlList: thumbs,
                     thumbsWritten: 0,
                     failures: 0
                 }));
@@ -481,6 +484,7 @@ function detectPlatforms(entry) {
     }
     if (plats.size === 0) {
         if ((urlTerms.indexOf("itch") > -1) ||
+            (descTerms.indexOf("itch") > -1) ||
             (descTerms.indexOf("wasd") > -1) ||
             (descTerms.indexOf("awsd") > -1) ||
             (descTerms.indexOf("aswd") > -1)) {
@@ -640,8 +644,8 @@ function resolveLDJImage(imageRef, thumbSize) {
     if (thumbSize === void 0) { thumbSize = "480x384"; }
     var imageRelPath = imageRef.replace("///content", "").replace("///raw", "");
     return {
-        thumbnail_url: "https://static.jam.vg/content/" + imageRelPath + "." + thumbSize + ".fit.jpg",
-        full_url: "https://static.jam.vg/raw/" + imageRelPath
+        thumbnail_url: imageRelPath.length > 0 ? "https://static.jam.vg/content/" + imageRelPath + "." + thumbSize + ".fit.jpg" : "",
+        full_url: imageRelPath.length > 0 ? "https://static.jam.vg/raw/" + imageRelPath : ""
     };
 }
 function extractMDRefs(text) {
@@ -682,7 +686,6 @@ function createEntryJSON(issue, apiEntry, apiUser) {
         ratings: [],
         platforms: []
     };
-    entry.platforms = arrayFromSet(detectPlatforms(entry));
     return entry;
 }
 var MAX_INFLIGHT = 10;

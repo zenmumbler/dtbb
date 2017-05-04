@@ -16,6 +16,7 @@
 		"ordered-imports": [false],
 		"radix": false,
 		"only-arrow-functions": [false],
+		"forin": false,
 
 		/* TypeScript Specific */
 		"array-type": [true, "array"],

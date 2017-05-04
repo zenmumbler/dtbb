@@ -907,6 +907,7 @@ var CatalogStore = (function () {
         Promise.all([this.persist_.persistedIssues(), this.manifest_])
             .then(function (_a) {
             var headers = _a[0], manifest = _a[1];
+            console.info("Local issues available: " + headers.map(function (h) { return h.issue; }));
             var local = headers.find(function (h) { return h.issue === newIssue; });
             var remote = manifest.issues.find(function (me) { return me.issue === newIssue; });
             if (local && remote) {
@@ -1172,7 +1173,7 @@ var GamesGrid = (function () {
         cell.tile.style.left = cellPixelPos.left + "px";
         cell.tile.style.top = cellPixelPos.top + "px";
         var docID = this.activeList_[newPosition];
-        if (cell.docID != docID) {
+        if (cell.docID !== docID) {
             cell.docID = docID;
             var entry = this.state_.entries.get(docID);
             cell.tile.dataset["docId"] = "" + docID;
@@ -1180,7 +1181,7 @@ var GamesGrid = (function () {
             if (entry) {
                 cell.link.href = entry.entry_url;
                 cell.link.className = entry.category;
-                cell.thumb.style.backgroundImage = "url(" + localThumbURL(entry.ld_issue, entry.thumbnail_url) + ")";
+                cell.thumb.style.backgroundImage = entry.thumbnail_url ? "url(" + localThumbURL(entry.ld_issue, entry.thumbnail_url) + ")" : "";
                 cell.title.textContent = entry.title;
                 cell.author.textContent = entry.author.name;
                 for (var platKey in Platforms) {
@@ -1205,8 +1206,8 @@ var GamesGrid = (function () {
         }
     };
     GamesGrid.prototype.moveCells = function (cellsToMove, positionOffset) {
-        for (var c = 0; c < cellsToMove.length; ++c) {
-            var cell = cellsToMove[c];
+        for (var _i = 0, cellsToMove_1 = cellsToMove; _i < cellsToMove_1.length; _i++) {
+            var cell = cellsToMove_1[_i];
             this.setCellPosition(cell, cell.position + positionOffset);
         }
     };
@@ -1242,7 +1243,7 @@ var GamesGrid = (function () {
         }
     };
     GamesGrid.prototype.dimensionsChanged = function (newCols, newRows) {
-        if (this.cols_ != newCols || this.rows_ != newRows) {
+        if (this.cols_ !== newCols || this.rows_ !== newRows) {
             this.cols_ = newCols;
             this.rows_ = newRows;
             this.ensureCellCount(this.rows_ * this.cols_);
@@ -1250,7 +1251,7 @@ var GamesGrid = (function () {
         }
         else {
             var newScrollOffset = this.scrollingElem_.scrollTop;
-            if (newScrollOffset != this.scrollOffset_) {
+            if (newScrollOffset !== this.scrollOffset_) {
                 this.scrollPosChanged(newScrollOffset);
             }
         }
@@ -1410,7 +1411,13 @@ function watchableBinding(w, elemOrSel, context) {
 var FilterControls = (function () {
     function FilterControls(containerElem_, state_) {
         watchableBinding(state_.issue, "select[data-filter=issue]", containerElem_)
-            .broadcast(function (issue) { state_.setIssue(issue); });
+            .broadcast(function (issue) {
+            state_.setIssue(issue);
+            if (issue > 37) {
+                state_.setPlatform(0);
+            }
+            elem("select[data-filter=platform]").disabled = issue > 37;
+        });
         watchableBinding(state_.category, "input[name=category]", containerElem_)
             .broadcast(function (category) { state_.setCategory(category); });
         watchableBinding(state_.platform, "select[data-filter=platform]", containerElem_)
@@ -1420,6 +1427,7 @@ var FilterControls = (function () {
         state_.loading.watch(function (loading) {
             if (!loading) {
                 elem("#terms").focus();
+                elem("select[data-filter=platform]").disabled = state_.issue.get() > 37;
             }
         });
     }
