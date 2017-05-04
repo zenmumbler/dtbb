@@ -21,6 +21,7 @@ interface APIMinimal {
 	node: {
 		id: number;
 		type: "item" | "user";
+		author: number;
 		path: string;
 		name: string;
 		meta: {
@@ -35,19 +36,23 @@ function load(state: EntrySpiderState) {
 		return Promise.resolve();
 	}
 
-	const link = state.urlList[state.index];
+	const [linkType, link] = state.urlList[state.index].split("|");
+
 	let gid: number;
 	if (state.issue <= 37) {
+		if (linkType !== "E") {
+			throw new Error("Can only handle entry links in LD <= 37");
+		}
 		gid = parseInt(link.substr(link.indexOf("uid=") + 4));
 	}
 	else {
 		gid = parseInt(link.substr(link.lastIndexOf("/") + 1));
 	}
-	const filePath = entryPageFilePath(state.issue, gid);
+	const filePath = linkType === "E" ? entryPageFilePath(state.issue, gid) : userJSONFilePath(state.issue, gid);
 
 	const next = (overrideDelay?: number): Promise<void> => {
 		if (state.index % 10 === 0) {
-			console.info((100 * (state.index / state.urlList.length)).toFixed(1) + "%");
+			console.info((100 * (state.index / state.urlList.length)).toFixed(1) + `% (${state.index}/${state.urlList.length})`);
 		}
 		state.index += 1;
 
@@ -67,7 +72,16 @@ function load(state: EntrySpiderState) {
 				},
 				(error, response, body) => {
 					if (!error && response.statusCode === 200) {
-						const json = JSON.parse(body) as APIMinimal;
+						if (linkType === "E" && state.issue >= 38) {
+							const json = JSON.parse(body) as APIMinimal;
+							if (json && json.node && json.node[0] && json.node[0].author) {
+								state.urlList.push(`U|${issueBaseURL(state.issue)}/get/${json.node[0].author}`);
+							}
+							else {
+								console.info(`No author found for gid: ${gid}`);
+							}
+						}
+
 						fs.writeFile(filePath, body, (err) => {
 							if (err) {
 								console.info(`Failed to write file for gid: ${gid}`, err);
@@ -112,10 +126,10 @@ export function fetchEntryPages(issue: number) {
 					let links: string[];
 					const baseURL = issueBaseURL(issue);
 					if (issue <= 37) {
-						links = json.links.map(u => baseURL + u);
+						links = json.links.map(u => `E|${baseURL}${u}`);
 					}
 					else {
-						links = json.links.map(id => `${baseURL}/get/${id}`);
+						links = json.links.map(id => `E|${baseURL}/get/${id}`);
 					}
 					return load({
 						issue,
