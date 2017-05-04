@@ -283,7 +283,7 @@ function createEntryJSON(issue: number, apiEntry: APIEntry, apiUser: APIUser) {
 		platforms: []
 	};
 
-	entry.platforms = arrayFromSet(detectPlatforms(entry));
+	// entry.platforms = arrayFromSet(detectPlatforms(entry));
 
 	return entry;
 }
