@@ -4,8 +4,8 @@ Ludum Dare Games Browser
 Live at: https://zenmumbler.net/dtbb
 
 This is a website concept I made to quickly search through the many entries submitted for
-the [Ludum Dare][ld] game jams. A new LD site is now nearly done (as per LD37), but the old
-site was not great at doing this.
+the [Ludum Dare][ld] game jams. Neither the old nor the new official LD sites are
+particularly good at searching through the games.
 
 Site features:
 
@@ -39,9 +39,9 @@ Importing Data
 
 **NOTE WELL**: the _full processed data_ for all supported events is already present in the
 `site/data/ldXY_entries.json` files. All of the spidered files (except for thumbnails) are
-also present, thought zipped in `/import/spider_data/entry_pages`, unzip these to use them
-in the extraction script. Only mess with the import stuff if you find it interesting for some
-reason. 
+also present, though zipped, in `import/spider_data/entry_pages`. Unzip these to use them
+in the import extraction process. Only mess with the import stuff if you find it interesting
+for some reason. 
 
 In the `import` folder run `node import` to get a list of commands available, right now they
 are `listing`, `entries`, `thumbs` and `extract`. Each of these commands takes 1 or 2 numbers
@@ -58,8 +58,8 @@ something like:
 
     node import listing 15 38
     node import entries 15 38
-    node import thumbs 15 38
     node import extract 15 38
+    node import thumbs 15 38 (optional)
 
 Note that each of these operations will take quite some time. The scraping happens
 sequentially, both for simplicity reasons and not to hammer the LD site too much and a
@@ -67,8 +67,8 @@ full extract of all ~35k entries will take around 20-30 minutes.
 
 LDs before #15 did not have a structured submission system in place and are not supported.
 The importer supports, for the most part, importing events on the new ldjam.com site
-(LD 38 and newer). The main thing missing is platform detection, which yielded too many
-empties on the data from the new site.
+(#38 and newer). The main thing disabled is platform detection, which yielded too many
+empties/false positives on the data from the new site.
 
 
 Details
