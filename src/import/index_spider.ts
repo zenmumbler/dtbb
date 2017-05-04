@@ -5,7 +5,7 @@ import * as fs from "fs";
 import * as http from "http";
 import request from "request";
 
-import { ensureDirectory, listingDirPath, listingPath, issueBaseURL, timeoutPromise } from "./importutil";
+import { ensureDirectory, listingDirPath, listingPath, issueIndexPageURL, timeoutPromise } from "./importutil";
 
 const LD_PAGE_SIZE = 24;
 const DELAY_BETWEEN_REQUESTS_MS = 20;
@@ -17,33 +17,67 @@ interface SpiderState {
 	allThumbs: string[];
 }
 
+function processBody(state: SpiderState, body: string): boolean {
+	const links = body.match(/\?action=preview&(amp;)?uid=(\d+)/g);
+	const thumbs = body.match(/http:\/\/ludumdare.com\/compo\/wp\-content\/compo2\/thumb\/[^\.]+\.jpg/g);
+
+	if (links && thumbs) {
+		if (links.length === thumbs.length + 1) {
+			links.shift(); // remove hidden "edit self" link
+		}
+
+		if (links.length === thumbs.length) {
+			state.allLinks = state.allLinks.concat(links);
+			state.allThumbs = state.allThumbs.concat(thumbs);
+		}
+		else {
+			throw new Error(`mismatch of link and thumb count (${links.length} vs ${thumbs.length}) at offset ${state.offset}`);
+		}
+
+		return false;
+	}
+
+	return true;
+}
+
+interface APIListing {
+	status: number;
+	feed: {
+		id: number;
+		modified: string;
+	}[];
+}
+
+function processBodyNew(state: SpiderState, body: string): boolean {
+	const listingJSON = JSON.parse(body) as APIListing;
+
+	if (listingJSON && listingJSON.status === 200 && listingJSON.feed) {
+		const ids = listingJSON.feed.map(g => "" + g.id);
+		state.allLinks = state.allLinks.concat(ids);
+
+		return listingJSON.feed.length === 0;
+	}
+	else {
+		throw new Error(`Something wrong with the feed at offset ${state.offset}`);
+	}
+}
+
 function next(state: SpiderState) {
+	const processFn = (state.issue <= 37) ? processBody : processBodyNew;
+
 	return new Promise<void>((resolve, reject) => {
 		request(
-			`${issueBaseURL(state.issue)}/?action=preview&start=${state.offset}`,
+			`${issueIndexPageURL(state.issue, state.offset)}`,
 			(error: any, response: http.IncomingMessage, body: string) => {
 				let completed = false;
 
 				if (!error && response.statusCode === 200) {
-					const links = body.match(/\?action=preview&(amp;)?uid=(\d+)/g);
-					const thumbs = body.match(/http:\/\/ludumdare.com\/compo\/wp\-content\/compo2\/thumb\/[^\.]+\.jpg/g);
-
-					if (links && thumbs) {
-						if (links.length === thumbs.length + 1) {
-							links.shift(); // remove hidden "edit self" link
-						}
-
-						if (links.length === thumbs.length) {
-							state.allLinks = state.allLinks.concat(links);
-							state.allThumbs = state.allThumbs.concat(thumbs);
-						}
-						else {
-							reject(`mismatch of link and thumb count (${links.length} vs ${thumbs.length}) at offset ${state.offset}`);
-							return;
-						}
+					try {
+						completed = processFn(state, body);
 					}
-					else {
-						completed = true;
+					catch (e) {
+						reject((e as Error).message);
+						return;
 					}
 				}
 				else {

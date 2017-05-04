@@ -5,7 +5,7 @@ import * as fs from "fs";
 import request from "request";
 
 import { EntryListing } from "../lib/catalog";
-import { ensureDirectory, issueBaseURL, listingPath, entryPagesDirPath, entryPageFilePath, timeoutPromise } from "./importutil";
+import { ensureDirectory, issueBaseURL, listingPath, entryPagesDirPath, entryPageFilePath, userJSONFilePath, timeoutPromise } from "./importutil";
 
 const DELAY_BETWEEN_REQUESTS_MS = 50;
 
@@ -17,6 +17,17 @@ interface EntrySpiderState {
 	failures: number;
 }
 
+interface APIMinimal {
+	node: {
+		id: number;
+		type: "item" | "user";
+		path: string;
+		name: string;
+		meta: {
+			avatar?: string;
+		}
+	}[];
+}
 
 function load(state: EntrySpiderState) {
 	if (state.index >= state.urlList.length) {
@@ -25,8 +36,14 @@ function load(state: EntrySpiderState) {
 	}
 
 	const link = state.urlList[state.index];
-	const uid = parseInt(link.substr(link.indexOf("uid=") + 4));
-	const filePath = entryPageFilePath(state.issue, uid);
+	let gid: number;
+	if (state.issue <= 37) {
+		gid = parseInt(link.substr(link.indexOf("uid=") + 4));
+	}
+	else {
+		gid = parseInt(link.substr(link.lastIndexOf("/") + 1));
+	}
+	const filePath = entryPageFilePath(state.issue, gid);
 
 	const next = (overrideDelay?: number): Promise<void> => {
 		if (state.index % 10 === 0) {
@@ -50,9 +67,10 @@ function load(state: EntrySpiderState) {
 				},
 				(error, response, body) => {
 					if (!error && response.statusCode === 200) {
+						const json = JSON.parse(body) as APIMinimal;
 						fs.writeFile(filePath, body, (err) => {
 							if (err) {
-								console.info(`Failed to write file for uid: ${uid}`, err);
+								console.info(`Failed to write file for gid: ${gid}`, err);
 								state.failures += 1;
 							}
 							else {
@@ -62,7 +80,7 @@ function load(state: EntrySpiderState) {
 						});
 					}
 					else {
-						console.info(`Failed to load entry page for uid: ${uid}`, error, response ? response.statusCode : "-");
+						console.info(`Failed to load entry page for gid: ${gid}`, error, response ? response.statusCode : "-");
 						state.failures += 1;
 						resolve(next());
 					}
@@ -89,9 +107,16 @@ export function fetchEntryPages(issue: number) {
 
 			resolve(ensureDirectory(entryPagesDirPath(issue))
 				.then(() => {
-					const baseURL = issueBaseURL(issue);
 					const json = JSON.parse(data) as EntryListing;
-					const links = json.links.map(u => baseURL + u);
+
+					let links: string[];
+					const baseURL = issueBaseURL(issue);
+					if (issue <= 37) {
+						links = json.links.map(u => baseURL + u);
+					}
+					else {
+						links = json.links.map(id => `${baseURL}/get/${id}`);
+					}
 					return load({
 						issue,
 						index: 0,

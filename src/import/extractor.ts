@@ -26,6 +26,47 @@ function entryDoc(issue: number, uid: number): Promise<Document> {
 }
 
 
+interface APIEntry {
+	status: number;
+	node: {
+		id: number;
+		author: number;
+		type: "item";
+		subtype: "game";
+		subsubtype: "compo" | "jam";
+		published: string;
+		created: string;
+		modified: string;
+		version: number;
+		slug: string;
+		name: string;
+		body: string;
+		path: string;
+		meta: {
+			cover: string;
+			love: number;
+			notes: number;
+			"notes-timestamp": string;
+		}
+	}[];
+}
+
+
+function entryJSONDoc(issue: number, gid: number): Promise<APIEntry> {
+	return new Promise((resolve, reject) => {
+		fs.readFile(entryPageFilePath(issue, gid), "utf8", (err, data) => {
+			if (err) {
+				reject(err);
+			}
+			else {
+				const entryJSON = JSON.parse(data) as APIEntry;
+				resolve(entryJSON);
+			}
+		});
+	});
+}
+
+
 function loadCatalog(issue: number): Promise<EntryListing> {
 	return new Promise((resolve, reject) => {
 		fs.readFile(listingPath(issue), "utf8", (err, data) => {
@@ -70,10 +111,10 @@ function extractRatings(table: HTMLTableElement | null): EntryRating[] {
 			}
 
 			// area
-			let area = (tds[1].innerHTML.trim().toLowerCase().replace("(jam)", "")) as RatingArea;
+			const area = (tds[1].innerHTML.trim().toLowerCase().replace("(jam)", "")) as RatingArea;
 
 			// score
-			let score = parseFloat(tds[2].innerHTML.trim());
+			const score = parseFloat(tds[2].innerHTML.trim());
 
 			if (rank > -1 && area.length > 0 && !isNaN(score)) {
 				ratings.push({ area, rank, score });
@@ -115,14 +156,14 @@ function createEntry(relURI: string, issue: number, uid: number, thumbImg: strin
 
 		title: titleElem!.textContent || "<no title>",
 		category: categoryStr.indexOf("jam") > -1 ? "jam" : "compo",
-		description: description,
+		description,
 
 		thumbnail_url: thumbImg,
 		entry_url: eventBaseURL + relURI,
 
 		author: {
 			name: authorName,
-			uid: uid,
+			uid,
 			avatar_url: avatarImg.src,
 			home_url: ldBaseURL + authorLink!.getAttribute("href")!.substr(3)
 		},
@@ -156,6 +197,43 @@ function createEntry(relURI: string, issue: number, uid: number, thumbImg: strin
 	return entry;
 }
 
+function resolveLDJImage(localURL: string): string {
+	return localURL;
+}
+
+function createEntryJSON(issue: number, apiEntry: APIEntry) {
+	const doc = apiEntry.node[0];
+	const eventBaseURL = "https://ldjam.com";
+
+	const entry: Entry = {
+		ld_issue: issue,
+
+		title: doc.name,
+		category: doc.subsubtype,
+		description: doc.body,
+
+		thumbnail_url: resolveLDJImage(doc.meta.cover),
+		entry_url: eventBaseURL + doc.path,
+
+		author: {
+			name: "?",
+			uid: doc.author,
+			avatar_url: "",
+			home_url: ""
+		},
+
+		screens: [],
+		links: [],
+
+		ratings: [],
+		platforms: []
+	};
+
+	entry.platforms = arrayFromSet(detectPlatforms(entry));
+
+	return entry;
+}
+
 
 // ------------
 
@@ -174,12 +252,20 @@ interface ExtractState {
 
 
 function extractEntryFromPage(state: ExtractState, link: string, thumb: string) {
-	const uid = parseInt(link.substr(link.indexOf("uid=") + 4));
-
-	return entryDoc(state.issue, uid)
-		.then(doc => {
-			return createEntry(link, state.issue, uid, thumb, doc);
-		});
+	if (state.issue <= 37) {
+		const uid = parseInt(link.substr(link.indexOf("uid=") + 4));
+		return entryDoc(state.issue, uid)
+			.then(doc => {
+				return createEntry(link, state.issue, uid, thumb, doc);
+			});
+	}
+	else {
+		const gid = parseInt(link.substr(link.lastIndexOf("/") + 1));
+		return entryJSONDoc(state.issue, gid)
+			.then(entry => {
+				return createEntryJSON(state.issue, entry);
+			});
+	}
 }
 
 

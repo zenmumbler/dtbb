@@ -92,7 +92,9 @@ export const IssueThemeNames: { readonly [issue: number]: string } = {
 
 	35: "Shapeshift",
 	36: "Ancient Technology",
-	37: "One Room"
+	37: "One Room",
+
+	38: "A Small World"
 };
 
 // ----

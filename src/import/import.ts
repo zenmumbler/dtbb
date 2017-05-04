@@ -8,7 +8,7 @@ import { extractEntries } from "./extractor";
 import { task, runt } from "./runt";
 
 const MIN_ISSUE = 15;
-const MAX_ISSUE = 37;
+const MAX_ISSUE = 38;
 
 interface IssueRange {
 	from: number;

@@ -24,13 +24,28 @@ function entryPagesDirPath(issue) {
     return "./spider_data/entry_pages/entries_" + issue + "/";
 }
 function entryPageFilePath(issue, uid) {
-    return entryPagesDirPath(issue) + "entry_" + uid + ".html";
+    var ext = issue <= 37 ? "html" : "json";
+    return entryPagesDirPath(issue) + "entry_" + uid + "." + ext;
 }
+
 function entriesCatalogPath(issue) {
     return "../site/data/ld" + issue + "_entries.json";
 }
 function issueBaseURL(issue) {
-    return "http://ludumdare.com/compo/ludum-dare-" + issue + "/";
+    if (issue <= 37) {
+        return "http://ludumdare.com/compo/ludum-dare-" + issue + "/";
+    }
+    else {
+        return "https://api.ldjam.com/vx/node/";
+    }
+}
+function issueIndexPageURL(issue, offset) {
+    if (issue <= 37) {
+        return issueBaseURL(issue) + "/?action=preview&start=" + offset;
+    }
+    else {
+        return issueBaseURL(issue) + "/feed/1/all/item/game?offset=" + offset + "}&limit=24";
+    }
 }
 function ensureDirectory(dir) {
     return new Promise(function (resolve, reject) {
@@ -52,28 +67,47 @@ function timeoutPromise(delayMS) {
 
 var LD_PAGE_SIZE = 24;
 var DELAY_BETWEEN_REQUESTS_MS = 20;
+function processBody(state, body) {
+    var links = body.match(/\?action=preview&(amp;)?uid=(\d+)/g);
+    var thumbs = body.match(/http:\/\/ludumdare.com\/compo\/wp\-content\/compo2\/thumb\/[^\.]+\.jpg/g);
+    if (links && thumbs) {
+        if (links.length === thumbs.length + 1) {
+            links.shift();
+        }
+        if (links.length === thumbs.length) {
+            state.allLinks = state.allLinks.concat(links);
+            state.allThumbs = state.allThumbs.concat(thumbs);
+        }
+        else {
+            throw new Error("mismatch of link and thumb count (" + links.length + " vs " + thumbs.length + ") at offset " + state.offset);
+        }
+        return false;
+    }
+    return true;
+}
+function processBodyNew(state, body) {
+    var listingJSON = JSON.parse(body);
+    if (listingJSON && listingJSON.status === 200 && listingJSON.feed) {
+        var ids = listingJSON.feed.map(function (g) { return "" + g.id; });
+        state.allLinks = state.allLinks.concat(ids);
+        return listingJSON.feed.length === 0;
+    }
+    else {
+        throw new Error("Something wrong with the feed at offset " + state.offset);
+    }
+}
 function next(state) {
+    var processFn = (state.issue <= 37) ? processBody : processBodyNew;
     return new Promise(function (resolve, reject) {
-        request(issueBaseURL(state.issue) + "/?action=preview&start=" + state.offset, function (error, response, body) {
+        request("" + issueIndexPageURL(state.issue, state.offset), function (error, response, body) {
             var completed = false;
             if (!error && response.statusCode === 200) {
-                var links = body.match(/\?action=preview&(amp;)?uid=(\d+)/g);
-                var thumbs = body.match(/http:\/\/ludumdare.com\/compo\/wp\-content\/compo2\/thumb\/[^\.]+\.jpg/g);
-                if (links && thumbs) {
-                    if (links.length === thumbs.length + 1) {
-                        links.shift();
-                    }
-                    if (links.length === thumbs.length) {
-                        state.allLinks = state.allLinks.concat(links);
-                        state.allThumbs = state.allThumbs.concat(thumbs);
-                    }
-                    else {
-                        reject("mismatch of link and thumb count (" + links.length + " vs " + thumbs.length + ") at offset " + state.offset);
-                        return;
-                    }
+                try {
+                    completed = processFn(state, body);
                 }
-                else {
-                    completed = true;
+                catch (e) {
+                    reject(e.message);
+                    return;
                 }
             }
             else {
@@ -123,8 +157,14 @@ function load(state) {
         return Promise.resolve();
     }
     var link = state.urlList[state.index];
-    var uid = parseInt(link.substr(link.indexOf("uid=") + 4));
-    var filePath = entryPageFilePath(state.issue, uid);
+    var gid;
+    if (state.issue <= 37) {
+        gid = parseInt(link.substr(link.indexOf("uid=") + 4));
+    }
+    else {
+        gid = parseInt(link.substr(link.lastIndexOf("/") + 1));
+    }
+    var filePath = entryPageFilePath(state.issue, gid);
     var next = function (overrideDelay) {
         if (state.index % 10 === 0) {
             console.info((100 * (state.index / state.urlList.length)).toFixed(1) + "%");
@@ -145,7 +185,7 @@ function load(state) {
                 if (!error && response.statusCode === 200) {
                     fs.writeFile(filePath, body, function (err) {
                         if (err) {
-                            console.info("Failed to write file for uid: " + uid, err);
+                            console.info("Failed to write file for gid: " + gid, err);
                             state.failures += 1;
                         }
                         else {
@@ -155,7 +195,7 @@ function load(state) {
                     });
                 }
                 else {
-                    console.info("Failed to load entry page for uid: " + uid, error, response ? response.statusCode : "-");
+                    console.info("Failed to load entry page for gid: " + gid, error, response ? response.statusCode : "-");
                     state.failures += 1;
                     resolve(next());
                 }
@@ -176,9 +216,15 @@ function fetchEntryPages(issue) {
             }
             resolve(ensureDirectory(entryPagesDirPath(issue))
                 .then(function () {
-                var baseURL = issueBaseURL(issue);
                 var json = JSON.parse(data);
-                var links = json.links.map(function (u) { return baseURL + u; });
+                var links;
+                var baseURL = issueBaseURL(issue);
+                if (issue <= 37) {
+                    links = json.links.map(function (u) { return baseURL + u; });
+                }
+                else {
+                    links = json.links.map(function (id) { return baseURL + "/get/" + id; });
+                }
                 return load({
                     issue: issue,
                     index: 0,
@@ -270,31 +316,6 @@ function fetchThumbs(issue) {
     });
 }
 
-function makePlatformLookup(plats) {
-    var pl = {};
-    var shift = 0;
-    for (var _i = 0, plats_1 = plats; _i < plats_1.length; _i++) {
-        var p = plats_1[_i];
-        pl[p.key] = {
-            key: p.key,
-            label: p.label,
-            mask: 1 << shift
-        };
-        shift += 1;
-    }
-    return pl;
-}
-var Platforms = makePlatformLookup([
-    { key: "desktop", label: "Desktop" },
-    { key: "win", label: "Windows" },
-    { key: "mac", label: "MacOS" },
-    { key: "linux", label: "Linux" },
-    { key: "web", label: "Web" },
-    { key: "java", label: "Java" },
-    { key: "vr", label: "VR" },
-    { key: "mobile", label: "Mobile" },
-]);
-
 var IssueThemeNames = {
     15: "Caverns",
     16: "Exploration",
@@ -318,7 +339,8 @@ var IssueThemeNames = {
     34: "Two Button Controls, Growing",
     35: "Shapeshift",
     36: "Ancient Technology",
-    37: "One Room"
+    37: "One Room",
+    38: "A Small World"
 };
 
 function mergeSet(dest, source) {
@@ -465,6 +487,19 @@ function entryDoc(issue, uid) {
         });
     });
 }
+function entryJSONDoc(issue, gid) {
+    return new Promise(function (resolve, reject) {
+        fs.readFile(entryPageFilePath(issue, gid), "utf8", function (err, data) {
+            if (err) {
+                reject(err);
+            }
+            else {
+                var entryJSON = JSON.parse(data);
+                resolve(entryJSON);
+            }
+        });
+    });
+}
 function loadCatalog(issue) {
     return new Promise(function (resolve, reject) {
         fs.readFile(listingPath(issue), "utf8", function (err, data) {
@@ -569,13 +604,49 @@ function createEntry(relURI, issue, uid, thumbImg, doc) {
     entry.platforms = arrayFromSet(detectPlatforms(entry));
     return entry;
 }
+function resolveLDJImage(localURL) {
+    return localURL;
+}
+function createEntryJSON(issue, apiEntry) {
+    var doc = apiEntry.node[0];
+    var eventBaseURL = "https://ldjam.com";
+    var entry = {
+        ld_issue: issue,
+        title: doc.name,
+        category: doc.subsubtype,
+        description: doc.body,
+        thumbnail_url: resolveLDJImage(doc.meta.cover),
+        entry_url: eventBaseURL + doc.path,
+        author: {
+            name: "?",
+            uid: doc.author,
+            avatar_url: "",
+            home_url: ""
+        },
+        screens: [],
+        links: [],
+        ratings: [],
+        platforms: []
+    };
+    entry.platforms = arrayFromSet(detectPlatforms(entry));
+    return entry;
+}
 var MAX_INFLIGHT = 10;
 function extractEntryFromPage(state, link, thumb) {
-    var uid = parseInt(link.substr(link.indexOf("uid=") + 4));
-    return entryDoc(state.issue, uid)
-        .then(function (doc) {
-        return createEntry(link, state.issue, uid, thumb, doc);
-    });
+    if (state.issue <= 37) {
+        var uid_1 = parseInt(link.substr(link.indexOf("uid=") + 4));
+        return entryDoc(state.issue, uid_1)
+            .then(function (doc) {
+            return createEntry(link, state.issue, uid_1, thumb, doc);
+        });
+    }
+    else {
+        var gid = parseInt(link.substr(link.lastIndexOf("/") + 1));
+        return entryJSONDoc(state.issue, gid)
+            .then(function (entry) {
+            return createEntryJSON(state.issue, entry);
+        });
+    }
 }
 function completed(state) {
     if (state.completionPromise) {
@@ -723,7 +794,7 @@ function runt() {
 }
 
 var MIN_ISSUE = 15;
-var MAX_ISSUE = 37;
+var MAX_ISSUE = 38;
 function getIssueRange(issueSA, issueSB) {
     var issueFrom = issueSA === undefined ? 0 : parseInt(issueSA);
     var issueTo = issueSB === undefined ? issueFrom : parseInt(issueSB);
