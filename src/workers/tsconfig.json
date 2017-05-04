@@ -8,19 +8,16 @@
         "diagnostics": false,
         "listFiles": false,
 
-        "noImplicitAny": true,
-        "suppressImplicitAnyIndexErrors": false,
-        "noImplicitReturns": true,
-        "forceConsistentCasingInFileNames": true,
-        "noFallthroughCasesInSwitch": true,
-        "strictNullChecks": true,
-        "noImplicitThis": true,
-        "noUnusedLocals": true,
-        "noUnusedParameters": true,
+		"strict": true,
+		"noImplicitReturns": true,
+		"forceConsistentCasingInFileNames": true,
+		"noFallthroughCasesInSwitch": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
 
-        "lib": ["es5", "webworker", "es2015"],
-        "skipLibCheck": true,
-        "skipDefaultLibCheck": false,
+        "lib": ["es5", "webworker", "es2015", "es2016", "es2017"],
+		"skipLibCheck": true, // has to be true to allow jQuery.d.ts to pass
+        "skipDefaultLibCheck": true,
 
         "removeComments": true,
         "sourceMap": false
