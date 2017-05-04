@@ -4,8 +4,8 @@
 import * as fs from "fs";
 import request from "request";
 
-import { EntryListing } from "../lib/catalog";
-import { ensureDirectory, listingPath, thumbsDirPath, localThumbPathForLDURL, timeoutPromise } from "./importutil";
+import { EntryListing, Catalog } from "../lib/catalog";
+import { ensureDirectory, listingPath, entriesCatalogPath, thumbsDirPath, localThumbPathForLDURL, timeoutPromise } from "./importutil";
 
 const DELAY_BETWEEN_REQUESTS_MS = 10;
 
@@ -80,20 +80,25 @@ export function fetchThumbs(issue: number) {
 
 	console.info(`Fetching thumbs for issue ${issue}`);
 
+	const sourcePath = issue <= 37 ? listingPath(issue) : entriesCatalogPath(issue);
+
 	return new Promise<void>((resolve, reject) => {
-		fs.readFile(listingPath(issue), "utf8", (listingErr, data) => {
+		fs.readFile(sourcePath, "utf8", (listingErr, data) => {
 			if (listingErr) {
-				reject(`Could not load listing for issue ${issue}: ${listingErr}`);
+				reject(`Could not load listing/entries for issue ${issue}: ${listingErr}`);
 				return;
 			}
 
 			return(ensureDirectory(thumbsDirPath(issue))
 				.then(() => {
-					const json = JSON.parse(data) as EntryListing;
+					const thumbs = issue <= 37 ?
+						(JSON.parse(data) as EntryListing).thumbs :
+						(JSON.parse(data) as Catalog).entries.filter(e => e.thumbnail_url.length > 0).map(e => e.thumbnail_url);
+
 					resolve(load({
 						issue,
 						index: 0,
-						urlList: json.thumbs,
+						urlList: thumbs,
 						thumbsWritten: 0,
 						failures: 0
 					}));
