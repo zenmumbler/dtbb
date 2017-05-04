@@ -27,7 +27,9 @@ function entryPageFilePath(issue, uid) {
     var ext = issue <= 37 ? "html" : "json";
     return entryPagesDirPath(issue) + "entry_" + uid + "." + ext;
 }
-
+function userJSONFilePath(issue, uid) {
+    return entryPagesDirPath(issue) + "user_" + uid + ".json";
+}
 function entriesCatalogPath(issue) {
     return "../site/data/ld" + issue + "_entries.json";
 }
@@ -156,18 +158,21 @@ function load(state) {
         console.info("Done (wrote " + state.entriesWritten + " entries, " + state.failures + " failures)");
         return Promise.resolve();
     }
-    var link = state.urlList[state.index];
+    var _a = state.urlList[state.index].split("|"), linkType = _a[0], link = _a[1];
     var gid;
     if (state.issue <= 37) {
+        if (linkType !== "E") {
+            throw new Error("Can only handle entry links in LD <= 37");
+        }
         gid = parseInt(link.substr(link.indexOf("uid=") + 4));
     }
     else {
         gid = parseInt(link.substr(link.lastIndexOf("/") + 1));
     }
-    var filePath = entryPageFilePath(state.issue, gid);
+    var filePath = linkType === "E" ? entryPageFilePath(state.issue, gid) : userJSONFilePath(state.issue, gid);
     var next = function (overrideDelay) {
         if (state.index % 10 === 0) {
-            console.info((100 * (state.index / state.urlList.length)).toFixed(1) + "%");
+            console.info((100 * (state.index / state.urlList.length)).toFixed(1) + ("% (" + state.index + "/" + state.urlList.length + ")"));
         }
         state.index += 1;
         return timeoutPromise(overrideDelay || DELAY_BETWEEN_REQUESTS_MS$1)
@@ -183,6 +188,15 @@ function load(state) {
                 timeout: 3000
             }, function (error, response, body) {
                 if (!error && response.statusCode === 200) {
+                    if (linkType === "E" && state.issue >= 38) {
+                        var json = JSON.parse(body);
+                        if (json && json.node && json.node[0] && json.node[0].author) {
+                            state.urlList.push("U|" + issueBaseURL(state.issue) + "/get/" + json.node[0].author);
+                        }
+                        else {
+                            console.info("No author found for gid: " + gid);
+                        }
+                    }
                     fs.writeFile(filePath, body, function (err) {
                         if (err) {
                             console.info("Failed to write file for gid: " + gid, err);
@@ -220,10 +234,10 @@ function fetchEntryPages(issue) {
                 var links;
                 var baseURL = issueBaseURL(issue);
                 if (issue <= 37) {
-                    links = json.links.map(function (u) { return baseURL + u; });
+                    links = json.links.map(function (u) { return "E|" + baseURL + u; });
                 }
                 else {
-                    links = json.links.map(function (id) { return baseURL + "/get/" + id; });
+                    links = json.links.map(function (id) { return "E|" + baseURL + "/get/" + id; });
                 }
                 return load({
                     issue: issue,
@@ -458,6 +472,12 @@ function detectPlatforms(entry) {
         if (dks) {
             mergeSet(plats, dks);
         }
+        if (entry.ld_issue >= 38) {
+            var xlks = linkPlatformMapping[term];
+            if (xlks) {
+                mergeSet(plats, xlks);
+            }
+        }
     }
     if (plats.size === 0) {
         if ((urlTerms.indexOf("itch") > -1) ||
@@ -496,6 +516,18 @@ function entryJSONDoc(issue, gid) {
             else {
                 var entryJSON = JSON.parse(data);
                 resolve(entryJSON);
+            }
+        });
+    });
+}
+function userJSONDoc(issue, uid) {
+    return new Promise(function (resolve, reject) {
+        fs.readFile(userJSONFilePath(issue, uid), "utf8", function (err, data) {
+            if (err) {
+                reject(err);
+            }
+            else {
+                resolve(JSON.parse(data));
             }
         });
     });
@@ -604,27 +636,49 @@ function createEntry(relURI, issue, uid, thumbImg, doc) {
     entry.platforms = arrayFromSet(detectPlatforms(entry));
     return entry;
 }
-function resolveLDJImage(localURL) {
-    return localURL;
+function resolveLDJImage(imageRef, thumbSize) {
+    if (thumbSize === void 0) { thumbSize = "480x384"; }
+    var imageRelPath = imageRef.replace("///content", "").replace("///raw", "");
+    return {
+        thumbnail_url: "https://static.jam.vg/content/" + imageRelPath + "." + thumbSize + ".fit.jpg",
+        full_url: "https://static.jam.vg/raw/" + imageRelPath
+    };
 }
-function createEntryJSON(issue, apiEntry) {
+function extractMDRefs(text) {
+    var refs = { links: [], images: [] };
+    var matcher = /\!?\[([^\]]*)\]\(([^\)]*)\)/g;
+    var links;
+    while (links = matcher.exec(text)) {
+        if (links[0].charAt(0) === "!") {
+            refs.images.push(links[2]);
+        }
+        else {
+            refs.links.push({ label: links[1], url: links[2] });
+        }
+    }
+    return refs;
+}
+function createEntryJSON(issue, apiEntry, apiUser) {
     var doc = apiEntry.node[0];
+    var author = apiUser.node[0];
     var eventBaseURL = "https://ldjam.com";
+    var refs = extractMDRefs(doc.body);
+    var screens = refs.images.map(function (imgRef) { return resolveLDJImage(imgRef); });
     var entry = {
         ld_issue: issue,
         title: doc.name,
         category: doc.subsubtype,
         description: doc.body,
-        thumbnail_url: resolveLDJImage(doc.meta.cover),
+        thumbnail_url: resolveLDJImage(doc.meta.cover || "").thumbnail_url,
         entry_url: eventBaseURL + doc.path,
         author: {
-            name: "?",
-            uid: doc.author,
-            avatar_url: "",
-            home_url: ""
+            name: author.name,
+            uid: author.id,
+            avatar_url: resolveLDJImage(author.meta.avatar || "").full_url,
+            home_url: eventBaseURL + author.path
         },
-        screens: [],
-        links: [],
+        screens: screens,
+        links: refs.links,
         ratings: [],
         platforms: []
     };
@@ -644,7 +698,11 @@ function extractEntryFromPage(state, link, thumb) {
         var gid = parseInt(link.substr(link.lastIndexOf("/") + 1));
         return entryJSONDoc(state.issue, gid)
             .then(function (entry) {
-            return createEntryJSON(state.issue, entry);
+            return userJSONDoc(state.issue, entry.node[0].author).then(function (user) { return ({ entry: entry, user: user }); });
+        })
+            .then(function (_a) {
+            var entry = _a.entry, user = _a.user;
+            return createEntryJSON(state.issue, entry, user);
         });
     }
 }
