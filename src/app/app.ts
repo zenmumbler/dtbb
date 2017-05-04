@@ -1,5 +1,5 @@
 // app.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
-// (c) 2016 by Arthur Langereis (@zenmumbler)
+// (c) 2016-7 by Arthur Langereis (@zenmumbler)
 
 import { elem, elemList } from "./domutil";
 
@@ -13,7 +13,8 @@ export const state = new GamesBrowserState();
 // this function is a hacky way to allow anyone to completely get rid of the local database
 // - which can become rather large - pending a UI to do this.
 export function reset() {
-	// cough
+	console.info("Deleting local data, please wait, this can take a while...");
+
 	elemList<HTMLSelectElement>("select").forEach(e => e.disabled = true);
 	elem("#smokedglass").style.display = "block";
 	elem(".status").style.display = "none";
@@ -30,6 +31,6 @@ document.addEventListener("DOMContentLoaded", _ => {
 	new FilterControls(elem(".filters"), state);
 	new LoadingWall(elem("#smokedglass"), state);
 
-	state.setIssue(37);
+	state.setIssue(38);
 	console.info("Hi! If you ever need to delete all local data cached by DTBB just run: `dtbb.reset()` in your console while on this page. Have fun!");
 });

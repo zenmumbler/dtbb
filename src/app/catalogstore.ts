@@ -104,7 +104,7 @@ export class CatalogStore {
 			resultSet = this.allSet_;
 		}
 		else {
-			restrictionSets.sort((a, b) => { return a.size < b.size ? -1 : 1; });
+			restrictionSets.sort((a, b) => a.size < b.size ? -1 : 1);
 
 			resultSet = new Set(restrictionSets[0]);
 			for (let tisix = 1; tisix < restrictionSets.length; ++tisix) {
