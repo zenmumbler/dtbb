@@ -1,5 +1,5 @@
 // gamesgrid.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
-// (c) 2016 by Arthur Langereis (@zenmumbler)
+// (c) 2016-7 by Arthur Langereis (@zenmumbler)
 
 import { Platforms, localThumbURL } from "../../../lib/catalog";
 import { arrayFromSet } from "../../../lib/setutil";
@@ -143,7 +143,7 @@ export class GamesGrid {
 		cell.tile.style.top = cellPixelPos.top + "px";
 
 		const docID = this.activeList_[newPosition];
-		if (cell.docID != docID) {
+		if (cell.docID !== docID) {
 			cell.docID = docID;
 			const entry = this.state_.entries.get(docID);
 
@@ -153,7 +153,7 @@ export class GamesGrid {
 			if (entry) {
 				cell.link.href = entry.entry_url;
 				cell.link.className = entry.category;
-				cell.thumb.style.backgroundImage = "url(" + localThumbURL(entry.ld_issue, entry.thumbnail_url) + ")";
+				cell.thumb.style.backgroundImage = entry.thumbnail_url ? "url(" + localThumbURL(entry.ld_issue, entry.thumbnail_url) + ")" : "";
 				cell.title.textContent = entry.title;
 				cell.author.textContent = entry.author.name;
 
@@ -174,7 +174,7 @@ export class GamesGrid {
 		const effectiveOffset = Math.max(0, this.scrollOffset_ - this.gridOffsetY);
 		const effectiveCellHeight = this.cellHeight_ + this.cellMargin_;
 		const firstViewRow = Math.floor(effectiveOffset / effectiveCellHeight);
-		var position = firstViewRow * this.cols_;
+		let position = firstViewRow * this.cols_;
 
 		for (const cell of this.cells_) {
 			this.setCellPosition(cell, position);
@@ -184,8 +184,7 @@ export class GamesGrid {
 
 
 	private moveCells(cellsToMove: GameCell[], positionOffset: number) {
-		for (let c = 0; c < cellsToMove.length; ++c) {
-			const cell = cellsToMove[c];
+		for (const cell of cellsToMove) {
 			this.setCellPosition(cell, cell.position + positionOffset);
 		}
 	}
@@ -234,7 +233,7 @@ export class GamesGrid {
 
 
 	private dimensionsChanged(newCols: number, newRows: number) {
-		if (this.cols_ != newCols || this.rows_ != newRows) {
+		if (this.cols_ !== newCols || this.rows_ !== newRows) {
 			this.cols_ = newCols;
 			this.rows_ = newRows;
 
@@ -244,7 +243,7 @@ export class GamesGrid {
 		}
 		else {
 			const newScrollOffset = this.scrollingElem_.scrollTop;
-			if (newScrollOffset != this.scrollOffset_) {
+			if (newScrollOffset !== this.scrollOffset_) {
 				this.scrollPosChanged(newScrollOffset);
 			}
 		}

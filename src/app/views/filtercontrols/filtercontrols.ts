@@ -9,7 +9,13 @@ export class FilterControls {
 	constructor(containerElem_: HTMLElement, state_: GamesBrowserState) {
 		// LD issue selector
 		watchableBinding(state_.issue, "select[data-filter=issue]", containerElem_)
-			.broadcast(issue => { state_.setIssue(issue); });
+			.broadcast(issue => {
+				state_.setIssue(issue);
+				if (issue > 37) {
+					state_.setPlatform(0);
+				}
+				elem<HTMLSelectElement>("select[data-filter=platform]").disabled = issue > 37;
+			});
 
 		// category radios
 		watchableBinding(state_.category, "input[name=category]", containerElem_)
@@ -26,6 +32,7 @@ export class FilterControls {
 		state_.loading.watch(loading => {
 			if (! loading) {
 				elem<HTMLInputElement>("#terms").focus();
+				elem<HTMLSelectElement>("select[data-filter=platform]").disabled = state_.issue.get() > 37;
 			}
 		});
 	}
