@@ -1,8 +1,71 @@
 // detect_platform.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
-// (c) 2016 by Arthur Langereis (@zenmumbler)
+// (c) 2016-7 by Arthur Langereis (@zenmumbler)
 
 import { Entry, PlatformKey } from "../lib/catalog";
-import { newSetFromArray, mergeSet } from "../lib/setutil";
+import { mergeSet, newSetFromArray } from "../lib/setutil";
+
+const apiPlatformTags = {
+	42332: "Source code",
+	42336: "HTML5 (web)",
+	42337: "Windows",
+	42339: "macOS",
+	42341: "Linux",
+	42342: "Android",
+	42346: "iOS",
+	42348: "PlayStation (PS1)",
+	42349: "PlayStation 2 (PS2)",
+	42350: "PlayStation 3 (PS3)",
+	42351: "PlayStation 4 (PS4)",
+	42352: "PlayStation Portable (PSP)",
+	42356: "PlayStation Vita (PS Vita)",
+	42361: "Nintendo Entertainment System/Famicom",
+	42362: "Super Nintendo/Famicom",
+	42365: "Nintendo 64 (N64)",
+	42368: "Nintendo GameCube",
+	42370: "Nintendo Wii",
+	42371: "Nintendo Wii U",
+	42372: "Nintendo Switch",
+	42374: "Nintendo GameBoy",
+	42376: "GameBoy Advance",
+	42377: "Nintendo DS",
+	42382: "Nintendo 3DS",
+	42386: "Sega Master System",
+	42387: "Sega Genesis/Mega Drive",
+	42389: "Sega Saturn",
+	42390: "Sega Dreamcast",
+	42391: "Sega Game Gear",
+	42392: "Microsoft Xbox",
+	42393: "Microsoft Xbox 360",
+	42394: "Microsoft Xbox One",
+	42398: "Commodore (Other)",
+	42400: "Commodore VIC-20",
+	42402: "Commodore 64",
+	42403: "Commodore 128",
+	42405: "Amiga",
+	42407: "Atari (other)",
+	42408: "Atari 2600",
+	42412: "Atari Jaguar",
+	42413: "Atari ST",
+	42416: "Sinclair (other)",
+	42418: "ZX Spectrum",
+	42422: "Acorn (other)",
+	42424: "BBC Micro",
+	42426: "Amstrad (other)",
+	42427: "Amstrad CPC",
+	42429: "Sega VMU",
+	42430: "Sega (other)",
+	42432: "Nintendo (other)",
+	42433: "Sony (other)",
+	42434: "Apple (other)",
+	42436: "MSX",
+	42437: "Microsoft (other)",
+	42438: "Flash (web)",
+	42439: "Java (web)",
+	42440: "Other (web)",
+	42512: "Other (platform)",
+	42516: "PDF",
+	42517: "Other (document)",
+};
 
 function termify(text: string) {
 	return text

@@ -42,11 +42,21 @@ interface APIEntry {
 		name: string;
 		body: string;
 		path: string;
+		love: number;
+		notes: number;
+		"notes-timestamp": string;
 		meta: {
+			"link-01"?: string,
+			"link-01-tag"?: string;
+			"link-02"?: string;
+			"link-02-tag"?: string;
+			"link-03"?: string;
+			"link-03-tag"?: string;
+			"link-04"?: string;
+			"link-04-tag"?: string;
+			"link-05"?: string;
+			"link-05-tag"?: string;
 			cover?: string;
-			love: number;
-			notes: number;
-			"notes-timestamp": string;
 		}
 	}[];
 }
@@ -283,7 +293,7 @@ function createEntryJSON(issue: number, apiEntry: APIEntry, apiUser: APIUser) {
 		platforms: []
 	};
 
-	// entry.platforms = arrayFromSet(detectPlatforms(entry));
+	entry.platforms = arrayFromSet(detectPlatforms(entry));
 
 	return entry;
 }
