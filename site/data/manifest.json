@@ -1,5 +1,6 @@
 {
 	"issues": [
+		{ "issue": 39, "updatedAt": "2017-08-04T12:00:00.000Z" },
 		{ "issue": 38, "updatedAt": "2017-05-04T12:00:00.000Z" },
 		{ "issue": 37, "updatedAt": "2017-01-05T11:00:00.000Z" },
 		{ "issue": 36, "updatedAt": "2016-11-12T12:00:00.000Z" },
