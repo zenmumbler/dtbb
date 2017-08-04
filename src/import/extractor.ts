@@ -93,9 +93,11 @@ interface APIEntry {
 	node: {
 		id: number;
 		author: number;
+		parent: number;
+		superparent: number;
 		type: "item";
 		subtype: "game";
-		subsubtype: "compo" | "jam";
+		subsubtype: "compo" | "jam" | "unfinished";
 		published: string;
 		created: string;
 		modified: string;
@@ -328,6 +330,10 @@ function createEntryJSON(issue: number, apiEntry: APIEntry, apiUser: APIUser) {
 	const author = apiUser.node[0];
 	const eventBaseURL = "https://ldjam.com";
 
+	if (doc.subsubtype === "unfinished" || doc.parent === 9405) {
+		return undefined;
+	}
+
 	const refs = extractMDRefs(doc.body);
 	const screens = refs.images.map(imgRef => resolveLDJImage(imgRef));
 
@@ -384,6 +390,7 @@ interface ExtractState {
 	source: EntryListing;
 	stats: IssueStats;
 	entries: Entry[];
+	skippedCount: number;
 }
 
 
@@ -494,12 +501,18 @@ function tryNext(state: ExtractState): Promise<void> {
 
 		const p: Promise<void> = extractEntryFromPage(state, link, thumb)
 			.then(entry => {
-				state.entries.push(entry);
-				updateStats(state.stats, entry);
+				if (entry) {
+					state.entries.push(entry);
+					updateStats(state.stats, entry);
+				}
+				else {
+					state.skippedCount += 1;
+				}
 
-				const totalCount = state.source.links.length + state.entries.length;
-				if (state.entries.length % 10 === 0) {
-					console.info((100 * (state.entries.length / totalCount)).toFixed(1) + "%");
+				const totalCount = state.source.links.length + state.entries.length + state.skippedCount;
+				const curCount = state.entries.length + state.skippedCount;
+				if (curCount % 10 === 0) {
+					console.info((100 * (curCount / totalCount)).toFixed(1) + "%");
 				}
 
 				return unqueueSelf(p);
@@ -535,7 +548,8 @@ export function extractEntries(issue: number) {
 				jamEntries: 0,
 				ratingDistribution: {}
 			},
-			entries: []
+			entries: [],
+			skippedCount: 0
 		});
 	});
 }
