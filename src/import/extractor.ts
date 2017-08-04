@@ -2,7 +2,7 @@
 // by Arthur Langereis - @zenmumbler
 
 import * as fs from "fs";
-import * as jsdom from "jsdom";
+import { JSDOM } from "jsdom";
 
 import { EntryListing, Entry, Catalog, EntryRating, RatingArea, IssueStats, IssueThemeNames } from "../lib/catalog";
 import { listingPath, issueBaseURL, entryPageFilePath, userJSONFilePath, entriesCatalogPath, timeoutPromise } from "./importutil";
@@ -13,7 +13,7 @@ import { detectPlatforms } from "./detect_platform";
 function entryDoc(issue: number, uid: number): Promise<Document> {
 	return new Promise<Document>(
 		(resolve, reject) => {
-			jsdom.env(entryPageFilePath(issue, uid), (errors: Error[], window: Window) => {
+			JSDOM.fromFile(entryPageFilePath(issue, uid), (errors: Error[], window: Window) => {
 				if (errors && errors.length) {
 					reject(errors);
 				}
