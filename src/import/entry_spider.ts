@@ -21,6 +21,7 @@ interface APIMinimal {
 	node: {
 		id: number;
 		author: number;
+		subsubtype: string;
 	}[];
 }
 
@@ -68,11 +69,20 @@ function load(state: EntrySpiderState) {
 					if (!error && response.statusCode === 200) {
 						if (linkType === "E" && state.issue >= 38) {
 							const json = JSON.parse(body) as APIMinimal;
-							if (json && json.node && json.node[0] && json.node[0].author) {
-								state.urlList.push(`U|${issueBaseURL(state.issue)}/get/${json.node[0].author}`);
-							}
-							else {
-								console.info(`No author found for gid: ${gid}`);
+							if (json && json.node && json.node[0] && json) {
+								if (json.node[0].subsubtype !== "unfinished") {
+									if (json.node[0].author) {
+										state.urlList.push(`U|${issueBaseURL(state.issue)}/get/${json.node[0].author}`);
+									}
+									else {
+										console.info(`No author found for gid: ${gid}`);
+									}
+								}
+								else {
+									// unfinished entry, skip
+									resolve(next());
+									return;
+								}
 							}
 						}
 
