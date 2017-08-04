@@ -501,6 +501,15 @@ function detectPlatforms(entry) {
             mergeSet(plats, dks);
         }
     }
+    if (plats.size === 0 && entry.ld_issue >= 38) {
+        for (var _b = 0, descTerms_2 = descTerms; _b < descTerms_2.length; _b++) {
+            var term = descTerms_2[_b];
+            var dks = descriptionPlatformMapping[term];
+            if (dks) {
+                mergeSet(plats, dks);
+            }
+        }
+    }
     if (plats.size === 0) {
         if ((urlTerms.indexOf("itch") > -1) ||
             (descTerms.indexOf("wasd") > -1) ||
@@ -746,6 +755,9 @@ function createEntryJSON(issue, apiEntry, apiUser) {
     var doc = apiEntry.node[0];
     var author = apiUser.node[0];
     var eventBaseURL = "https://ldjam.com";
+    if (doc.subsubtype === "unfinished" || doc.parent === 9405) {
+        return undefined;
+    }
     var refs = extractMDRefs(doc.body);
     var screens = refs.images.map(function (imgRef) { return resolveLDJImage(imgRef); });
     var links = [
@@ -873,11 +885,17 @@ function tryNext(state) {
         };
         var p_1 = extractEntryFromPage(state, link_1, thumb)
             .then(function (entry) {
-            state.entries.push(entry);
-            updateStats(state.stats, entry);
-            var totalCount = state.source.links.length + state.entries.length;
-            if (state.entries.length % 10 === 0) {
-                console.info((100 * (state.entries.length / totalCount)).toFixed(1) + "%");
+            if (entry) {
+                state.entries.push(entry);
+                updateStats(state.stats, entry);
+            }
+            else {
+                state.skippedCount += 1;
+            }
+            var totalCount = state.source.links.length + state.entries.length + state.skippedCount;
+            var curCount = state.entries.length + state.skippedCount;
+            if (curCount % 10 === 0) {
+                console.info((100 * (curCount / totalCount)).toFixed(1) + "%");
             }
             return unqueueSelf_1(p_1);
         })
@@ -906,7 +924,8 @@ function extractEntries(issue) {
                 jamEntries: 0,
                 ratingDistribution: {}
             },
-            entries: []
+            entries: [],
+            skippedCount: 0
         });
     });
 }

@@ -67,6 +67,7 @@ gulp.task("app", ["compile-app"], function() {
 
 
 // compile worker script
+/* tslint:disable */
 const tscWorkers = tsc.createProject("src/workers/tsconfig.json");
 gulp.task("compile-workers", function() {
 	const tsResult = tscWorkers.src().pipe(tscWorkers());

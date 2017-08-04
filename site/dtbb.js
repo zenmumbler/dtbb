@@ -64,7 +64,8 @@ var IssueThemeNames = {
     35: "Shapeshift",
     36: "Ancient Technology",
     37: "One Room",
-    38: "A Small World"
+    38: "A Small World",
+    39: "Running out of Power"
 };
 function localThumbURL(issue, ldThumbURL) {
     var fileName = ldThumbURL.split("/").splice(-1);
@@ -1413,7 +1414,7 @@ var FilterControls = (function () {
         watchableBinding(state_.issue, "select[data-filter=issue]", containerElem_)
             .broadcast(function (issue) {
             state_.setIssue(issue);
-            if (issue > 37) {
+            if (issue === 38) {
                 state_.setPlatform(0);
             }
             elem("select[data-filter=platform]").disabled = issue > 37;
@@ -1427,7 +1428,7 @@ var FilterControls = (function () {
         state_.loading.watch(function (loading) {
             if (!loading) {
                 elem("#terms").focus();
-                elem("select[data-filter=platform]").disabled = state_.issue.get() > 37;
+                elem("select[data-filter=platform]").disabled = state_.issue.get() === 38;
             }
         });
     }
@@ -1474,7 +1475,7 @@ document.addEventListener("DOMContentLoaded", function (_) {
     new GamesGrid(elem(".entries"), state);
     new FilterControls(elem(".filters"), state);
     new LoadingWall(elem("#smokedglass"), state);
-    state.setIssue(38);
+    state.setIssue(39);
     console.info("Hi! If you ever need to delete all local data cached by DTBB just run: `dtbb.reset()` in your console while on this page. Have fun!");
 });
 
