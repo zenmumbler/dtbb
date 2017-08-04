@@ -119,6 +119,15 @@ export function detectPlatforms(entry: Entry) {
 		}
 	}
 
+	if (plats.size === 0 && entry.ld_issue >= 38) {
+		for (const term of descTerms) {
+			const dks = descriptionPlatformMapping[term];
+			if (dks) {
+				mergeSet(plats, dks);
+			}
+		}
+	}
+
 	if (plats.size === 0) {
 		// last resort, try itch on url and keyboard refs in description to try and add a generic platform
 		if (
