@@ -25,6 +25,68 @@ function entryDoc(issue: number, uid: number): Promise<Document> {
 	);
 }
 
+const apiLinkTypeDescription: { [tag: string]: string | undefined } = {
+	42332: "Source code",
+	42336: "HTML5 web",
+	42337: "Windows",
+	42339: "macOS",
+	42341: "Linux",
+	42342: "Android",
+	42346: "iOS",
+	42348: "PlayStation PS1 PSX",
+	42349: "PlayStation 2 PS2",
+	42350: "PlayStation 3 PS3",
+	42351: "PlayStation 4 PS4",
+	42352: "PlayStation Portable PSP",
+	42356: "PlayStation Vita PS Vita",
+	42361: "Nintendo Entertainment System Famicom",
+	42362: "Super Nintendo Famicom",
+	42365: "Nintendo 64 N64",
+	42368: "Nintendo GameCube",
+	42370: "Nintendo Wii",
+	42371: "Nintendo Wii U",
+	42372: "Nintendo Switch",
+	42374: "Nintendo GameBoy",
+	42376: "GameBoy Advance",
+	42377: "Nintendo DS",
+	42382: "Nintendo 3DS",
+	42386: "Sega Master System",
+	42387: "Sega Genesis / Mega Drive",
+	42389: "Sega Saturn",
+	42390: "Sega Dreamcast",
+	42391: "Sega Game Gear",
+	42392: "Microsoft Xbox",
+	42393: "Microsoft Xbox 360",
+	42394: "Microsoft Xbox One",
+	42398: "Commodore",
+	42400: "Commodore VIC-20",
+	42402: "Commodore 64",
+	42403: "Commodore 128",
+	42405: "Amiga",
+	42407: "Atari",
+	42408: "Atari 2600",
+	42412: "Atari Jaguar",
+	42413: "Atari ST",
+	42416: "Sinclair",
+	42418: "ZX Spectrum",
+	42422: "Acorn",
+	42424: "BBC Micro",
+	42426: "Amstrad",
+	42427: "Amstrad CPC",
+	42429: "Sega VMU",
+	42430: "Sega",
+	42432: "Nintendo",
+	42433: "Sony",
+	42434: "Apple",
+	42436: "MSX",
+	42437: "Microsoft",
+	42438: "Flash web",
+	42439: "Java web",
+	42440: "web",
+	42512: "Other",
+	42516: "PDF",
+	42517: "Document",
+};
 
 interface APIEntry {
 	status: number;
@@ -269,6 +331,16 @@ function createEntryJSON(issue: number, apiEntry: APIEntry, apiUser: APIUser) {
 	const refs = extractMDRefs(doc.body);
 	const screens = refs.images.map(imgRef => resolveLDJImage(imgRef));
 
+	const links = [
+		{ label: doc.meta["link-01-tag"]!, url: doc.meta["link-01"]! },
+		{ label: doc.meta["link-02-tag"]!, url: doc.meta["link-02"]! },
+		{ label: doc.meta["link-03-tag"]!, url: doc.meta["link-03"]! },
+		{ label: doc.meta["link-04-tag"]!, url: doc.meta["link-04"]! },
+		{ label: doc.meta["link-05-tag"]!, url: doc.meta["link-05"]! },
+	]
+	.filter(l => l.url !== undefined && l.label !== undefined)
+	.map(l => { l.label = apiLinkTypeDescription[l.label!] || "Other"; return l; });
+
 	const entry: Entry = {
 		ld_issue: issue,
 
@@ -287,7 +359,7 @@ function createEntryJSON(issue: number, apiEntry: APIEntry, apiUser: APIUser) {
 		},
 
 		screens,
-		links: refs.links,
+		links,
 
 		ratings: [],
 		platforms: []
