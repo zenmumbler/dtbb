@@ -179,6 +179,26 @@ function load(state) {
             .then(function (_) { return load(state); });
     };
     if (fs.existsSync(filePath)) {
+        if (linkType === "E") {
+            return new Promise(function (resolve) {
+                fs.readFile(filePath, "utf8", function (err, data) {
+                    if (err) {
+                        state.urlList.push("E|" + issueBaseURL(state.issue) + "/get/" + gid);
+                    }
+                    else {
+                        var json = JSON.parse(data);
+                        for (var _i = 0, _a = json.node[0].link.author; _i < _a.length; _i++) {
+                            var author = _a[_i];
+                            if (!state.authorIDs.has(author)) {
+                                state.authorIDs.add(author);
+                                state.urlList.push("U|" + issueBaseURL(state.issue) + "/get/" + author);
+                            }
+                        }
+                    }
+                    resolve(next(1));
+                });
+            });
+        }
         return next(1);
     }
     else {
@@ -191,17 +211,12 @@ function load(state) {
                     if (linkType === "E" && state.issue >= 38) {
                         var json = JSON.parse(body);
                         if (json && json.node && json.node[0] && json) {
-                            if (json.node[0].subsubtype !== "unfinished") {
-                                if (json.node[0].author) {
-                                    state.urlList.push("U|" + issueBaseURL(state.issue) + "/get/" + json.node[0].author);
+                            for (var _i = 0, _a = json.node[0].link.author; _i < _a.length; _i++) {
+                                var author = _a[_i];
+                                if (!state.authorIDs.has(author)) {
+                                    state.authorIDs.add(author);
+                                    state.urlList.push("U|" + issueBaseURL(state.issue) + "/get/" + author);
                                 }
-                                else {
-                                    console.info("No author found for gid: " + gid);
-                                }
-                            }
-                            else {
-                                resolve(next());
-                                return;
                             }
                         }
                     }
@@ -252,7 +267,8 @@ function fetchEntryPages(issue) {
                     index: 0,
                     urlList: links,
                     entriesWritten: 0,
-                    failures: 0
+                    failures: 0,
+                    authorIDs: new Set()
                 });
             })
                 .catch(function (dirErr) {

@@ -15,13 +15,17 @@ interface EntrySpiderState {
 	urlList: string[];
 	entriesWritten: number;
 	failures: number;
+	authorIDs: Set<number>;
 }
 
 interface APIMinimal {
 	node: {
 		id: number;
-		author: number;
+		// author: number;
 		subsubtype: string;
+		link: {
+			author: number[];
+		}
 	}[];
 }
 
@@ -56,6 +60,26 @@ function load(state: EntrySpiderState) {
 	};
 
 	if (fs.existsSync(filePath)) {
+		if (linkType === "E") {
+			return new Promise<void>(resolve => {
+				fs.readFile(filePath, "utf8", (err, data) => {
+					if (err) {
+						state.urlList.push(`E|${issueBaseURL(state.issue)}/get/${gid}`);
+					}
+					else {
+						const json = JSON.parse(data) as APIMinimal;
+						for (const author of json.node[0].link.author) {
+							if (! state.authorIDs.has(author)) {
+								state.authorIDs.add(author);
+								state.urlList.push(`U|${issueBaseURL(state.issue)}/get/${author}`);
+							}
+						}
+					}
+					resolve(next(1));
+				});
+			});
+		}
+
 		return next(1);
 	}
 	else {
@@ -70,18 +94,11 @@ function load(state: EntrySpiderState) {
 						if (linkType === "E" && state.issue >= 38) {
 							const json = JSON.parse(body) as APIMinimal;
 							if (json && json.node && json.node[0] && json) {
-								if (json.node[0].subsubtype !== "unfinished") {
-									if (json.node[0].author) {
-										state.urlList.push(`U|${issueBaseURL(state.issue)}/get/${json.node[0].author}`);
+								for (const author of json.node[0].link.author) {
+									if (! state.authorIDs.has(author)) {
+										state.authorIDs.add(author);
+										state.urlList.push(`U|${issueBaseURL(state.issue)}/get/${author}`);
 									}
-									else {
-										console.info(`No author found for gid: ${gid}`);
-									}
-								}
-								else {
-									// unfinished entry, skip
-									resolve(next());
-									return;
 								}
 							}
 						}
@@ -140,7 +157,8 @@ export function fetchEntryPages(issue: number) {
 						index: 0,
 						urlList: links,
 						entriesWritten: 0,
-						failures: 0
+						failures: 0,
+						authorIDs: new Set()
 					});
 				})
 				.catch(dirErr => {
