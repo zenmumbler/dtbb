@@ -1,4 +1,4 @@
-(function (exports) {
+var dtbb = (function (exports) {
 'use strict';
 
 function elem(sel, base) {
@@ -1481,4 +1481,6 @@ document.addEventListener("DOMContentLoaded", function (_) {
 exports.state = state;
 exports.reset = reset;
 
-}((this.dtbb = this.dtbb || {})));
+return exports;
+
+}({}));
