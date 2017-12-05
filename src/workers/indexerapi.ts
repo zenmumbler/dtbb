@@ -104,7 +104,7 @@ export class IndexerAPI {
 
 	private promisedCall<T extends Response>(req: Request, progress?: (ratio: number) => void) {
 		return new Promise<T>((resolve, reject) => {
-			this.promFuncs_.set(req.reqIndex, { resolve, reject, progress });
+			this.promFuncs_.set(req.reqIndex, { resolve: resolve as any, reject, progress });
 			this.worker_.postMessage(req);
 		});
 	}
