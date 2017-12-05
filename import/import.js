@@ -46,7 +46,16 @@ function issueIndexPageURL(issue, offset) {
         return issueBaseURL(issue) + "/?action=preview&start=" + offset;
     }
     else {
-        return issueBaseURL(issue) + "/feed/1/all/item/game?offset=" + offset + "}&limit=24";
+        var issueFeedID = {
+            38: 9405,
+            39: 32802,
+            40: 49883
+        };
+        var feed = issueFeedID[issue];
+        if (!feed) {
+            throw new Error("You have to update the issueFeedID mapping for issue " + issue);
+        }
+        return issueBaseURL(issue) + "/feed/" + feed + "/smart+parent/item/game/compo+jam?offset=" + offset + "}&limit=24";
     }
 }
 function ensureDirectory(dir) {
