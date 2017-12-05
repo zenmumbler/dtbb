@@ -539,13 +539,11 @@ function detectPlatforms(entry) {
 
 function entryDoc(issue, uid) {
     return new Promise(function (resolve, reject) {
-        jsdom.JSDOM.fromFile(entryPageFilePath(issue, uid), function (errors, window) {
-            if (errors && errors.length) {
-                reject(errors);
-            }
-            else {
-                resolve(window.document);
-            }
+        jsdom.JSDOM.fromFile(entryPageFilePath(issue, uid))
+            .then(function (jsdom$$1) {
+            resolve(jsdom$$1.window.document);
+        }, function (err) {
+            reject(err);
         });
     });
 }
@@ -975,7 +973,7 @@ function runt() {
 }
 
 var MIN_ISSUE = 15;
-var MAX_ISSUE = 39;
+var MAX_ISSUE = 50;
 function getIssueRange(issueSA, issueSB) {
     var issueFrom = issueSA === undefined ? 0 : parseInt(issueSA);
     var issueTo = issueSB === undefined ? issueFrom : parseInt(issueSB);
