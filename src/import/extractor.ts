@@ -13,13 +13,12 @@ import { detectPlatforms } from "./detect_platform";
 function entryDoc(issue: number, uid: number): Promise<Document> {
 	return new Promise<Document>(
 		(resolve, reject) => {
-			JSDOM.fromFile(entryPageFilePath(issue, uid), (errors: Error[], window: Window) => {
-				if (errors && errors.length) {
-					reject(errors);
-				}
-				else {
-					resolve(window.document);
-				}
+			JSDOM.fromFile(entryPageFilePath(issue, uid))
+			.then((jsdom: JSDOM) => {
+				resolve(jsdom.window.document);
+			},
+			(err) => {
+				reject(err);
 			});
 		}
 	);
