@@ -23,7 +23,7 @@ interface APIMinimal {
 		id: number;
 		// author: number;
 		subsubtype: string;
-		link: {
+		meta: {
 			author: number[];
 		}
 	}[];
@@ -68,10 +68,12 @@ function load(state: EntrySpiderState) {
 					}
 					else {
 						const json = JSON.parse(data) as APIMinimal;
-						for (const author of json.node[0].link.author) {
-							if (! state.authorIDs.has(author)) {
-								state.authorIDs.add(author);
-								state.urlList.push(`U|${issueBaseURL(state.issue)}/get/${author}`);
+						if (json.node[0] && json.node[0].meta) {
+							for (const author of json.node[0].meta.author) {
+								if (! state.authorIDs.has(author)) {
+									state.authorIDs.add(author);
+									state.urlList.push(`U|${issueBaseURL(state.issue)}/get/${author}`);
+								}
 							}
 						}
 					}
@@ -93,8 +95,8 @@ function load(state: EntrySpiderState) {
 					if (!error && response.statusCode === 200) {
 						if (linkType === "E" && state.issue >= 38) {
 							const json = JSON.parse(body) as APIMinimal;
-							if (json && json.node && json.node[0] && json) {
-								for (const author of json.node[0].link.author) {
+							if (json && json.node && json.node[0] && json.node[0].meta) {
+								for (const author of json.node[0].meta.author) {
 									if (! state.authorIDs.has(author)) {
 										state.authorIDs.add(author);
 										state.urlList.push(`U|${issueBaseURL(state.issue)}/get/${author}`);
