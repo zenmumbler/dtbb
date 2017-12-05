@@ -42,7 +42,7 @@ export function issueBaseURL(issue: number) {
 		return `http://ludumdare.com/compo/ludum-dare-${issue}/`;
 	}
 	else {
-		return `https://api.ldjam.com/vx/node/`; // issue does not seem to factor into the new API yet
+		return `https://api.ldjam.com/vx/node/`;
 	}
 }
 
@@ -51,7 +51,19 @@ export function issueIndexPageURL(issue: number, offset: number) {
 		return `${issueBaseURL(issue)}/?action=preview&start=${offset}`; // itemCount is fixed at 24
 	}
 	else {
-		return `${issueBaseURL(issue)}/feed/1/all/item/game?offset=${offset}}&limit=24`;
+		// a direct map of issue to feed indexes
+		// this can be retrieved with an API call, but I can't be arsed
+		// so I need to update this every LD, 3 times a year. Good enough.
+		const issueFeedID: { [i: number]: number } = {
+			38: 9405,
+			39: 32802,
+			40: 49883
+		};
+		const feed = issueFeedID[issue];
+		if (! feed) {
+			throw new Error(`You have to update the issueFeedID mapping for issue ${issue}`);
+		}
+		return `${issueBaseURL(issue)}/feed/${feed}/smart+parent/item/game/compo+jam?offset=${offset}}&limit=24`;
 	}
 }
 
