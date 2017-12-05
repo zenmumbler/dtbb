@@ -1,6 +1,6 @@
 // gulpfile.js - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016-7 by Arthur Langereis (@zenmumbler)
-// @ts-check
+/* tslint:disable */
 
 const gulp = require("gulp");
 const rollup = require("rollup-stream");
@@ -43,7 +43,7 @@ gulp.task("compile-app", function() {
 // bundle main site code
 gulp.task("app", ["compile-app"], function() {
 	return rollup({
-		entry: "site/build/app/app/app.js",
+		input: "site/build/app/app/app.js",
 		format: "iife",
 		moduleName: "dtbb",
 		plugins: [
@@ -67,7 +67,6 @@ gulp.task("app", ["compile-app"], function() {
 
 
 // compile worker script
-/* tslint:disable */
 const tscWorkers = tsc.createProject("src/workers/tsconfig.json");
 gulp.task("compile-workers", function() {
 	const tsResult = tscWorkers.src().pipe(tscWorkers());
@@ -77,7 +76,7 @@ gulp.task("compile-workers", function() {
 // bundle site worker
 gulp.task("workers", ["compile-workers"], function() {
 	return rollup({
-		entry: "site/build/workers/workers/task_indexer.js",
+		input: "site/build/workers/workers/task_indexer.js",
 		format: "iife",
 		plugins: [
 			nodeResolve({
@@ -113,7 +112,7 @@ gulp.task("compile-import", function() {
 // bundle import node app
 gulp.task("import", ["compile-import"], function() {
 	return rollup({
-		entry: "import/build/import/import.js",
+		input: "import/build/import/import.js",
 		format: "cjs",
 		external: ["fs", "mkdirp", "request", "jsdom", path.resolve("import/build/import/request"), path.resolve("import/build/import/mkdirp")]
 	})
