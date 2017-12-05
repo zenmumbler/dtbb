@@ -196,11 +196,13 @@ function load(state) {
                     }
                     else {
                         var json = JSON.parse(data);
-                        for (var _i = 0, _a = json.node[0].link.author; _i < _a.length; _i++) {
-                            var author = _a[_i];
-                            if (!state.authorIDs.has(author)) {
-                                state.authorIDs.add(author);
-                                state.urlList.push("U|" + issueBaseURL(state.issue) + "/get/" + author);
+                        if (json.node[0] && json.node[0].meta) {
+                            for (var _i = 0, _a = json.node[0].meta.author; _i < _a.length; _i++) {
+                                var author = _a[_i];
+                                if (!state.authorIDs.has(author)) {
+                                    state.authorIDs.add(author);
+                                    state.urlList.push("U|" + issueBaseURL(state.issue) + "/get/" + author);
+                                }
                             }
                         }
                     }
@@ -219,8 +221,8 @@ function load(state) {
                 if (!error && response.statusCode === 200) {
                     if (linkType === "E" && state.issue >= 38) {
                         var json = JSON.parse(body);
-                        if (json && json.node && json.node[0] && json) {
-                            for (var _i = 0, _a = json.node[0].link.author; _i < _a.length; _i++) {
+                        if (json && json.node && json.node[0] && json.node[0].meta) {
+                            for (var _i = 0, _a = json.node[0].meta.author; _i < _a.length; _i++) {
                                 var author = _a[_i];
                                 if (!state.authorIDs.has(author)) {
                                     state.authorIDs.add(author);
