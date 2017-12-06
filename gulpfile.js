@@ -45,7 +45,7 @@ gulp.task("app", ["compile-app"], function() {
 	return rollup({
 		input: "site/build/app/app/app.js",
 		format: "iife",
-		moduleName: "dtbb",
+		name: "dtbb",
 		plugins: [
 			nodeResolve({
 				jsnext: true,
