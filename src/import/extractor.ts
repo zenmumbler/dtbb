@@ -323,15 +323,24 @@ function extractMDRefs(text: string): MDRefs {
 	return refs;
 }
 
+const deduper = new Set<string>();
 
 function createEntryJSON(issue: number, apiEntry: APIEntry, apiUser: APIUser) {
 	const doc = apiEntry.node[0];
 	const author = apiUser.node[0];
 	const eventBaseURL = "https://ldjam.com";
 
-	if (doc.subsubtype === "unfinished" || doc.parent === 9405) {
+	if (doc.subsubtype === "unfinished") {
 		return undefined;
 	}
+
+	const uniqueRef = doc.name + author.id;
+	if (deduper.has(uniqueRef)) {
+		console.info(`skip duplicate: ${uniqueRef}`);
+		// starting with LD40, quite a few duplicates showed up
+		return undefined;
+	}
+	deduper.add(uniqueRef);
 
 	const refs = extractMDRefs(doc.body);
 	const screens = refs.images.map(imgRef => resolveLDJImage(imgRef));
