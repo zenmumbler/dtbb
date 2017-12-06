@@ -393,7 +393,8 @@ var IssueThemeNames = {
     36: "Ancient Technology",
     37: "One Room",
     38: "A Small World",
-    39: "Running out of Power"
+    39: "Running out of Power",
+    40: "The more you have, the worse it is"
 };
 
 function mergeSet(dest, source) {

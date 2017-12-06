@@ -65,7 +65,8 @@ var IssueThemeNames = {
     36: "Ancient Technology",
     37: "One Room",
     38: "A Small World",
-    39: "Running out of Power"
+    39: "Running out of Power",
+    40: "The more you have, the worse it is"
 };
 function localThumbURL(issue, ldThumbURL) {
     var fileName = ldThumbURL.split("/").splice(-1);
@@ -1475,7 +1476,7 @@ document.addEventListener("DOMContentLoaded", function (_) {
     new GamesGrid(elem(".entries"), state);
     new FilterControls(elem(".filters"), state);
     new LoadingWall(elem("#smokedglass"), state);
-    state.setIssue(39);
+    state.setIssue(40);
     console.info("Hi! If you ever need to delete all local data cached by DTBB just run: `dtbb.reset()` in your console while on this page. Have fun!");
 });
 
