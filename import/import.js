@@ -761,13 +761,20 @@ function extractMDRefs(text) {
     }
     return refs;
 }
+var deduper = new Set();
 function createEntryJSON(issue, apiEntry, apiUser) {
     var doc = apiEntry.node[0];
     var author = apiUser.node[0];
     var eventBaseURL = "https://ldjam.com";
-    if (doc.subsubtype === "unfinished" || doc.parent === 9405) {
+    if (doc.subsubtype === "unfinished") {
         return undefined;
     }
+    var uniqueRef = doc.name + author.id;
+    if (deduper.has(uniqueRef)) {
+        console.info("skip duplicate: " + uniqueRef);
+        return undefined;
+    }
+    deduper.add(uniqueRef);
     var refs = extractMDRefs(doc.body);
     var screens = refs.images.map(function (imgRef) { return resolveLDJImage(imgRef); });
     var links = [
