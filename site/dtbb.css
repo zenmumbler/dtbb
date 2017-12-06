@@ -103,11 +103,11 @@ a {
 }
 
 .entry > a.compo {
-	border-right: 8px solid #45B236;
+	border-right: 8px solid #f79122;
 }
 
 .entry > a.jam {
-	border-right: 8px solid #3C4CFF;
+	border-right: 8px solid #ee5533;
 }
 
 .entry > a:hover {
@@ -228,7 +228,7 @@ a {
 	font-size: 14px;
 	padding: 5px 12px 1px 12px;
 	cursor: pointer;
-	border-bottom-color: #45B236;
+	border-bottom-color: #f79122;
 	border-style: solid;
 	border-width: 0 0 4px 0;
 	background-color: white;
@@ -240,30 +240,30 @@ a {
 #controls label.left {
 	border-top-left-radius: 4px;
 	border-bottom-left-radius: 4px;
-	border-bottom-color: #CC5B13;
+	border-bottom-color: #4880bd;
 }
 
 #controls label.right {
 	border-top-right-radius: 4px;
 	border-bottom-right-radius: 4px;
-	border-bottom-color: #3C4CFF;
+	border-bottom-color: #ee5533;
 }
 
 #controls input:checked + label {
-	background-color: #45B236;
-	border-color: #45B236;
+	background-color: #f79122;
+	border-color: #f79122;
 	color: white;
 }
 
 #controls input:checked + label.left {
-	background-color: #CC5B13;
-	border-color: #CC5B13;
+	background-color: #4880bd;
+	border-color: #4880bd;
 	color: white;
 }
 
 #controls input:checked + label.right {
-	background-color: #3C4CFF;
-	border-color: #3C4CFF;
+	background-color: #ee5533;
+	border-color: #ee5533;
 	color: white;
 }
 
@@ -288,7 +288,7 @@ a {
 	left: 50vw;
 	margin-left: -220px;
 	background: linear-gradient(to bottom, #202022 0%, #171a22 100%);
-	border-right: 12px solid #CC5B13;
+	border-right: 12px solid #4880bd;
 	color: white;
 	transition: opacity 0.5s ease-out;
 	opacity: 0;
@@ -314,7 +314,7 @@ a {
 	position: absolute;
 	left: 0;
 	top: 0;
-	background-color: #45B236;
+	background-color: #f79122;
 	height: 8px;
 	width: 0;
 }
