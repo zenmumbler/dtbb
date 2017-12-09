@@ -5,7 +5,7 @@ import * as fs from "fs";
 import * as http from "http";
 import request from "request";
 
-import { ensureDirectory, listingDirPath, listingPath, issueIndexPageURL, timeoutPromise } from "./importutil";
+import { ensureDirectory, listingDirPath, listingPath, issueIndexPageURL, timeoutPromise, issueMinMonth } from "./importutil";
 
 const LD_PAGE_SIZE = 24;
 const DELAY_BETWEEN_REQUESTS_MS = 20;
@@ -52,8 +52,11 @@ function processBodyNew(state: SpiderState, body: string): boolean {
 	const listingJSON = JSON.parse(body) as APIListing;
 
 	if (listingJSON && listingJSON.status === 200 && listingJSON.feed) {
-		const ids = listingJSON.feed.map(g => "" + g.id);
+		const ids = listingJSON.feed.filter(g => g.modified.indexOf(issueMinMonth(state.issue)) === 0).map(g => "" + g.id);
 		state.allLinks = state.allLinks.concat(ids);
+		if (ids.length < listingJSON.feed.length) {
+			console.info(`skipping ${listingJSON.feed.length - ids.length} entries from older LD.`);
+		}
 
 		return listingJSON.feed.length === 0;
 	}

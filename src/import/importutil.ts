@@ -46,24 +46,39 @@ export function issueBaseURL(issue: number) {
 	}
 }
 
+export function issueFeedID(issue: number) {
+	// a direct map of issue to feed indexes
+	// this can be retrieved with an API call, but I can't be arsed
+	// so I need to update this every LD, 3 times a year. Good enough.
+	const issue2Feed: { [i: number]: number } = {
+		38: 9405,
+		39: 32802,
+		40: 49883
+	};
+	return issue2Feed[issue];
+}
+
+export function issueMinMonth(issue: number) {
+	// a direct map of issue to minimum month of issuage
+	// this is needed for now as the 'all' filter on listings ignores the feed ID...
+	const issue2Date: { [i: number]: string } = {
+		38: "2017-04",
+		39: "2017-08",
+		40: "2017-12"
+	};
+	return issue2Date[issue];
+}
+
 export function issueIndexPageURL(issue: number, offset: number) {
 	if (issue <= 37) {
 		return `${issueBaseURL(issue)}/?action=preview&start=${offset}`; // itemCount is fixed at 24
 	}
 	else {
-		// a direct map of issue to feed indexes
-		// this can be retrieved with an API call, but I can't be arsed
-		// so I need to update this every LD, 3 times a year. Good enough.
-		const issueFeedID: { [i: number]: number } = {
-			38: 9405,
-			39: 32802,
-			40: 49883
-		};
-		const feed = issueFeedID[issue];
+		const feed = issueFeedID(issue);
 		if (! feed) {
 			throw new Error(`You have to update the issueFeedID mapping for issue ${issue}`);
 		}
-		return `${issueBaseURL(issue)}/feed/${feed}/smart+parent/item/game/compo+jam?offset=${offset}}&limit=24`;
+		return `${issueBaseURL(issue)}/feed/${feed}/all/item/game/compo+jam?offset=${offset}}&limit=24`;
 	}
 }
 

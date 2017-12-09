@@ -5,7 +5,7 @@ import * as fs from "fs";
 import { JSDOM } from "jsdom";
 
 import { EntryListing, Entry, Catalog, EntryRating, RatingArea, IssueStats, IssueThemeNames } from "../lib/catalog";
-import { listingPath, issueBaseURL, entryPageFilePath, userJSONFilePath, entriesCatalogPath, timeoutPromise } from "./importutil";
+import { listingPath, issueFeedID, issueBaseURL, entryPageFilePath, userJSONFilePath, entriesCatalogPath, timeoutPromise } from "./importutil";
 import { arrayFromSet } from "../lib/setutil";
 import { detectPlatforms } from "./detect_platform";
 
@@ -330,14 +330,14 @@ function createEntryJSON(issue: number, apiEntry: APIEntry, apiUser: APIUser) {
 	const author = apiUser.node[0];
 	const eventBaseURL = "https://ldjam.com";
 
-	if (doc.subsubtype === "unfinished") {
+	if (doc.subsubtype === "unfinished" || doc.parent !== issueFeedID(issue)) {
 		return undefined;
 	}
 
 	const uniqueRef = doc.name + author.id;
 	if (deduper.has(uniqueRef)) {
-		console.info(`skip duplicate: ${uniqueRef}`);
-		// starting with LD40, quite a few duplicates showed up
+		// this should not happen unless I've screwed up in the listing fetcher
+		console.info(`skipped duplicate: ${uniqueRef}`);
 		return undefined;
 	}
 	deduper.add(uniqueRef);
