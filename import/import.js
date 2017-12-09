@@ -41,21 +41,32 @@ function issueBaseURL(issue) {
         return "https://api.ldjam.com/vx/node/";
     }
 }
+function issueFeedID(issue) {
+    var issue2Feed = {
+        38: 9405,
+        39: 32802,
+        40: 49883
+    };
+    return issue2Feed[issue];
+}
+function issueMinMonth(issue) {
+    var issue2Date = {
+        38: "2017-04",
+        39: "2017-08",
+        40: "2017-12"
+    };
+    return issue2Date[issue];
+}
 function issueIndexPageURL(issue, offset) {
     if (issue <= 37) {
         return issueBaseURL(issue) + "/?action=preview&start=" + offset;
     }
     else {
-        var issueFeedID = {
-            38: 9405,
-            39: 32802,
-            40: 49883
-        };
-        var feed = issueFeedID[issue];
+        var feed = issueFeedID(issue);
         if (!feed) {
             throw new Error("You have to update the issueFeedID mapping for issue " + issue);
         }
-        return issueBaseURL(issue) + "/feed/" + feed + "/smart+parent/item/game/compo+jam?offset=" + offset + "}&limit=24";
+        return issueBaseURL(issue) + "/feed/" + feed + "/all/item/game/compo+jam?offset=" + offset + "}&limit=24";
     }
 }
 function ensureDirectory(dir) {
@@ -99,8 +110,11 @@ function processBody(state, body) {
 function processBodyNew(state, body) {
     var listingJSON = JSON.parse(body);
     if (listingJSON && listingJSON.status === 200 && listingJSON.feed) {
-        var ids = listingJSON.feed.map(function (g) { return "" + g.id; });
+        var ids = listingJSON.feed.filter(function (g) { return g.modified.indexOf(issueMinMonth(state.issue)) === 0; }).map(function (g) { return "" + g.id; });
         state.allLinks = state.allLinks.concat(ids);
+        if (ids.length < listingJSON.feed.length) {
+            console.info("skipping " + (listingJSON.feed.length - ids.length) + " entries from older LD.");
+        }
         return listingJSON.feed.length === 0;
     }
     else {
@@ -766,12 +780,12 @@ function createEntryJSON(issue, apiEntry, apiUser) {
     var doc = apiEntry.node[0];
     var author = apiUser.node[0];
     var eventBaseURL = "https://ldjam.com";
-    if (doc.subsubtype === "unfinished") {
+    if (doc.subsubtype === "unfinished" || doc.parent !== issueFeedID(issue)) {
         return undefined;
     }
     var uniqueRef = doc.name + author.id;
     if (deduper.has(uniqueRef)) {
-        console.info("skip duplicate: " + uniqueRef);
+        console.info("skipped duplicate: " + uniqueRef);
         return undefined;
     }
     deduper.add(uniqueRef);
