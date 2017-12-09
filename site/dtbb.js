@@ -803,7 +803,7 @@ var CatalogIndexer = (function () {
         }
         else {
             var urlPrefix = (location.pathname.indexOf("/workers") > -1) ? "../" : "";
-            var entriesURL = urlPrefix + "data/ld" + issue + "_entries.json";
+            var entriesURL = urlPrefix + "data/ld" + issue + "_entries.json?d={Date.now()}";
             return loadTypedJSON(entriesURL).then(function (catalog) {
                 return _this.acceptCatalogData(catalog);
             });
