@@ -2,9 +2,9 @@
 
 function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
 
+var mkdirp = _interopDefault(require('mkdirp'));
 var fs = require('fs');
 var request = _interopDefault(require('request'));
-var mkdirp = _interopDefault(require('mkdirp'));
 var jsdom = require('jsdom');
 
 function listingDirPath() {
@@ -45,7 +45,8 @@ function issueFeedID(issue) {
     var issue2Feed = {
         38: 9405,
         39: 32802,
-        40: 49883
+        40: 49883,
+        41: 73256
     };
     return issue2Feed[issue];
 }
@@ -53,7 +54,8 @@ function issueMinMonth(issue) {
     var issue2Date = {
         38: "2017-04",
         39: "2017-08",
-        40: "2017-12"
+        40: "2017-12",
+        41: "2018-04"
     };
     return issue2Date[issue];
 }
@@ -382,6 +384,30 @@ function fetchThumbs(issue) {
     });
 }
 
+function makePlatformLookup(plats) {
+    var pl = {};
+    var shift = 0;
+    for (var _i = 0, plats_1 = plats; _i < plats_1.length; _i++) {
+        var p = plats_1[_i];
+        pl[p.key] = {
+            key: p.key,
+            label: p.label,
+            mask: 1 << shift
+        };
+        shift += 1;
+    }
+    return pl;
+}
+var Platforms = makePlatformLookup([
+    { key: "desktop", label: "Desktop" },
+    { key: "win", label: "Windows" },
+    { key: "mac", label: "MacOS" },
+    { key: "linux", label: "Linux" },
+    { key: "web", label: "Web" },
+    { key: "java", label: "Java" },
+    { key: "vr", label: "VR" },
+    { key: "mobile", label: "Mobile" },
+]);
 var IssueThemeNames = {
     15: "Caverns",
     16: "Exploration",
@@ -408,7 +434,8 @@ var IssueThemeNames = {
     37: "One Room",
     38: "A Small World",
     39: "Running out of Power",
-    40: "The more you have, the worse it is"
+    40: "The more you have, the worse it is",
+    41: "Two Incompatible Genres"
 };
 
 function mergeSet(dest, source) {
