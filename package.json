@@ -20,20 +20,23 @@
     "gulp": "^3.9.1",
     "gulp-gzip": "^1.4.0",
     "gulp-rename": "^1.2.2",
-    "gulp-sass": "^3.1.0",
-    "gulp-typescript": "^3.2.1",
+    "gulp-sass": "^4.0.1",
+    "gulp-typescript": "^4.0.2",
     "jsdom": "^11.1.0",
     "mkdirp": "^0.5.1",
     "request": "^2.81.0",
-    "rollup": "^0.52.1",
-    "rollup-plugin-commonjs": "^8.1.0",
+    "rollup": "^0.58.2",
+    "rollup-plugin-commonjs": "^9.1.0",
     "rollup-plugin-node-resolve": "^3.0.0",
     "rollup-stream": "^1.23.1",
     "typescript": "^2.4.2",
-    "vinyl-source-stream": "^1.1.0"
+    "vinyl-source-stream": "^2.0.0"
   },
   "dependencies": {
     "node-sass": "^4.5.3",
     "promised-db": "^1.0.3"
+  },
+  "resolutions": {
+    "rollup": "0.58.2"
   }
 }
