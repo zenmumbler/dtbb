@@ -44,8 +44,10 @@ gulp.task("compile-app", function() {
 gulp.task("app", ["compile-app"], function() {
 	return rollup({
 		input: "site/build/app/app/app.js",
-		format: "iife",
-		name: "dtbb",
+		output: {
+			format: "iife",
+			name: "dtbb",
+		},
 		plugins: [
 			nodeResolve({
 				jsnext: true,
@@ -77,7 +79,9 @@ gulp.task("compile-workers", function() {
 gulp.task("workers", ["compile-workers"], function() {
 	return rollup({
 		input: "site/build/workers/workers/task_indexer.js",
-		format: "iife",
+		output: {
+			format: "iife",
+		},
 		plugins: [
 			nodeResolve({
 				jsnext: true,
@@ -113,7 +117,9 @@ gulp.task("compile-import", function() {
 gulp.task("import", ["compile-import"], function() {
 	return rollup({
 		input: "import/build/import/import.js",
-		format: "cjs",
+		output: {
+			format: "cjs",
+		},
 		external: ["fs", "mkdirp", "request", "jsdom", path.resolve("import/build/import/request"), path.resolve("import/build/import/mkdirp")]
 	})
 	.pipe(source("import.js"))
