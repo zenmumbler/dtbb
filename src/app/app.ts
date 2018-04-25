@@ -1,5 +1,5 @@
 // app.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
-// (c) 2016-7 by Arthur Langereis (@zenmumbler)
+// (c) 2016-8 by Arthur Langereis (@zenmumbler)
 
 import { elem, elemList } from "./domutil";
 
@@ -31,6 +31,6 @@ document.addEventListener("DOMContentLoaded", _ => {
 	new FilterControls(elem(".filters"), state);
 	new LoadingWall(elem("#smokedglass"), state);
 
-	state.setIssue(40);
+	state.setIssue(41);
 	console.info("Hi! If you ever need to delete all local data cached by DTBB just run: `dtbb.reset()` in your console while on this page. Have fun!");
 });

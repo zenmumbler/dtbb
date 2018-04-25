@@ -53,7 +53,8 @@ export function issueFeedID(issue: number) {
 	const issue2Feed: { [i: number]: number } = {
 		38: 9405,
 		39: 32802,
-		40: 49883
+		40: 49883,
+		41: 73256
 	};
 	return issue2Feed[issue];
 }
@@ -64,7 +65,8 @@ export function issueMinMonth(issue: number) {
 	const issue2Date: { [i: number]: string } = {
 		38: "2017-04",
 		39: "2017-08",
-		40: "2017-12"
+		40: "2017-12",
+		41: "2018-04"
 	};
 	return issue2Date[issue];
 }

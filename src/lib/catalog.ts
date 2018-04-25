@@ -96,7 +96,9 @@ export const IssueThemeNames: { readonly [issue: number]: string } = {
 
 	38: "A Small World",
 	39: "Running out of Power",
-	40: "The more you have, the worse it is"
+	40: "The more you have, the worse it is",
+
+	41: "Two Incompatible Genres"
 };
 
 // ----
