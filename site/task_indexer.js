@@ -740,7 +740,7 @@
             }
             else if (req.what === "index") {
                 if (db !== undefined) {
-                    if (typeof req.issue === "number" && req.issue >= 15 && req.issue <= 40) {
+                    if (typeof req.issue === "number" && req.issue >= 15 && req.issue <= 50) {
                         var indexer = new CatalogIndexer(db, "local");
                         indexer.onProgress = function (completed, total) {
                             if (completed % 100 === 0) {
