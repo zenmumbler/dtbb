@@ -16,24 +16,24 @@
   "homepage": "https://github.com/zenmumbler/dtbb#readme",
   "devDependencies": {
     "@types/form-data": "^2.2.0",
-    "@types/jsdom": "^11.0.1",
+    "@types/jsdom": "^11.0.6",
     "gulp": "^3.9.1",
     "gulp-gzip": "^1.4.0",
-    "gulp-rename": "^1.2.2",
+    "gulp-rename": "^1.4.0",
     "gulp-sass": "^4.0.1",
     "gulp-typescript": "^4.0.2",
-    "jsdom": "^11.1.0",
+    "jsdom": "^11.12.0",
     "mkdirp": "^0.5.1",
-    "request": "^2.81.0",
-    "rollup": "^0.58.2",
-    "rollup-plugin-commonjs": "^9.1.0",
+    "request": "^2.88.0",
+    "rollup": "^0.64.1",
+    "rollup-plugin-commonjs": "^9.1.5",
     "rollup-plugin-node-resolve": "^3.0.0",
     "rollup-stream": "^1.23.1",
-    "typescript": "^2.4.2",
+    "typescript": "^3.0.1",
     "vinyl-source-stream": "^2.0.0"
   },
   "dependencies": {
-    "node-sass": "^4.5.3",
+    "node-sass": "^4.9.3",
     "promised-db": "^1.0.3"
   },
   "resolutions": {
