@@ -11,6 +11,6 @@ export function loadTypedJSON<T>(url: string): Promise<T> {
 			resolve(xhr.response as T);
 		};
 		xhr.onerror = reject;
-		xhr.send(null);
+		xhr.send();
 	});
 }
