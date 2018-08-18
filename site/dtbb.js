@@ -136,7 +136,7 @@ var dtbb = (function (exports) {
                 resolve(xhr.response);
             };
             xhr.onerror = reject;
-            xhr.send(null);
+            xhr.send();
         });
     }
 
@@ -435,6 +435,7 @@ var dtbb = (function (exports) {
     }());
 
     function intersectSet(a, b) {
+        var _a, _b;
         var intersection = new Set();
         var tiny;
         var large;
@@ -450,7 +451,6 @@ var dtbb = (function (exports) {
             }
         });
         return intersection;
-        var _a, _b;
     }
     function mergeSet(dest, source) {
         if (source && source.forEach) {

@@ -305,11 +305,12 @@
                 resolve(xhr.response);
             };
             xhr.onerror = reject;
-            xhr.send(null);
+            xhr.send();
         });
     }
 
     function intersectSet(a, b) {
+        var _a, _b;
         var intersection = new Set();
         var tiny;
         var large;
@@ -325,7 +326,6 @@
             }
         });
         return intersection;
-        var _a, _b;
     }
     function mergeSet(dest, source) {
         if (source && source.forEach) {
