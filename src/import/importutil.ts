@@ -54,7 +54,8 @@ export function issueFeedID(issue: number) {
 		38: 9405,
 		39: 32802,
 		40: 49883,
-		41: 73256
+		41: 73256,
+		42: 97793
 	};
 	return issue2Feed[issue];
 }
@@ -66,7 +67,8 @@ export function issueMinMonth(issue: number) {
 		38: "2017-04",
 		39: "2017-08",
 		40: "2017-12",
-		41: "2018-04"
+		41: "2018-04",
+		42: "2018-08"
 	};
 	return issue2Date[issue];
 }
