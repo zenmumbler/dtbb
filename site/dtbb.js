@@ -67,7 +67,8 @@ var dtbb = (function (exports) {
         38: "A Small World",
         39: "Running out of Power",
         40: "The more you have, the worse it is",
-        41: "Two Incompatible Genres"
+        41: "Two Incompatible Genres",
+        42: "Running out of Space"
     };
     function localThumbURL(issue, ldThumbURL) {
         var fileName = ldThumbURL.split("/").splice(-1);
@@ -1476,7 +1477,7 @@ var dtbb = (function (exports) {
         new GamesGrid(elem(".entries"), state);
         new FilterControls(elem(".filters"), state);
         new LoadingWall(elem("#smokedglass"), state);
-        state.setIssue(41);
+        state.setIssue(42);
         console.info("Hi! If you ever need to delete all local data cached by DTBB just run: `dtbb.reset()` in your console while on this page. Have fun!");
     });
 
