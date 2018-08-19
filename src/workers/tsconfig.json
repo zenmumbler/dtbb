@@ -1,29 +1,12 @@
 {
+    "extends": "../tsconfig-base.json",
     "compilerOptions": {
-        "module": "es6",
-        "target": "es5",
-        "rootDir": "..",
-        "outDir": "../../site/build/workers/",
-        "noEmitOnError": true,
-        "diagnostics": false,
-        "listFiles": false,
-
-		"strict": true,
-		"noImplicitReturns": true,
-		"forceConsistentCasingInFileNames": true,
-		"noFallthroughCasesInSwitch": true,
-		"noUnusedLocals": true,
-		"noUnusedParameters": true,
-
-        "lib": ["es5", "webworker", "es2015", "es2016", "es2017"],
-		"skipLibCheck": true, // has to be true to allow jQuery.d.ts to pass
-        "skipDefaultLibCheck": true,
-
-        "removeComments": true,
-        "sourceMap": false
+        "outDir": "../../build/workers",
     },
-    "include": [
-        "../lib/**/*.ts",
-        "./**/*.ts"
+    "files": [
+        "*.ts"
+    ],
+    "references": [
+        { "path": "../lib" }
     ]
 }

@@ -1,12 +1,9 @@
 {
     "extends": "../tsconfig-base.json",
     "compilerOptions": {
-        "outDir": "../../build/workers",
+        "outDir": "../../build/lib",
     },
     "files": [
         "*.ts"
-    ],
-    "references": [
-        { "path": "../lib" }
     ]
 }
