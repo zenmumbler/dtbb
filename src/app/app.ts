@@ -31,6 +31,6 @@ document.addEventListener("DOMContentLoaded", _ => {
 	new FilterControls(elem(".filters"), state);
 	new LoadingWall(elem("#smokedglass"), state);
 
-	state.setIssue(41);
+	state.setIssue(42);
 	console.info("Hi! If you ever need to delete all local data cached by DTBB just run: `dtbb.reset()` in your console while on this page. Have fun!");
 });
