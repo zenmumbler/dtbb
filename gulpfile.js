@@ -1,11 +1,10 @@
 // gulpfile.js - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016-7 by Arthur Langereis (@zenmumbler)
-/* tslint:disable */
+// @ts-check
 
 const gulp = require("gulp");
 const rollup = require("rollup-stream");
 const source = require("vinyl-source-stream");
-const rename = require("gulp-rename");
 const sass = require("gulp-sass");
 const tsc = require("gulp-typescript");
 const path = require("path");
@@ -23,7 +22,7 @@ const commonjs = require("rollup-plugin-commonjs");
 // ---- site
 
 // compile styles
-gulp.task("styles", function() {
+function styles() {
 	return gulp.src("src/app/views/dtbb.scss")
 		.pipe(sass({
 			outputStyle: "expanded",
@@ -31,17 +30,17 @@ gulp.task("styles", function() {
 			indentWidth: 1
 		}).on("error", sass.logError))
 		.pipe(gulp.dest("site"));
-});
+}
 
 
 const tscApp = tsc.createProject("src/app/tsconfig.json");
-gulp.task("compile-app", function() {
+function compileApp() {
 	const tsResult = tscApp.src().pipe(tscApp());
 	return tsResult.js.pipe(gulp.dest("site/build/app"));
-});
+}
 
 // bundle main site code
-gulp.task("app", ["compile-app"], function() {
+const rollApp = gulp.series(compileApp, function() {
 	return rollup({
 		input: "site/build/app/app/app.js",
 		output: {
@@ -67,16 +66,17 @@ gulp.task("app", ["compile-app"], function() {
 	.pipe(gulp.dest("site"));
 });
 
+exports.app = rollApp;
 
 // compile worker script
 const tscWorkers = tsc.createProject("src/workers/tsconfig.json");
-gulp.task("compile-workers", function() {
+function compileWorkers() {
 	const tsResult = tscWorkers.src().pipe(tscWorkers());
 	return tsResult.js.pipe(gulp.dest("site/build/workers"));
-});
+}
 
 // bundle site worker
-gulp.task("workers", ["compile-workers"], function() {
+const rollWorkers = gulp.series(compileWorkers, function() {
 	return rollup({
 		input: "site/build/workers/workers/task_indexer.js",
 		output: {
@@ -101,20 +101,22 @@ gulp.task("workers", ["compile-workers"], function() {
 	.pipe(gulp.dest("site"));
 });
 
+exports.workers = rollWorkers;
+
 // site composite task
-gulp.task("site", ["styles", "app", "workers"], () => {});
+exports.site = gulp.parallel(styles, rollApp, rollWorkers);
 
 
 // ---- import
 
 const tscImport = tsc.createProject("src/import/tsconfig.json");
-gulp.task("compile-import", function() {
+function compileImport() {
 	const tsResult = tscImport.src().pipe(tscImport());
 	return tsResult.js.pipe(gulp.dest("import/build"));
-});
+}
 
 // bundle import node app
-gulp.task("import", ["compile-import"], function() {
+const rollImport = gulp.series(compileImport, function() {
 	return rollup({
 		input: "import/build/import/import.js",
 		output: {
@@ -126,14 +128,17 @@ gulp.task("import", ["compile-import"], function() {
 	.pipe(gulp.dest("import"));
 });
 
+exports.import = rollImport;
 
 
 // ---- global watches
 
-gulp.task("watch", function() {
-	gulp.watch("src/**/*.scss", ["styles"]);
-	gulp.watch("src/lib/**/*.ts", ["app", "workers", "import"]);
-	gulp.watch("src/app/**/*.ts", ["app"]);
-	gulp.watch("src/workers/**/*.ts", ["workers"]);
-	gulp.watch("src/import/**/*.ts", ["import"]);
-});
+function watch() {
+	gulp.watch("src/**/*.scss", styles);
+	gulp.watch("src/lib/**/*.ts", gulp.parallel(rollApp, rollWorkers, rollImport));
+	gulp.watch("src/app/**/*.ts", rollApp);
+	gulp.watch("src/workers/**/*.ts", rollWorkers);
+	gulp.watch("src/import/**/*.ts", rollImport);
+}
+
+exports.watch = watch;
