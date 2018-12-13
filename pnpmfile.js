@@ -1,4 +1,4 @@
-const ROLLUP_VERSION = "^0.64.1";
+const ROLLUP_VERSION = "^0.67.4";
 
 function readPackage(pkg, context) {
 	// Override the manifest of foo@1 after downloading it from the registry
