@@ -1,8 +1,6 @@
 node_modules
-*.sublime-workspace
 import/spider_data/entry_pages/**/*.html
 # import/spider_data/entry_pages/*.zip
 import/spider_data/entry_pages/**/*.json
-import/build/**/*
-site/build/**/*
 site/data/thumbs
+build

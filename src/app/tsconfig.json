@@ -1,11 +1,9 @@
 {
     "extends": "../tsconfig-base.json",
     "compilerOptions": {
-        "outDir": "../../build/workers",
+        "outDir": "../../build/app",
+        "lib": ["es2015", "dom"]
     },
-    "files": [
-        "*.ts"
-    ],
     "references": [
         { "path": "../lib" }
     ]

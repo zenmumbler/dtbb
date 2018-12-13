@@ -2,8 +2,6 @@
     "extends": "../tsconfig-base.json",
     "compilerOptions": {
         "outDir": "../../build/lib",
+        "lib": ["es2015", "dom"]
     },
-    "files": [
-        "*.ts"
-    ]
 }
