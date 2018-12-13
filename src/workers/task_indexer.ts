@@ -5,7 +5,7 @@
 
 import { CatalogPersistence } from "../lib/catalogpersistence";
 import { CatalogIndexer } from "../lib/catalogindexer";
-import { Request, Response, IndexSuccessResponse } from "./indexerapi";
+import { Request, Response, IndexSuccessResponse } from "../lib/indexerapi";
 
 declare function postMessage(response: Response): void;
 

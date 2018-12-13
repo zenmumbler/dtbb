@@ -5,7 +5,7 @@ import { loadTypedJSON } from "./fileutil";
 import { TextIndex } from "./textindex";
 import { Catalog, IndexedEntry, maskForPlatformKeys } from "./catalog";
 import { CatalogPersistence } from "./catalogpersistence";
-import { IndexerAPI } from "../workers/indexerapi";
+import { IndexerAPI } from "./indexerapi";
 
 
 function makeDocID(issue: number, entryIndex: number) {
