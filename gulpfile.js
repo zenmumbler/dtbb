@@ -42,7 +42,7 @@ function compileApp() {
 // bundle main site code
 const rollApp = gulp.series(compileApp, function() {
 	return rollup({
-		input: "site/build/app/app/app.js",
+		input: "build/app/app.js",
 		output: {
 			format: "iife",
 			name: "dtbb",
@@ -78,7 +78,7 @@ function compileWorkers() {
 // bundle site worker
 const rollWorkers = gulp.series(compileWorkers, function() {
 	return rollup({
-		input: "site/build/workers/workers/task_indexer.js",
+		input: "build/workers/task_indexer.js",
 		output: {
 			format: "iife",
 		},
@@ -118,7 +118,7 @@ function compileImport() {
 // bundle import node app
 const rollImport = gulp.series(compileImport, function() {
 	return rollup({
-		input: "import/build/import/import.js",
+		input: "build/import/import.js",
 		output: {
 			format: "cjs",
 		},
