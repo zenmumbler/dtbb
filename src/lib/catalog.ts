@@ -99,7 +99,8 @@ export const IssueThemeNames: { readonly [issue: number]: string } = {
 	40: "The more you have, the worse it is",
 
 	41: "Two Incompatible Genres",
-	42: "Running out of Space"
+	42: "Running out of Space",
+	43: "Sacrifices must be made"
 };
 
 // ----
