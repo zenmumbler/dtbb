@@ -1477,7 +1477,7 @@ var dtbb = (function (exports) {
         new GamesGrid(elem(".entries"), state);
         new FilterControls(elem(".filters"), state);
         new LoadingWall(elem("#smokedglass"), state);
-        state.setIssue(42);
+        state.setIssue(43);
         console.info("Hi! If you ever need to delete all local data cached by DTBB just run: `dtbb.reset()` in your console while on this page. Have fun!");
     });
 
