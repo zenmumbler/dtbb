@@ -3,8 +3,8 @@
 function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
 
 var mkdirp = _interopDefault(require('mkdirp'));
-var fs = require('fs');
 var request = _interopDefault(require('request'));
+var fs = require('fs');
 var jsdom = require('jsdom');
 
 function listingDirPath() {
@@ -437,7 +437,8 @@ var IssueThemeNames = {
     38: "A Small World",
     39: "Running out of Power",
     40: "The more you have, the worse it is",
-    41: "Two Incompatible Genres"
+    41: "Two Incompatible Genres",
+    42: "Running out of Space"
 };
 
 function mergeSet(dest, source) {
