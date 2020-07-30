@@ -2,7 +2,7 @@
     "extends": "../tsconfig-base.json",
     "compilerOptions": {
         "outDir": "../../build/workers",
-        "lib": ["es2015", "webworker"]
+        "lib": ["es2017", "webworker"]
     },
     "references": [
         { "path": "../lib" }
