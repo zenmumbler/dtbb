@@ -1,5 +1,5 @@
 // gamesgrid.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
-// (c) 2016-7 by Arthur Langereis (@zenmumbler)
+// (c) 2016-Present by @zenmumbler
 
 import { Platforms, localThumbURL } from "../../../lib/catalog";
 import { arrayFromSet } from "../../../lib/setutil";

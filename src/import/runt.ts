@@ -1,5 +1,5 @@
 // runt - mini task thingy
-// by Arthur Langereis - @zenmumbler
+// (c) 2016-Present by @zenmumbler
 
 type TaskFunc = (...args: string[]) => void | Promise<void>;
 

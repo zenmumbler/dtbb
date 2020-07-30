@@ -1,5 +1,5 @@
 // importutil - part of dtbb
-// by Arthur Langereis - @zenmumbler
+// (c) 2016-Present by @zenmumbler
 
 import mkdirp from "mkdirp";
 

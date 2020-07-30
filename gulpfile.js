@@ -1,5 +1,5 @@
 // gulpfile.js - part of DTBB (https://github.com/zenmumbler/dtbb)
-// (c) 2016-7 by Arthur Langereis (@zenmumbler)
+// (c) 2016-Present by @zenmumbler
 // @ts-check
 
 const gulp = require("gulp");

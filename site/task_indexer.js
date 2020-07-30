@@ -2,7 +2,7 @@
     'use strict';
 
     // promised-db - IndexedDB wrapped in a promise-based API with contextual methods and timeout support. (https://github.com/zenmumbler/promised-db)
-    // (c) 2016-Present by Arthur Langereis (@zenmumbler)
+    // (c) 2016-Present by @zenmumbler
     var PromisedDB = (function () {
         function PromisedDB(name, version, upgrade) {
             this.db_ = this._request(indexedDB.open(name, version), function (openReq) {

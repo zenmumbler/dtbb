@@ -1,5 +1,5 @@
 // index_spider - part of dtbb
-// by Arthur Langereis - @zenmumbler
+// (c) 2016-Present by @zenmumbler
 
 import * as fs from "fs";
 import * as http from "http";

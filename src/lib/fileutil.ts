@@ -1,5 +1,5 @@
 // fileutil.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
-// (c) 2016 by Arthur Langereis (@zenmumbler)
+// (c) 2016-Present by @zenmumbler
 
 export function loadTypedJSON<T>(url: string): Promise<T> {
 	return new Promise<T>((resolve, reject) => {

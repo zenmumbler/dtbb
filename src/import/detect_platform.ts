@@ -1,5 +1,5 @@
 // detect_platform.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
-// (c) 2016-7 by Arthur Langereis (@zenmumbler)
+// (c) 2016-Present by @zenmumbler
 
 import { Entry, PlatformKey } from "../lib/catalog";
 import { mergeSet, newSetFromArray } from "../lib/setutil";

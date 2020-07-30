@@ -1,5 +1,5 @@
 // indexerapi.ts  - part of DTBB (https://github.com/zenmumbler/dtbb)
-// (c) 2016 by Arthur Langereis (@zenmumbler)
+// (c) 2016-Present by @zenmumbler
 
 import { IndexedEntry } from "../lib/catalog";
 import { SerializedTextIndex } from "../lib/textindex";

@@ -1,5 +1,5 @@
 // import entry script - part of dtbb import
-// by Arthur Langereis - @zenmumbler
+// (c) 2016-Present by @zenmumbler
 
 import { fetchListing } from "./index_spider";
 import { fetchEntryPages } from "./entry_spider";

@@ -1,5 +1,5 @@
 // task_indexer.ts  - part of DTBB (https://github.com/zenmumbler/dtbb)
-// (c) 2016 by Arthur Langereis (@zenmumbler)
+// (c) 2016-Present by @zenmumbler
 
 // this is a WebWorker
 
@@ -7,15 +7,17 @@ import { CatalogPersistence } from "../lib/catalogpersistence";
 import { CatalogIndexer } from "../lib/catalogindexer";
 import { Request, Response, IndexSuccessResponse } from "../lib/indexerapi";
 
-declare function postMessage(response: Response): void;
-
 let db: CatalogPersistence | undefined;
+
+function postResponse(r: Response) {
+	postMessage(r);
+}
 
 onmessage = (evt: MessageEvent) => {
 	const req = evt.data as Request;
 
 	const error = function(message: string) {
-		postMessage({
+		postResponse({
 			status: "error",
 			reqIndex: (req && ("reqIndex" in req)) ? req.reqIndex : null,
 			message
@@ -26,7 +28,7 @@ onmessage = (evt: MessageEvent) => {
 		if (req.what === "open") {
 			if (db === undefined) {
 				db = new CatalogPersistence();
-				postMessage({ status: "success", reqIndex: req.reqIndex });
+				postResponse({ status: "success", reqIndex: req.reqIndex });
 			}
 			else {
 				error("Redundant open request");
@@ -38,7 +40,7 @@ onmessage = (evt: MessageEvent) => {
 					const indexer = new CatalogIndexer(db, "local");
 					indexer.onProgress = function(completed, total) {
 						if (completed % 100 === 0) {
-							postMessage({
+							postResponse({
 								status: "status",
 								reqIndex: req.reqIndex,
 								progress: completed / total
@@ -46,7 +48,7 @@ onmessage = (evt: MessageEvent) => {
 						}
 					};
 					indexer.importCatalogFile(req.issue).then(data => {
-						postMessage({
+						postResponse({
 							status: "success",
 							reqIndex: req.reqIndex,
 							entries: data.entries,
