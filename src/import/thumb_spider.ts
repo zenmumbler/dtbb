@@ -2,7 +2,7 @@
 // (c) 2016-Present by @zenmumbler
 
 import * as fs from "fs";
-import request from "request";
+import got from "got";
 
 import { EntryListing, Catalog } from "../lib/catalog";
 import { ensureDirectory, listingPath, entriesCatalogPath, thumbsDirPath, localThumbPathForLDURL, timeoutPromise } from "./importutil";
@@ -41,34 +41,29 @@ function load(state: ThumbSpiderState) {
 		return next(1);
 	}
 	else {
-		return new Promise<void>(resolve => {
-			request(
-				{
-					url,
-					encoding: null,
-					timeout: 3000
+		return got(url, { encoding: undefined, timeout: 3000 })
+			.then(
+				response => {
+					return fs.promises.writeFile(localPath, response.body)
+					.then(
+						() => {
+							state.thumbsWritten += 1;
+							return next();
+
+						},
+						err => {
+							console.info(`Failed to write thumb: ${localPath}`, err);
+							state.failures += 1;
+							return next();
+						}
+					);
 				},
-				(error, response, body) => {
-					if (!error && response.statusCode === 200) {
-						fs.writeFile(localPath, body, (err) => {
-							if (err) {
-								console.info(`Failed to write thumb: ${localPath}`, err);
-								state.failures += 1;
-							}
-							else {
-								state.thumbsWritten += 1;
-							}
-							resolve(next());
-						});
-					}
-					else {
-						console.info(`Failed to load thumb ${url}`, error, response ? response.statusCode : "-");
-						state.failures += 1;
-						resolve(next());
-					}
-				}
-			);
-		});
+				error => {
+					console.info(`Failed to load thumb ${url}`, error);
+					state.failures += 1;
+					return next();
+			}
+		);
 	}
 }
 

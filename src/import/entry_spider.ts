@@ -2,7 +2,7 @@
 // (c) 2016-Present by @zenmumbler
 
 import * as fs from "fs";
-import request from "request";
+import got from "got";
 
 import { EntryListing } from "../lib/catalog";
 import { ensureDirectory, issueBaseURL, listingPath, entryPagesDirPath, entryPageFilePath, userJSONFilePath, timeoutPromise } from "./importutil";
@@ -85,50 +85,46 @@ function load(state: EntrySpiderState) {
 		return next(1);
 	}
 	else {
-		return new Promise<void>(resolve => {
-			request(
-				{
-					url: link,
-					timeout: 3000
-				},
-				(error, response, body) => {
-					if (!error && response.statusCode === 200) {
-						if (linkType === "E" && state.issue >= 38) {
-							const json = JSON.parse(body) as APIMinimal;
-							if (json && json.node && json.node[0] && json.node[0].meta) {
-								for (const author of json.node[0].meta.author) {
-									if (! state.authorIDs.has(author)) {
-										state.authorIDs.add(author);
-										state.urlList.push(`U|${issueBaseURL(state.issue)}/get/${author}`);
-									}
-								}
+		return got(link, { timeout: 3000 })
+		.then(
+			(response) => {
+				if (linkType === "E" && state.issue >= 38) {
+					const json = JSON.parse(response.body) as APIMinimal;
+					if (json && json.node && json.node[0] && json.node[0].meta) {
+						for (const author of json.node[0].meta.author) {
+							if (! state.authorIDs.has(author)) {
+								state.authorIDs.add(author);
+								state.urlList.push(`U|${issueBaseURL(state.issue)}/get/${author}`);
 							}
 						}
-
-						fs.writeFile(filePath, body, (err) => {
-							if (err) {
-								console.info(`Failed to write file for gid: ${gid}`, err);
-								state.failures += 1;
-							}
-							else {
-								state.entriesWritten += 1;
-							}
-							resolve(next());
-						});
-					}
-					else {
-						console.info(`Failed to load entry page for gid: ${gid}`, error, response ? response.statusCode : "-");
-						state.failures += 1;
-						resolve(next());
 					}
 				}
-			);
-		});
+
+				return fs.promises.writeFile(filePath, response.body)
+				.then(
+					() => {
+						state.entriesWritten += 1;
+						return next();
+					},
+					err => {
+						console.info(`Failed to write file for gid: ${gid}`, err);
+						state.failures += 1;
+						return next();
+					}
+				);
+			},
+			(error) => {
+				console.info(`Failed to load entry page for gid: ${gid}`, error);
+				state.failures += 1;
+				return next();
+			}
+		);
 	}
 }
 
 
 export function fetchEntryPages(issue: number) {
+	// at the current rate, this check will fail in the year 2038
 	if (isNaN(issue) || issue < 15 || issue > 99) {
 		return Promise.reject("issue must be (15 <= issue <= 99)");
 	}

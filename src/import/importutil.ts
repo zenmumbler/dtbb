@@ -1,7 +1,7 @@
 // importutil - part of dtbb
 // (c) 2016-Present by @zenmumbler
 
-import mkdirp from "mkdirp";
+import * as mkdirp from "mkdirp";
 
 export function listingDirPath() {
 	return `./spider_data/listings/`;
@@ -49,7 +49,7 @@ export function issueBaseURL(issue: number) {
 export function issueFeedID(issue: number) {
 	// a direct map of issue to feed indexes
 	// this can be retrieved with an API call, but I can't be arsed
-	// so I need to update this every LD, 3 times a year. Good enough.
+	// so I need to update this every LD, 2 times a year. Good enough.
 	const issue2Feed: { [i: number]: number } = {
 		38: 9405,
 		39: 32802,
@@ -75,31 +75,22 @@ export function issueMinMonth(issue: number) {
 	return issue2Date[issue];
 }
 
-export function issueIndexPageURL(issue: number, offset: number) {
+export function issueIndexPageURL(issue: number, offset: number, limit: number) {
 	if (issue <= 37) {
-		return `${issueBaseURL(issue)}/?action=preview&start=${offset}`; // itemCount is fixed at 24
+		return `${issueBaseURL(issue)}?action=preview&start=${offset}`; // itemCount is fixed at 24
 	}
 	else {
 		const feed = issueFeedID(issue);
 		if (! feed) {
 			throw new Error(`You have to update the issueFeedID mapping for issue ${issue}`);
 		}
-		return `${issueBaseURL(issue)}/feed/${feed}/all/item/game/compo+jam?offset=${offset}}&limit=24`;
+		return `${issueBaseURL(issue)}feed/${feed}/grade-01-result+reverse+parent/item/game/compo+jam?offset=${offset}&limit=${limit}`;
 	}
 }
 
 
 export function ensureDirectory(dir: string) {
-	return new Promise((resolve, reject) => {
-		mkdirp(dir, err => {
-			if (err) {
-				reject(err);
-			}
-			else {
-				resolve();
-			}
-		});
-	});
+	return mkdirp(dir);
 }
 
 export function timeoutPromise(delayMS: number) {

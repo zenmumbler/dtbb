@@ -154,8 +154,8 @@ export class WatchableInputBinding<T extends (string | number | boolean)> {
 }
 
 export function watchableBinding<T extends (number | string | boolean)>(w: Watchable<T>, element: HTMLElement | HTMLElement[]): WatchableInputBinding<T>;
-export function watchableBinding<T extends (number | string | boolean)>(w: Watchable<T>, selector: string, context?: NodeSelector): WatchableInputBinding<T>;
-export function watchableBinding<T extends (number | string | boolean)>(w: Watchable<T>, elemOrSel: string | HTMLElement | HTMLElement[], context?: NodeSelector) {
+export function watchableBinding<T extends (number | string | boolean)>(w: Watchable<T>, selector: string, context?: ParentNode): WatchableInputBinding<T>;
+export function watchableBinding<T extends (number | string | boolean)>(w: Watchable<T>, elemOrSel: string | HTMLElement | HTMLElement[], context?: ParentNode) {
 	const elems = (
 		(typeof elemOrSel === "string")
 		? ([].slice.call((context || document).querySelectorAll(elemOrSel)) as HTMLElement[])

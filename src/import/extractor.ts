@@ -439,18 +439,15 @@ function completed(state: ExtractState) {
 	};
 	const catalogJSON = JSON.stringify(catalog);
 
-	state.completionPromise = new Promise<void>((resolve, reject) => {
-		fs.writeFile(entriesCatalogPath(state.issue), catalogJSON, (err) => {
-			if (err) {
+	state.completionPromise =
+		fs.promises.writeFile(entriesCatalogPath(state.issue), catalogJSON)
+		.then(
+			() => console.info("Done"),
+			err => {
 				console.info("Could not write catalog file: ", err);
-				reject(err);
+				throw err;
 			}
-			else {
-				console.info("Done");
-				resolve();
-			}
-		});
-	});
+		);
 
 	return state.completionPromise;
 }

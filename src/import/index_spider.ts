@@ -2,12 +2,12 @@
 // (c) 2016-Present by @zenmumbler
 
 import * as fs from "fs";
-import * as http from "http";
-import request from "request";
+import got from "got";
 
-import { ensureDirectory, listingDirPath, listingPath, issueIndexPageURL, timeoutPromise, issueMinMonth } from "./importutil";
+import { ensureDirectory, listingDirPath, listingPath, issueIndexPageURL, timeoutPromise } from "./importutil";
 
 const LD_PAGE_SIZE = 24;
+const LD_NEW_PAGE_SIZE = 100;
 const DELAY_BETWEEN_REQUESTS_MS = 20;
 
 interface SpiderState {
@@ -52,7 +52,7 @@ function processBodyNew(state: SpiderState, body: string): boolean {
 	const listingJSON = JSON.parse(body) as APIListing;
 
 	if (listingJSON && listingJSON.status === 200 && listingJSON.feed) {
-		const ids = listingJSON.feed.filter(g => g.modified.indexOf(issueMinMonth(state.issue)) === 0).map(g => "" + g.id);
+		const ids = listingJSON.feed.map(g => "" + g.id);
 		state.allLinks = state.allLinks.concat(ids);
 		if (ids.length < listingJSON.feed.length) {
 			console.info(`skipping ${listingJSON.feed.length - ids.length} entries from older LD.`);
@@ -65,53 +65,41 @@ function processBodyNew(state: SpiderState, body: string): boolean {
 	}
 }
 
-function next(state: SpiderState) {
+function next(state: SpiderState): Promise<void> {
 	const processFn = (state.issue <= 37) ? processBody : processBodyNew;
+	const pageSize = (state.issue <= 37) ? LD_PAGE_SIZE : LD_NEW_PAGE_SIZE;
 
-	return new Promise<void>((resolve, reject) => {
-		request(
-			`${issueIndexPageURL(state.issue, state.offset)}`,
-			(error: any, response: http.IncomingMessage, body: string) => {
-				let completed = false;
+	return got(`${issueIndexPageURL(state.issue, state.offset, pageSize)}`)
+	.then(
+		(response) => {
+			let completed = processFn(state, response.body);
 
-				if (!error && response.statusCode === 200) {
-					try {
-						completed = processFn(state, body);
-					}
-					catch (e) {
-						reject((e as Error).message);
-						return;
-					}
-				}
-				else {
-					reject(`Failed to get page for offset ${state.offset}, status: ${response.statusCode}, error: ${error}`);
-					return;
-				}
-
-				if (! completed) {
-					state.offset += LD_PAGE_SIZE;
-					console.info(`fetched ${state.allLinks.length} records...`);
-					resolve(timeoutPromise(DELAY_BETWEEN_REQUESTS_MS).then(_ => next(state)));
-				}
-				else {
-					console.info(`Writing listing (${state.allLinks.length} entries)...`);
-					const listingJSON = JSON.stringify({ links: state.allLinks, thumbs: state.allThumbs });
-
-					ensureDirectory(listingDirPath()).then(() => {
-						fs.writeFile(listingPath(state.issue), listingJSON, (err) => {
-							if (err) {
-								console.error("Failed to write listing file", err);
-							}
-							else {
-								console.info("Done.");
-								resolve();
-							}
-						});
-					});
-				}
+			if (! completed) {
+				state.offset += pageSize;
+				console.info(`fetched ${state.allLinks.length} records...`);
+				return timeoutPromise(DELAY_BETWEEN_REQUESTS_MS).then(_ => next(state));
 			}
-		);
-	});
+			else {
+				console.info(`Writing listing (${state.allLinks.length} entries)...`);
+				const listingJSON = JSON.stringify({ links: state.allLinks, thumbs: state.allThumbs });
+
+				return ensureDirectory(listingDirPath()).then(() => {
+					return fs.promises.writeFile(listingPath(state.issue), listingJSON)
+					.then(
+						() => {
+							console.info("Done.");
+						},
+						err => {
+							console.error("Failed to write listing file", err);
+						}
+					);
+				});
+			}
+		},
+		(error) => {
+			throw new Error(`Failed to get page for offset ${state.offset}, error: ${error}`);
+		}
+	);
 }
 
 export function fetchListing(issue: number) {
