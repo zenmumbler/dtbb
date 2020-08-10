@@ -100,7 +100,11 @@ export const IssueThemeNames: { readonly [issue: number]: string } = {
 
 	41: "Two Incompatible Genres",
 	42: "Running out of Space",
-	43: "Sacrifices must be made"
+	43: "Sacrifices must be made",
+
+	44: "Your life is currency",
+	45: "Start with nothing",
+	46: "Keep it alive"
 };
 
 // ----
