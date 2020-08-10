@@ -138,27 +138,26 @@ export class TextIndex {
 		if (this.wordNGramCache_.has(word)) {
 			return this.wordNGramCache_.get(word)!;
 		}
-		else {
-			const wordLen = word.length;
-			const ngrams = new Set<string>();
 
-			for (let l = this.MIN_NGRAM_LENGTH; l <= this.MAX_NGRAM_LENGTH; ++l) {
-				if (l > wordLen) {
-					break;
-				}
+		const wordLen = word.length;
+		const ngrams = new Set<string>();
 
-				const maxO = wordLen - l;
-				for (let o = 0; o <= maxO; ++o) {
-					const ss = word.substr(o, l);
-					if (! ngrams.has(ss)) {
-						ngrams.add(ss);
-					}
-				}
+		for (let l = this.MIN_NGRAM_LENGTH; l <= this.MAX_NGRAM_LENGTH; ++l) {
+			if (l > wordLen) {
+				break;
 			}
 
-			this.wordNGramCache_.set(word, ngrams);
-			return ngrams;
+			const maxO = wordLen - l;
+			for (let o = 0; o <= maxO; ++o) {
+				const ss = word.substr(o, l);
+				if (! ngrams.has(ss)) {
+					ngrams.add(ss);
+				}
+			}
 		}
+
+		this.wordNGramCache_.set(word, ngrams);
+		return ngrams;
 	}
 
 	private stripDiacritics(term: string) {
