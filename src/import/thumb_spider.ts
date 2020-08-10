@@ -41,7 +41,7 @@ function load(state: ThumbSpiderState) {
 		return next(1);
 	}
 	else {
-		return got(url, { encoding: undefined, timeout: 3000 })
+		return got(url, { responseType: "buffer", timeout: 3000 })
 			.then(
 				response => {
 					return fs.promises.writeFile(localPath, response.body)
