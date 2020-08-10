@@ -8,8 +8,8 @@ const source = require("vinyl-source-stream");
 const sass = require("gulp-sass");
 const tsc = require("gulp-typescript");
 const path = require("path");
-const nodeResolve = require("rollup-plugin-node-resolve");
-const commonjs = require("rollup-plugin-commonjs");
+const nodeResolve = require("@rollup/plugin-node-resolve");
+const commonjs = require("@rollup/plugin-commonjs");
 
 /*
 	TLDR:
