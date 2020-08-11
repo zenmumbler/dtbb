@@ -21,7 +21,6 @@ interface EntrySpiderState {
 interface APIMinimal {
 	node: {
 		id: number;
-		// author: number;
 		subsubtype: string;
 		meta: {
 			author: number[];

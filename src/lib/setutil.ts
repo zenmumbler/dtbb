@@ -52,7 +52,8 @@ export function mergeSet<T>(dest: Set<T>, source: Set<T> | T[]) {
 export function newSetFromArray<T>(source: T[]) {
 	// one would think the constructor from an iterable is faster
 	// than just looping over it and doing 100s of 1000s of function calls
-	// on Safari and Chrome, one would be wrong.
+	// on Safari and to a lesser extent Chrome, one would be wrong.
+	// this stil applies as of August 2020
 
 	// this func does the equivalent of:
 	// new Set<T>(source);
