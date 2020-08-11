@@ -2,7 +2,7 @@
     'use strict';
 
     // promised-db - IndexedDB wrapped in a promise-based API with contextual methods and timeout support. (https://github.com/zenmumbler/promised-db)
-    // (c) 2016-Present by @zenmumbler
+    // (c) 2016-Present by Arthur Langereis (@zenmumbler)
     var PromisedDB = (function () {
         function PromisedDB(name, version, upgrade) {
             this.db_ = this._request(indexedDB.open(name, version), function (openReq) {
@@ -168,82 +168,78 @@
         return PromisedDB;
     }());
 
-    var DB_NAME = "dtbb";
-    var CatalogPersistence = (function () {
-        function CatalogPersistence() {
-            this.db_ = new PromisedDB(DB_NAME, 1, function (db, _oldVersion, _newVersion) {
+    const DB_NAME = "dtbb";
+    class CatalogPersistence {
+        constructor() {
+            this.db_ = new PromisedDB(DB_NAME, 1, (db, _oldVersion, _newVersion) => {
                 console.info("Creating stores and indexes...");
-                var headers = db.createObjectStore("headers", { keyPath: "issue" });
-                var textindexes = db.createObjectStore("textindexes", { keyPath: "issue" });
-                var entries = db.createObjectStore("entries", { keyPath: "docID" });
+                const headers = db.createObjectStore("headers", { keyPath: "issue" });
+                const textindexes = db.createObjectStore("textindexes", { keyPath: "issue" });
+                const entries = db.createObjectStore("entries", { keyPath: "docID" });
                 headers.createIndex("issue", "issue", { unique: true });
                 textindexes.createIndex("issue", "issue", { unique: true });
                 entries.createIndex("issue", "ld_issue");
             });
         }
-        CatalogPersistence.prototype.saveCatalog = function (catalog, indEntries, sti) {
-            var header = {
+        saveCatalog(catalog, indEntries, sti) {
+            const header = {
                 issue: catalog.issue,
                 theme: catalog.theme,
                 stats: catalog.stats,
                 savedAt: new Date()
             };
-            return this.db_.transaction(["headers", "entries", "textindexes"], "readwrite", function (tr, _a) {
-                var timeout = _a.timeout;
-                console.info("Storing issue " + header.issue + " with " + indEntries.length + " entries and textindex");
+            return this.db_.transaction(["headers", "entries", "textindexes"], "readwrite", (tr, { timeout }) => {
+                console.info(`Storing issue ${header.issue} with ${indEntries.length} entries and textindex`);
                 timeout(10000);
-                var headers = tr.objectStore("headers");
-                var entries = tr.objectStore("entries");
-                var textindexes = tr.objectStore("textindexes");
+                const headers = tr.objectStore("headers");
+                const entries = tr.objectStore("entries");
+                const textindexes = tr.objectStore("textindexes");
                 headers.put(header);
-                var textIndex = {
+                const textIndex = {
                     issue: catalog.issue,
                     data: sti
                 };
                 textindexes.put(textIndex);
-                for (var _i = 0, indEntries_1 = indEntries; _i < indEntries_1.length; _i++) {
-                    var entry = indEntries_1[_i];
+                for (const entry of indEntries) {
                     entries.put(entry);
                 }
             })
-                .catch(function (error) {
-                console.warn("Error saving catalog " + catalog.issue, error);
+                .catch(error => {
+                console.warn(`Error saving catalog ${catalog.issue}`, error);
                 throw error;
             });
-        };
-        CatalogPersistence.prototype.saveCatalogTextIndex = function (issue, sti) {
-            var data = {
-                issue: issue,
+        }
+        saveCatalogTextIndex(issue, sti) {
+            const data = {
+                issue,
                 data: sti
             };
-            return this.db_.transaction("textindexes", "readwrite", function (tr, _a) {
-                var textindexes = tr.objectStore("textindexes");
+            return this.db_.transaction("textindexes", "readwrite", (tr, {}) => {
+                const textindexes = tr.objectStore("textindexes");
                 textindexes.put(data);
             })
-                .catch(function (error) {
+                .catch(error => {
                 console.warn("Error saving textindex: ", error);
                 throw error;
             });
-        };
-        CatalogPersistence.prototype.persistedIssues = function () {
-            return this.db_.transaction("headers", "readonly", function (tr, _a) {
-                var getAll = _a.getAll;
-                var issueIndex = tr.objectStore("headers").index("issue");
+        }
+        persistedIssues() {
+            return this.db_.transaction("headers", "readonly", (tr, { getAll }) => {
+                const issueIndex = tr.objectStore("headers").index("issue");
                 return getAll(issueIndex, undefined, "nextunique");
             })
-                .catch(function () { return []; });
-        };
-        CatalogPersistence.prototype.loadCatalog = function (issue) {
-            return this.db_.transaction(["headers", "entries", "textindexes"], "readonly", function (tr, _a) {
-                var request = _a.request, getAll = _a.getAll, timeout = _a.timeout;
+                .catch(() => []);
+        }
+        loadCatalog(issue) {
+            return this.db_.transaction(["headers", "entries", "textindexes"], "readonly", (tr, { request, getAll, timeout }) => {
                 timeout(5000);
-                var headerP = request(tr.objectStore("headers").get(issue));
-                var issueIndex = tr.objectStore("entries").index("issue");
-                var entriesP = getAll(issueIndex, issue);
-                var ptiP = request(tr.objectStore("textindexes").get(issue));
+                const headerP = request(tr.objectStore("headers").get(issue));
+                const issueIndex = tr.objectStore("entries").index("issue");
+                const entriesP = getAll(issueIndex, issue);
+                const ptiP = request(tr.objectStore("textindexes").get(issue));
                 return Promise.all([headerP, entriesP, ptiP])
-                    .then(function (result) {
-                    var pti = result[2];
+                    .then((result) => {
+                    const pti = result[2];
                     return {
                         header: result[0],
                         entries: result[1],
@@ -251,53 +247,50 @@
                     };
                 });
             })
-                .catch(function () { return null; });
-        };
-        CatalogPersistence.prototype.destroyCatalog = function (issue) {
-            var _this = this;
-            return this.db_.transaction(["entries"], "readonly", function (tr, _a) {
-                var getAllKeys = _a.getAllKeys;
-                var issueIndex = tr.objectStore("entries").index("issue");
+                .catch(() => null);
+        }
+        destroyCatalog(issue) {
+            return this.db_.transaction(["entries"], "readonly", (tr, { getAllKeys }) => {
+                const issueIndex = tr.objectStore("entries").index("issue");
                 return getAllKeys(issueIndex, issue);
             })
-                .then(function (entryKeys) {
-                return _this.db_.transaction(["headers", "entries", "textindexes"], "readwrite", function (tr, _a) {
-                    var headers = tr.objectStore("headers");
-                    var entries = tr.objectStore("entries");
-                    var indexes = tr.objectStore("textindexes");
+                .then(entryKeys => {
+                return this.db_.transaction(["headers", "entries", "textindexes"], "readwrite", (tr, {}) => {
+                    const headers = tr.objectStore("headers");
+                    const entries = tr.objectStore("entries");
+                    const indexes = tr.objectStore("textindexes");
                     if (entryKeys.length > 0) {
-                        var range = IDBKeyRange.bound(entryKeys[0], entryKeys[entryKeys.length - 1]);
+                        const range = IDBKeyRange.bound(entryKeys[0], entryKeys[entryKeys.length - 1]);
                         entries.delete(range);
                     }
                     headers.delete(issue);
                     indexes.delete(issue);
                 });
             });
-        };
-        CatalogPersistence.prototype.purgeAllData = function () {
-            return this.db_.transaction(["headers", "entries", "textindexes"], "readwrite", function (tr, _a) {
-                var headers = tr.objectStore("headers");
-                var entries = tr.objectStore("entries");
-                var indexes = tr.objectStore("textindexes");
+        }
+        purgeAllData() {
+            return this.db_.transaction(["headers", "entries", "textindexes"], "readwrite", (tr, {}) => {
+                const headers = tr.objectStore("headers");
+                const entries = tr.objectStore("entries");
+                const indexes = tr.objectStore("textindexes");
                 headers.clear();
                 entries.clear();
                 indexes.clear();
             });
-        };
-        CatalogPersistence.prototype.deleteDatabase = function () {
+        }
+        deleteDatabase() {
             this.db_.close();
-            return new Promise(function (resolve, reject) {
-                var req = indexedDB.deleteDatabase(DB_NAME);
-                req.onerror = function (err) { reject(err); };
-                req.onsuccess = function () { resolve(); };
+            return new Promise((resolve, reject) => {
+                const req = indexedDB.deleteDatabase(DB_NAME);
+                req.onerror = (err) => { reject(err); };
+                req.onsuccess = () => { resolve(); };
             });
-        };
-        return CatalogPersistence;
-    }());
+        }
+    }
 
     function loadTypedJSON(url) {
-        return new Promise(function (resolve, reject) {
-            var xhr = new XMLHttpRequest();
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
             xhr.open("GET", url);
             xhr.overrideMimeType("application/json");
             xhr.responseType = "json";
@@ -310,17 +303,16 @@
     }
 
     function intersectSet(a, b) {
-        var _a, _b;
-        var intersection = new Set();
-        var tiny;
-        var large;
+        const intersection = new Set();
+        let tiny;
+        let large;
         if (a.size < b.size) {
-            _a = [a, b], tiny = _a[0], large = _a[1];
+            [tiny, large] = [a, b];
         }
         else {
-            _b = [b, a], tiny = _b[0], large = _b[1];
+            [tiny, large] = [b, a];
         }
-        tiny.forEach(function (val) {
+        tiny.forEach(val => {
             if (large.has(val)) {
                 intersection.add(val);
             }
@@ -329,19 +321,19 @@
     }
     function mergeSet(dest, source) {
         if (source && source.forEach) {
-            source.forEach(function (val) { return dest.add(val); });
+            source.forEach(val => dest.add(val));
         }
     }
     function newSetFromArray(source) {
-        var set = new Set();
-        var len = source.length;
-        for (var vi = 0; vi < len; ++vi) {
+        const set = new Set();
+        const len = source.length;
+        for (let vi = 0; vi < len; ++vi) {
             set.add(source[vi]);
         }
         return set;
     }
 
-    var DiacriticCharMapping = {
+    const DiacriticCharMapping = {
         "À": "A",
         "Á": "A",
         "Â": "A",
@@ -399,12 +391,12 @@
         "ý": "y",
         "ÿ": "y",
     };
-    var InvalidCharsMatcher = /[^a-zA-Z0-9ÀÁÂÃÄÅÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜÝßàáâãäåçèéêëìíîïñòóôõöøùúûüýÿ]/g;
-    var DiacriticsMatcher = /[ÀÁÂÃÄÅÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜÝßàáâãäåçèéêëìíîïñòóôõöøùúûüýÿ]/;
-    var DiacriticCharMatchers = {};
-    Object.keys(DiacriticCharMapping).forEach(function (c) { return DiacriticCharMatchers[c] = new RegExp(c, "g"); });
-    var TextIndex = (function () {
-        function TextIndex() {
+    const InvalidCharsMatcher = /[^a-zA-Z0-9ÀÁÂÃÄÅÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜÝßàáâãäåçèéêëìíîïñòóôõöøùúûüýÿ]/g;
+    const DiacriticsMatcher = /[ÀÁÂÃÄÅÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜÝßàáâãäåçèéêëìíîïñòóôõöøùúûüýÿ]/;
+    const DiacriticCharMatchers = {};
+    Object.keys(DiacriticCharMapping).forEach(c => DiacriticCharMatchers[c] = new RegExp(c, "g"));
+    class TextIndex {
+        constructor() {
             this.data_ = new Map();
             this.wordNGramCache_ = new Map();
             this.MIN_NGRAM_LENGTH = 2;
@@ -412,29 +404,28 @@
             this.collapsedPunctuationMatcher = /['-]/g;
             this.multipleSpacesMatcher = / +/g;
         }
-        TextIndex.prototype.export = function () {
-            var json = {};
-            this.data_.forEach(function (indexes, key) {
-                var flatIndexes = [];
-                indexes.forEach(function (index) { return flatIndexes.push(index); });
+        export() {
+            const json = {};
+            this.data_.forEach((indexes, key) => {
+                const flatIndexes = [];
+                indexes.forEach(index => flatIndexes.push(index));
                 json[key] = flatIndexes;
             });
             return json;
-        };
-        TextIndex.prototype.import = function (index) {
-            var _this = this;
+        }
+        import(index) {
             if (index instanceof TextIndex) {
-                index.data_.forEach(function (indexes, key) {
-                    if (_this.data_.has(key)) {
-                        mergeSet(_this.data_.get(key), indexes);
+                index.data_.forEach((indexes, key) => {
+                    if (this.data_.has(key)) {
+                        mergeSet(this.data_.get(key), indexes);
                     }
                     else {
-                        _this.data_.set(key, indexes);
+                        this.data_.set(key, indexes);
                     }
                 });
             }
             else {
-                for (var key in index) {
+                for (const key in index) {
                     if (this.data_.has(key)) {
                         mergeSet(this.data_.get(key), index[key]);
                     }
@@ -443,82 +434,74 @@
                     }
                 }
             }
-        };
-        Object.defineProperty(TextIndex.prototype, "ngramCount", {
-            get: function () {
-                return this.data_.size;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        TextIndex.prototype.wordNGrams = function (word) {
+        }
+        get ngramCount() {
+            return this.data_.size;
+        }
+        wordNGrams(word) {
             if (this.wordNGramCache_.has(word)) {
                 return this.wordNGramCache_.get(word);
             }
-            else {
-                var wordLen = word.length;
-                var ngrams = new Set();
-                for (var l = this.MIN_NGRAM_LENGTH; l <= this.MAX_NGRAM_LENGTH; ++l) {
-                    if (l > wordLen) {
-                        break;
-                    }
-                    var maxO = wordLen - l;
-                    for (var o = 0; o <= maxO; ++o) {
-                        var ss = word.substr(o, l);
-                        if (!ngrams.has(ss)) {
-                            ngrams.add(ss);
-                        }
+            const wordLen = word.length;
+            const ngrams = new Set();
+            for (let l = this.MIN_NGRAM_LENGTH; l <= this.MAX_NGRAM_LENGTH; ++l) {
+                if (l > wordLen) {
+                    break;
+                }
+                const maxO = wordLen - l;
+                for (let o = 0; o <= maxO; ++o) {
+                    const ss = word.substr(o, l);
+                    if (!ngrams.has(ss)) {
+                        ngrams.add(ss);
                     }
                 }
-                this.wordNGramCache_.set(word, ngrams);
-                return ngrams;
             }
-        };
-        TextIndex.prototype.stripDiacritics = function (term) {
-            var r;
+            this.wordNGramCache_.set(word, ngrams);
+            return ngrams;
+        }
+        stripDiacritics(term) {
+            let r;
             while (r = term.match(DiacriticsMatcher)) {
-                var mc = term[r.index];
+                const mc = term[r.index];
                 term = term.replace(DiacriticCharMatchers[mc], DiacriticCharMapping[mc]);
             }
             return term;
-        };
-        TextIndex.prototype.tokenizeString = function (s) {
-            var cs = s.toLowerCase().replace(this.collapsedPunctuationMatcher, "").replace(InvalidCharsMatcher, " ").replace(this.multipleSpacesMatcher, " ").trim();
-            var tokens = cs.split(" ");
+        }
+        tokenizeString(s) {
+            const cs = s.toLowerCase().replace(this.collapsedPunctuationMatcher, "").replace(InvalidCharsMatcher, " ").replace(this.multipleSpacesMatcher, " ").trim();
+            const tokens = cs.split(" ");
             return newSetFromArray(tokens);
-        };
-        TextIndex.prototype.indexRawString = function (rs, ref) {
-            var _this = this;
-            var boxedRef = [ref];
-            var tokenSet = this.tokenizeString(rs);
-            tokenSet.forEach(function (token) {
-                token = _this.stripDiacritics(token);
-                var ngrams = _this.wordNGrams(token);
-                ngrams.forEach(function (ngram) {
-                    if (!_this.data_.has(ngram)) {
-                        _this.data_.set(ngram, newSetFromArray(boxedRef));
+        }
+        indexRawString(rs, ref) {
+            const boxedRef = [ref];
+            const tokenSet = this.tokenizeString(rs);
+            tokenSet.forEach(token => {
+                token = this.stripDiacritics(token);
+                const ngrams = this.wordNGrams(token);
+                ngrams.forEach(ngram => {
+                    if (!this.data_.has(ngram)) {
+                        this.data_.set(ngram, newSetFromArray(boxedRef));
                     }
                     else {
-                        _this.data_.get(ngram).add(ref);
+                        this.data_.get(ngram).add(ref);
                     }
                 });
             });
-        };
-        TextIndex.prototype.query = function (qs) {
-            var _this = this;
-            var qt = this.tokenizeString(qs);
-            var termIndexSets = [];
-            var hasEmptyResult = false;
-            qt.forEach(function (term) {
-                if (term.length < _this.MIN_NGRAM_LENGTH) {
+        }
+        query(qs) {
+            const qt = this.tokenizeString(qs);
+            const termIndexSets = [];
+            let hasEmptyResult = false;
+            qt.forEach(term => {
+                if (term.length < this.MIN_NGRAM_LENGTH) {
                     return;
                 }
-                if (term.length > _this.MAX_NGRAM_LENGTH) {
-                    term = term.substr(0, _this.MAX_NGRAM_LENGTH);
+                if (term.length > this.MAX_NGRAM_LENGTH) {
+                    term = term.substr(0, this.MAX_NGRAM_LENGTH);
                 }
-                term = _this.stripDiacritics(term);
-                if (_this.data_.has(term)) {
-                    termIndexSets.push(_this.data_.get(term));
+                term = this.stripDiacritics(term);
+                if (this.data_.has(term)) {
+                    termIndexSets.push(this.data_.get(term));
                 }
                 else {
                     hasEmptyResult = true;
@@ -530,21 +513,19 @@
             if (termIndexSets.length === 0) {
                 return null;
             }
-            termIndexSets.sort(function (a, b) { return a.size < b.size ? -1 : 1; });
-            var result = new Set(termIndexSets[0]);
-            for (var tisix = 1; tisix < termIndexSets.length; ++tisix) {
+            termIndexSets.sort((a, b) => a.size < b.size ? -1 : 1);
+            let result = new Set(termIndexSets[0]);
+            for (let tisix = 1; tisix < termIndexSets.length; ++tisix) {
                 result = intersectSet(result, termIndexSets[tisix]);
             }
             return result;
-        };
-        return TextIndex;
-    }());
+        }
+    }
 
     function makePlatformLookup(plats) {
-        var pl = {};
-        var shift = 0;
-        for (var _i = 0, plats_1 = plats; _i < plats_1.length; _i++) {
-            var p = plats_1[_i];
+        const pl = {};
+        let shift = 0;
+        for (const p of plats) {
             pl[p.key] = {
                 key: p.key,
                 label: p.label,
@@ -554,7 +535,7 @@
         }
         return pl;
     }
-    var Platforms = makePlatformLookup([
+    const Platforms = makePlatformLookup([
         { key: "desktop", label: "Desktop" },
         { key: "win", label: "Windows" },
         { key: "mac", label: "MacOS" },
@@ -565,25 +546,24 @@
         { key: "mobile", label: "Mobile" },
     ]);
     function maskForPlatformKeys(keys) {
-        return keys.reduce(function (mask, key) {
-            var plat = Platforms[key];
+        return keys.reduce((mask, key) => {
+            const plat = Platforms[key];
             return mask | (plat ? plat.mask : 0);
         }, 0);
     }
 
-    var IndexerAPI = (function () {
-        function IndexerAPI() {
-            var _this = this;
+    class IndexerAPI {
+        constructor() {
             this.promFuncs_ = new Map();
             this.nextIndex_ = 0;
             this.worker_ = new Worker("task_indexer.js");
-            this.worker_.onerror = function (event) {
-                console.warn("An internal error occurred inside the indexer task: " + event.error + " @ " + event.lineno + ":" + event.colno);
+            this.worker_.onerror = event => {
+                console.warn(`An internal error occurred inside the indexer task: ${event.error} @ ${event.lineno}:${event.colno}`);
             };
-            this.worker_.onmessage = function (event) {
-                var response = event.data;
+            this.worker_.onmessage = event => {
+                const response = event.data;
                 if (response && typeof response.status === "string" && typeof response.reqIndex === "number") {
-                    var funcs = _this.promFuncs_.get(response.reqIndex);
+                    const funcs = this.promFuncs_.get(response.reqIndex);
                     if (funcs) {
                         if (response.status === "status") {
                             if (funcs.progress) {
@@ -597,83 +577,79 @@
                             else if (response.status === "error") {
                                 funcs.reject(response);
                             }
-                            _this.promFuncs_.delete(response.reqIndex);
+                            this.promFuncs_.delete(response.reqIndex);
                         }
                     }
                     else {
-                        console.warn("IndexerAPI: Cannot find the functions for request #" + response.reqIndex);
+                        console.warn(`IndexerAPI: Cannot find the functions for request #${response.reqIndex}`);
                     }
                 }
                 else {
-                    console.warn("IndexerAPI: Got an invalid response from the server: " + response);
+                    console.warn(`IndexerAPI: Got an invalid response from the server: ${response}`);
                 }
             };
         }
-        IndexerAPI.prototype.promisedCall = function (req, progress) {
-            var _this = this;
-            return new Promise(function (resolve, reject) {
-                _this.promFuncs_.set(req.reqIndex, { resolve: resolve, reject: reject, progress: progress });
-                _this.worker_.postMessage(req);
+        promisedCall(req, progress) {
+            return new Promise((resolve, reject) => {
+                this.promFuncs_.set(req.reqIndex, { resolve: resolve, reject, progress });
+                this.worker_.postMessage(req);
             });
-        };
-        IndexerAPI.prototype.open = function () {
+        }
+        open() {
             this.nextIndex_ += 1;
-            var req = {
+            const req = {
                 what: "open",
                 reqIndex: this.nextIndex_
             };
             return this.promisedCall(req);
-        };
-        IndexerAPI.prototype.index = function (issue, progress) {
+        }
+        index(issue, progress) {
             this.nextIndex_ += 1;
-            var req = {
+            const req = {
                 what: "index",
                 reqIndex: this.nextIndex_,
-                issue: issue
+                issue
             };
             return this.promisedCall(req, progress);
-        };
-        IndexerAPI.prototype.exit = function () {
+        }
+        exit() {
             this.worker_.terminate();
-        };
-        return IndexerAPI;
-    }());
+        }
+    }
 
     function makeDocID(issue, entryIndex) {
         return (issue << 16) | entryIndex;
     }
-    var CatalogIndexer = (function () {
-        function CatalogIndexer(persist_, mode) {
-            var _this = this;
+    class CatalogIndexer {
+        constructor(persist_, mode) {
             this.persist_ = persist_;
             if (mode === "worker") {
                 this.api_ = new IndexerAPI();
-                this.api_.open().catch(function () {
+                this.api_.open().catch(() => {
                     console.warn("Got a failure when trying to connect to Indexer API, disabling");
-                    _this.api_ = undefined;
+                    this.api_ = undefined;
                 });
             }
         }
-        CatalogIndexer.prototype.acceptCatalogData = function (catalog) {
-            var entries = catalog.entries.map(function (entry) {
-                var indEntry = entry;
+        acceptCatalogData(catalog) {
+            const entries = catalog.entries.map(entry => {
+                const indEntry = entry;
                 indEntry.indexes = {
                     platformMask: 0
                 };
                 return indEntry;
             });
-            var count = entries.length;
-            var textIndex = new TextIndex();
-            for (var entryIndex = 0; entryIndex < count; ++entryIndex) {
-                var entry = entries[entryIndex];
-                var docID = makeDocID(catalog.issue, entryIndex);
+            const count = entries.length;
+            const textIndex = new TextIndex();
+            for (let entryIndex = 0; entryIndex < count; ++entryIndex) {
+                const entry = entries[entryIndex];
+                const docID = makeDocID(catalog.issue, entryIndex);
                 entry.docID = docID;
                 entry.indexes.platformMask = maskForPlatformKeys(entry.platforms);
                 textIndex.indexRawString(entry.title, docID);
                 textIndex.indexRawString(entry.author.name, docID);
                 textIndex.indexRawString(entry.description, docID);
-                for (var _i = 0, _a = entry.links; _i < _a.length; _i++) {
-                    var link = _a[_i];
+                for (const link of entry.links) {
                     textIndex.indexRawString(link.label, docID);
                 }
                 if (this.onProgress) {
@@ -682,57 +658,58 @@
             }
             this.storeCatalog(catalog, entries, textIndex);
             return {
-                entries: entries,
-                textIndex: textIndex
+                entries,
+                textIndex
             };
-        };
-        CatalogIndexer.prototype.storeCatalog = function (catalog, indexedEntries, textIndex) {
+        }
+        storeCatalog(catalog, indexedEntries, textIndex) {
             this.persist_.saveCatalog(catalog, indexedEntries, textIndex.export())
-                .then(function () {
-                console.info("saved issue " + catalog.issue);
+                .then(() => {
+                console.info(`saved issue ${catalog.issue}`);
             });
-        };
-        CatalogIndexer.prototype.importCatalogFile = function (issue, progress) {
-            var _this = this;
+        }
+        importCatalogFile(issue, progress) {
             if (this.api_) {
                 return this.api_.index(issue, progress)
-                    .then(function (response) {
-                    var textIndex = new TextIndex();
+                    .then(response => {
+                    const textIndex = new TextIndex();
                     textIndex.import(response.textIndex);
-                    return { entries: response.entries, textIndex: textIndex };
+                    return { entries: response.entries, textIndex };
                 });
             }
             else {
-                var urlPrefix = (location.pathname.indexOf("/workers") > -1) ? "../" : "";
-                var entriesURL = urlPrefix + "data/ld" + issue + "_entries.json?d={Date.now()}";
-                return loadTypedJSON(entriesURL).then(function (catalog) {
-                    return _this.acceptCatalogData(catalog);
+                const urlPrefix = (location.pathname.indexOf("/workers") > -1) ? "../" : "";
+                const entriesURL = `${urlPrefix}data/ld${issue}_entries.json?d={Date.now()}`;
+                return loadTypedJSON(entriesURL).then(catalog => {
+                    return this.acceptCatalogData(catalog);
                 });
             }
-        };
-        CatalogIndexer.prototype.stop = function () {
+        }
+        stop() {
             if (this.api_) {
                 this.api_.exit();
             }
-        };
-        return CatalogIndexer;
-    }());
+        }
+    }
 
-    var db;
-    onmessage = function (evt) {
-        var req = evt.data;
-        var error = function (message) {
-            postMessage({
+    let db;
+    function postResponse(r) {
+        postMessage(r);
+    }
+    onmessage = (evt) => {
+        const req = evt.data;
+        const error = function (message) {
+            postResponse({
                 status: "error",
                 reqIndex: (req && ("reqIndex" in req)) ? req.reqIndex : null,
-                message: message
+                message
             });
         };
         if (typeof req === "object" && "what" in req) {
             if (req.what === "open") {
                 if (db === undefined) {
                     db = new CatalogPersistence();
-                    postMessage({ status: "success", reqIndex: req.reqIndex });
+                    postResponse({ status: "success", reqIndex: req.reqIndex });
                 }
                 else {
                     error("Redundant open request");
@@ -741,18 +718,18 @@
             else if (req.what === "index") {
                 if (db !== undefined) {
                     if (typeof req.issue === "number" && req.issue >= 15 && req.issue <= 50) {
-                        var indexer = new CatalogIndexer(db, "local");
+                        const indexer = new CatalogIndexer(db, "local");
                         indexer.onProgress = function (completed, total) {
                             if (completed % 100 === 0) {
-                                postMessage({
+                                postResponse({
                                     status: "status",
                                     reqIndex: req.reqIndex,
                                     progress: completed / total
                                 });
                             }
                         };
-                        indexer.importCatalogFile(req.issue).then(function (data) {
-                            postMessage({
+                        indexer.importCatalogFile(req.issue).then(data => {
+                            postResponse({
                                 status: "success",
                                 reqIndex: req.reqIndex,
                                 entries: data.entries,
@@ -761,7 +738,7 @@
                         });
                     }
                     else {
-                        error("Invalid issue number: " + req.issue);
+                        error(`Invalid issue number: ${req.issue}`);
                     }
                 }
                 else {
@@ -769,7 +746,7 @@
                 }
             }
             else {
-                error("Unknown request type " + req.what);
+                error(`Unknown request type ${req.what}`);
             }
         }
         else {

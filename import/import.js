@@ -2,102 +2,89 @@
 
 function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
 
-var mkdirp = _interopDefault(require('mkdirp'));
-var request = _interopDefault(require('request'));
 var fs = require('fs');
+var got = _interopDefault(require('got'));
+var mkdirp = require('mkdirp');
 var jsdom = require('jsdom');
 
 function listingDirPath() {
-    return "./spider_data/listings/";
+    return `./spider_data/listings/`;
 }
 function listingPath(issue) {
-    return listingDirPath() + "listing_" + issue + ".json";
+    return `${listingDirPath()}listing_${issue}.json`;
 }
 function thumbsDirPath(issue) {
-    return "../site/data/thumbs/" + issue + "/";
+    return `../site/data/thumbs/${issue}/`;
 }
 function localThumbPathForLDURL(issue, ldThumb) {
-    var fileName = ldThumb.split("/").splice(-1);
+    const fileName = ldThumb.split("/").splice(-1);
     return thumbsDirPath(issue) + fileName;
 }
 function entryPagesDirPath(issue) {
-    return "./spider_data/entry_pages/entries_" + issue + "/";
+    return `./spider_data/entry_pages/entries_${issue}/`;
 }
 function entryPageFilePath(issue, uid) {
-    var ext = issue <= 37 ? "html" : "json";
-    return entryPagesDirPath(issue) + "entry_" + uid + "." + ext;
+    const ext = issue <= 37 ? "html" : "json";
+    return `${entryPagesDirPath(issue)}entry_${uid}.${ext}`;
 }
 function userJSONFilePath(issue, uid) {
-    return entryPagesDirPath(issue) + "user_" + uid + ".json";
+    return `${entryPagesDirPath(issue)}user_${uid}.json`;
 }
 function entriesCatalogPath(issue) {
-    return "../site/data/ld" + issue + "_entries.json";
+    return `../site/data/ld${issue}_entries.json`;
 }
 function issueBaseURL(issue) {
     if (issue <= 37) {
-        return "http://ludumdare.com/compo/ludum-dare-" + issue + "/";
+        return `http://ludumdare.com/compo/ludum-dare-${issue}/`;
     }
     else {
-        return "https://api.ldjam.com/vx/node/";
+        return `https://api.ldjam.com/vx/node/`;
     }
 }
 function issueFeedID(issue) {
-    var issue2Feed = {
+    const issue2Feed = {
         38: 9405,
         39: 32802,
         40: 49883,
         41: 73256,
         42: 97793,
         43: 120415,
+        44: 139254,
+        45: 159347,
+        46: 176557,
+        47: -1,
+        48: -1,
+        49: -1
     };
     return issue2Feed[issue];
 }
-function issueMinMonth(issue) {
-    var issue2Date = {
-        38: "2017-04",
-        39: "2017-08",
-        40: "2017-12",
-        41: "2018-04",
-        42: "2018-08",
-        43: "2018-12"
-    };
-    return issue2Date[issue];
-}
-function issueIndexPageURL(issue, offset) {
+function issueIndexPageURL(issue, offset, limit) {
     if (issue <= 37) {
-        return issueBaseURL(issue) + "/?action=preview&start=" + offset;
+        return `${issueBaseURL(issue)}?action=preview&start=${offset}`;
     }
     else {
-        var feed = issueFeedID(issue);
+        const feed = issueFeedID(issue);
         if (!feed) {
-            throw new Error("You have to update the issueFeedID mapping for issue " + issue);
+            throw new Error(`You have to update the issueFeedID mapping for issue ${issue}`);
         }
-        return issueBaseURL(issue) + "/feed/" + feed + "/all/item/game/compo+jam?offset=" + offset + "}&limit=24";
+        return `${issueBaseURL(issue)}feed/${feed}/grade-01-result+reverse+parent/item/game/compo+jam?offset=${offset}&limit=${limit}`;
     }
 }
 function ensureDirectory(dir) {
-    return new Promise(function (resolve, reject) {
-        mkdirp(dir, function (err) {
-            if (err) {
-                reject(err);
-            }
-            else {
-                resolve();
-            }
-        });
-    });
+    return mkdirp(dir);
 }
 function timeoutPromise(delayMS) {
-    return new Promise(function (resolve) {
+    return new Promise(resolve => {
         setTimeout(resolve, delayMS);
     });
 }
 
-var LD_PAGE_SIZE = 24;
-var DELAY_BETWEEN_REQUESTS_MS = 20;
+const LD_PAGE_SIZE = 24;
+const LD_NEW_PAGE_SIZE = 100;
+const DELAY_BETWEEN_REQUESTS_MS = 20;
 function processBody(state, body) {
-    var links = body.match(/\?action=preview&(amp;)?uid=(\d+)/g);
-    var thumbs = body.match(/http:\/\/ludumdare.com\/compo\/wp\-content\/compo2\/thumb\/[^\.]+\.jpg/g);
+    const links = body.match(/\?action=preview&(amp;)?uid=(\d+)/g);
+    const thumbs = body.match(/http:\/\/ludumdare.com\/compo\/wp\-content\/compo2\/thumb\/[^\.]+\.jpg/g);
     if (links && thumbs) {
         if (links.length === thumbs.length + 1) {
             links.shift();
@@ -107,88 +94,74 @@ function processBody(state, body) {
             state.allThumbs = state.allThumbs.concat(thumbs);
         }
         else {
-            throw new Error("mismatch of link and thumb count (" + links.length + " vs " + thumbs.length + ") at offset " + state.offset);
+            throw new Error(`mismatch of link and thumb count (${links.length} vs ${thumbs.length}) at offset ${state.offset}`);
         }
         return false;
     }
     return true;
 }
 function processBodyNew(state, body) {
-    var listingJSON = JSON.parse(body);
+    const listingJSON = JSON.parse(body);
     if (listingJSON && listingJSON.status === 200 && listingJSON.feed) {
-        var ids = listingJSON.feed.filter(function (g) { return g.modified.indexOf(issueMinMonth(state.issue)) === 0; }).map(function (g) { return "" + g.id; });
+        const ids = listingJSON.feed.map(g => "" + g.id);
         state.allLinks = state.allLinks.concat(ids);
         if (ids.length < listingJSON.feed.length) {
-            console.info("skipping " + (listingJSON.feed.length - ids.length) + " entries from older LD.");
+            console.info(`skipping ${listingJSON.feed.length - ids.length} entries from older LD.`);
         }
         return listingJSON.feed.length === 0;
     }
     else {
-        throw new Error("Something wrong with the feed at offset " + state.offset);
+        throw new Error(`Something wrong with the feed at offset ${state.offset}`);
     }
 }
 function next(state) {
-    var processFn = (state.issue <= 37) ? processBody : processBodyNew;
-    return new Promise(function (resolve, reject) {
-        request("" + issueIndexPageURL(state.issue, state.offset), function (error, response, body) {
-            var completed = false;
-            if (!error && response.statusCode === 200) {
-                try {
-                    completed = processFn(state, body);
-                }
-                catch (e) {
-                    reject(e.message);
-                    return;
-                }
-            }
-            else {
-                reject("Failed to get page for offset " + state.offset + ", status: " + response.statusCode + ", error: " + error);
-                return;
-            }
-            if (!completed) {
-                state.offset += LD_PAGE_SIZE;
-                console.info("fetched " + state.allLinks.length + " records...");
-                resolve(timeoutPromise(DELAY_BETWEEN_REQUESTS_MS).then(function (_) { return next(state); }));
-            }
-            else {
-                console.info("Writing listing (" + state.allLinks.length + " entries)...");
-                var listingJSON_1 = JSON.stringify({ links: state.allLinks, thumbs: state.allThumbs });
-                ensureDirectory(listingDirPath()).then(function () {
-                    fs.writeFile(listingPath(state.issue), listingJSON_1, function (err) {
-                        if (err) {
-                            console.error("Failed to write listing file", err);
-                        }
-                        else {
-                            console.info("Done.");
-                            resolve();
-                        }
-                    });
+    const processFn = (state.issue <= 37) ? processBody : processBodyNew;
+    const pageSize = (state.issue <= 37) ? LD_PAGE_SIZE : LD_NEW_PAGE_SIZE;
+    return got(`${issueIndexPageURL(state.issue, state.offset, pageSize)}`)
+        .then((response) => {
+        let completed = processFn(state, response.body);
+        if (!completed) {
+            state.offset += pageSize;
+            console.info(`fetched ${state.allLinks.length} records...`);
+            return timeoutPromise(DELAY_BETWEEN_REQUESTS_MS).then(_ => next(state));
+        }
+        else {
+            console.info(`Writing listing (${state.allLinks.length} entries)...`);
+            const listingJSON = JSON.stringify({ links: state.allLinks, thumbs: state.allThumbs });
+            return ensureDirectory(listingDirPath()).then(() => {
+                return fs.promises.writeFile(listingPath(state.issue), listingJSON)
+                    .then(() => {
+                    console.info("Done.");
+                }, err => {
+                    console.error("Failed to write listing file", err);
                 });
-            }
-        });
+            });
+        }
+    }, (error) => {
+        throw new Error(`Failed to get page for offset ${state.offset}, error: ${error}`);
     });
 }
 function fetchListing(issue) {
     if (isNaN(issue) || issue < 15 || issue > 99) {
         return Promise.reject("issue must be (15 <= issue <= 99)");
     }
-    console.info("Fetching listing for issue " + issue);
+    console.info(`Fetching listing for issue ${issue}`);
     return next({
-        issue: issue,
+        issue,
         offset: 0,
         allLinks: [],
         allThumbs: []
     });
 }
 
-var DELAY_BETWEEN_REQUESTS_MS$1 = 50;
+const DELAY_BETWEEN_REQUESTS_MS$1 = 50;
 function load(state) {
     if (state.index >= state.urlList.length) {
-        console.info("Done (wrote " + state.entriesWritten + " entries, " + state.failures + " failures)");
+        console.info(`Done (wrote ${state.entriesWritten} entries, ${state.failures} failures)`);
         return Promise.resolve();
     }
-    var _a = state.urlList[state.index].split("|"), linkType = _a[0], link = _a[1];
-    var gid;
+    const [linkType, link] = state.urlList[state.index].split("|");
+    let gid;
     if (state.issue <= 37) {
         if (linkType !== "E") {
             throw new Error("Can only handle entry links in LD <= 37");
@@ -198,30 +171,29 @@ function load(state) {
     else {
         gid = parseInt(link.substr(link.lastIndexOf("/") + 1));
     }
-    var filePath = linkType === "E" ? entryPageFilePath(state.issue, gid) : userJSONFilePath(state.issue, gid);
-    var next = function (overrideDelay) {
+    const filePath = linkType === "E" ? entryPageFilePath(state.issue, gid) : userJSONFilePath(state.issue, gid);
+    const next = (overrideDelay) => {
         if (state.index % 10 === 0) {
-            console.info((100 * (state.index / state.urlList.length)).toFixed(1) + ("% (" + state.index + "/" + state.urlList.length + ")"));
+            console.info((100 * (state.index / state.urlList.length)).toFixed(1) + `% (${state.index}/${state.urlList.length})`);
         }
         state.index += 1;
         return timeoutPromise(overrideDelay || DELAY_BETWEEN_REQUESTS_MS$1)
-            .then(function (_) { return load(state); });
+            .then(_ => load(state));
     };
     if (fs.existsSync(filePath)) {
         if (linkType === "E") {
-            return new Promise(function (resolve) {
-                fs.readFile(filePath, "utf8", function (err, data) {
+            return new Promise(resolve => {
+                fs.readFile(filePath, "utf8", (err, data) => {
                     if (err) {
-                        state.urlList.push("E|" + issueBaseURL(state.issue) + "/get/" + gid);
+                        state.urlList.push(`E|${issueBaseURL(state.issue)}/get/${gid}`);
                     }
                     else {
-                        var json = JSON.parse(data);
+                        const json = JSON.parse(data);
                         if (json.node[0] && json.node[0].meta) {
-                            for (var _i = 0, _a = json.node[0].meta.author; _i < _a.length; _i++) {
-                                var author = _a[_i];
+                            for (const author of json.node[0].meta.author) {
                                 if (!state.authorIDs.has(author)) {
                                     state.authorIDs.add(author);
-                                    state.urlList.push("U|" + issueBaseURL(state.issue) + "/get/" + author);
+                                    state.urlList.push(`U|${issueBaseURL(state.issue)}/get/${author}`);
                                 }
                             }
                         }
@@ -233,41 +205,32 @@ function load(state) {
         return next(1);
     }
     else {
-        return new Promise(function (resolve) {
-            request({
-                url: link,
-                timeout: 3000
-            }, function (error, response, body) {
-                if (!error && response.statusCode === 200) {
-                    if (linkType === "E" && state.issue >= 38) {
-                        var json = JSON.parse(body);
-                        if (json && json.node && json.node[0] && json.node[0].meta) {
-                            for (var _i = 0, _a = json.node[0].meta.author; _i < _a.length; _i++) {
-                                var author = _a[_i];
-                                if (!state.authorIDs.has(author)) {
-                                    state.authorIDs.add(author);
-                                    state.urlList.push("U|" + issueBaseURL(state.issue) + "/get/" + author);
-                                }
-                            }
+        return got(link, { timeout: 3000 })
+            .then((response) => {
+            if (linkType === "E" && state.issue >= 38) {
+                const json = JSON.parse(response.body);
+                if (json && json.node && json.node[0] && json.node[0].meta) {
+                    for (const author of json.node[0].meta.author) {
+                        if (!state.authorIDs.has(author)) {
+                            state.authorIDs.add(author);
+                            state.urlList.push(`U|${issueBaseURL(state.issue)}/get/${author}`);
                         }
                     }
-                    fs.writeFile(filePath, body, function (err) {
-                        if (err) {
-                            console.info("Failed to write file for gid: " + gid, err);
-                            state.failures += 1;
-                        }
-                        else {
-                            state.entriesWritten += 1;
-                        }
-                        resolve(next());
-                    });
                 }
-                else {
-                    console.info("Failed to load entry page for gid: " + gid, error, response ? response.statusCode : "-");
-                    state.failures += 1;
-                    resolve(next());
-                }
+            }
+            return fs.promises.writeFile(filePath, response.body)
+                .then(() => {
+                state.entriesWritten += 1;
+                return next();
+            }, err => {
+                console.info(`Failed to write file for gid: ${gid}`, err);
+                state.failures += 1;
+                return next();
             });
+        }, (error) => {
+            console.info(`Failed to load entry page for gid: ${gid}`, error);
+            state.failures += 1;
+            return next();
         });
     }
 }
@@ -275,26 +238,26 @@ function fetchEntryPages(issue) {
     if (isNaN(issue) || issue < 15 || issue > 99) {
         return Promise.reject("issue must be (15 <= issue <= 99)");
     }
-    console.info("Fetching entry pages for issue " + issue);
-    return new Promise(function (resolve, reject) {
-        fs.readFile(listingPath(issue), "utf8", function (listingErr, data) {
+    console.info(`Fetching entry pages for issue ${issue}`);
+    return new Promise((resolve, reject) => {
+        fs.readFile(listingPath(issue), "utf8", (listingErr, data) => {
             if (listingErr) {
-                reject("Could not load listing for issue " + issue + ": " + listingErr);
+                reject(`Could not load listing for issue ${issue}: ${listingErr}`);
                 return;
             }
             resolve(ensureDirectory(entryPagesDirPath(issue))
-                .then(function () {
-                var json = JSON.parse(data);
-                var links;
-                var baseURL = issueBaseURL(issue);
+                .then(() => {
+                const json = JSON.parse(data);
+                let links;
+                const baseURL = issueBaseURL(issue);
                 if (issue <= 37) {
-                    links = json.links.map(function (u) { return "E|" + baseURL + u; });
+                    links = json.links.map(u => `E|${baseURL}${u}`);
                 }
                 else {
-                    links = json.links.map(function (id) { return "E|" + baseURL + "/get/" + id; });
+                    links = json.links.map(id => `E|${baseURL}/get/${id}`);
                 }
                 return load({
-                    issue: issue,
+                    issue,
                     index: 0,
                     urlList: links,
                     entriesWritten: 0,
@@ -302,57 +265,48 @@ function fetchEntryPages(issue) {
                     authorIDs: new Set()
                 });
             })
-                .catch(function (dirErr) {
-                reject("Could not create entries directory: " + dirErr);
+                .catch(dirErr => {
+                reject(`Could not create entries directory: ${dirErr}`);
             }));
         });
     });
 }
 
-var DELAY_BETWEEN_REQUESTS_MS$2 = 10;
+const DELAY_BETWEEN_REQUESTS_MS$2 = 10;
 function load$1(state) {
     if (state.index >= state.urlList.length) {
-        console.info("Done (wrote " + state.thumbsWritten + " thumbs, " + state.failures + " failures)");
+        console.info(`Done (wrote ${state.thumbsWritten} thumbs, ${state.failures} failures)`);
         return Promise.resolve();
     }
-    var url = state.urlList[state.index];
-    var localPath = localThumbPathForLDURL(state.issue, url);
-    var next = function (overrideDelay) {
+    const url = state.urlList[state.index];
+    const localPath = localThumbPathForLDURL(state.issue, url);
+    const next = (overrideDelay) => {
         if (state.index % 10 === 0) {
             console.info((100 * (state.index / state.urlList.length)).toFixed(1) + "%");
         }
         state.index += 1;
         return timeoutPromise(overrideDelay || DELAY_BETWEEN_REQUESTS_MS$2)
-            .then(function (_) { return load$1(state); });
+            .then(_ => load$1(state));
     };
     if (fs.existsSync(localPath)) {
         return next(1);
     }
     else {
-        return new Promise(function (resolve) {
-            request({
-                url: url,
-                encoding: null,
-                timeout: 3000
-            }, function (error, response, body) {
-                if (!error && response.statusCode === 200) {
-                    fs.writeFile(localPath, body, function (err) {
-                        if (err) {
-                            console.info("Failed to write thumb: " + localPath, err);
-                            state.failures += 1;
-                        }
-                        else {
-                            state.thumbsWritten += 1;
-                        }
-                        resolve(next());
-                    });
-                }
-                else {
-                    console.info("Failed to load thumb " + url, error, response ? response.statusCode : "-");
-                    state.failures += 1;
-                    resolve(next());
-                }
+        return got(url, { responseType: "buffer", timeout: 3000 })
+            .then(response => {
+            return fs.promises.writeFile(localPath, response.body)
+                .then(() => {
+                state.thumbsWritten += 1;
+                return next();
+            }, err => {
+                console.info(`Failed to write thumb: ${localPath}`, err);
+                state.failures += 1;
+                return next();
             });
+        }, error => {
+            console.info(`Failed to load thumb ${url}`, error);
+            state.failures += 1;
+            return next();
         });
     }
 }
@@ -360,39 +314,38 @@ function fetchThumbs(issue) {
     if (isNaN(issue) || issue < 15 || issue > 99) {
         return Promise.reject("issue must be (15 <= issue <= 99)");
     }
-    console.info("Fetching thumbs for issue " + issue);
-    var sourcePath = issue <= 37 ? listingPath(issue) : entriesCatalogPath(issue);
-    return new Promise(function (resolve, reject) {
-        fs.readFile(sourcePath, "utf8", function (listingErr, data) {
+    console.info(`Fetching thumbs for issue ${issue}`);
+    const sourcePath = issue <= 37 ? listingPath(issue) : entriesCatalogPath(issue);
+    return new Promise((resolve, reject) => {
+        fs.readFile(sourcePath, "utf8", (listingErr, data) => {
             if (listingErr) {
-                reject("Could not load listing/entries for issue " + issue + ": " + listingErr);
+                reject(`Could not load listing/entries for issue ${issue}: ${listingErr}`);
                 return;
             }
             return (ensureDirectory(thumbsDirPath(issue))
-                .then(function () {
-                var thumbs = issue <= 37 ?
+                .then(() => {
+                const thumbs = issue <= 37 ?
                     JSON.parse(data).thumbs :
-                    JSON.parse(data).entries.filter(function (e) { return e.thumbnail_url.length > 0; }).map(function (e) { return e.thumbnail_url; });
+                    JSON.parse(data).entries.filter(e => e.thumbnail_url.length > 0).map(e => e.thumbnail_url);
                 resolve(load$1({
-                    issue: issue,
+                    issue,
                     index: 0,
                     urlList: thumbs,
                     thumbsWritten: 0,
                     failures: 0
                 }));
             })
-                .catch(function (dirErr) {
-                reject("Could not create thumbs directory: " + dirErr);
+                .catch(dirErr => {
+                reject(`Could not create thumbs directory: ${dirErr}`);
             }));
         });
     });
 }
 
 function makePlatformLookup(plats) {
-    var pl = {};
-    var shift = 0;
-    for (var _i = 0, plats_1 = plats; _i < plats_1.length; _i++) {
-        var p = plats_1[_i];
+    const pl = {};
+    let shift = 0;
+    for (const p of plats) {
         pl[p.key] = {
             key: p.key,
             label: p.label,
@@ -402,7 +355,7 @@ function makePlatformLookup(plats) {
     }
     return pl;
 }
-var Platforms = makePlatformLookup([
+const Platforms = makePlatformLookup([
     { key: "desktop", label: "Desktop" },
     { key: "win", label: "Windows" },
     { key: "mac", label: "MacOS" },
@@ -412,7 +365,7 @@ var Platforms = makePlatformLookup([
     { key: "vr", label: "VR" },
     { key: "mobile", label: "Mobile" },
 ]);
-var IssueThemeNames = {
+const IssueThemeNames = {
     15: "Caverns",
     16: "Exploration",
     17: "Islands",
@@ -441,25 +394,28 @@ var IssueThemeNames = {
     40: "The more you have, the worse it is",
     41: "Two Incompatible Genres",
     42: "Running out of Space",
-    43: "Sacrifices must be made"
+    43: "Sacrifices must be made",
+    44: "Your life is currency",
+    45: "Start with nothing",
+    46: "Keep it alive"
 };
 
 function mergeSet(dest, source) {
     if (source && source.forEach) {
-        source.forEach(function (val) { return dest.add(val); });
+        source.forEach(val => dest.add(val));
     }
 }
 function newSetFromArray(source) {
-    var set = new Set();
-    var len = source.length;
-    for (var vi = 0; vi < len; ++vi) {
+    const set = new Set();
+    const len = source.length;
+    for (let vi = 0; vi < len; ++vi) {
         set.add(source[vi]);
     }
     return set;
 }
 function arrayFromSet(source) {
-    var arr = [];
-    source.forEach(function (val) { return arr.push(val); });
+    const arr = [];
+    source.forEach(val => arr.push(val));
     return arr;
 }
 
@@ -471,7 +427,7 @@ function termify(text) {
         .replace(/ +/g, " ")
         .trim()
         .split(" ")
-        .map(function (term) {
+        .map(term => {
         return term
             .replace("lve", "love")
             .replace(",", "")
@@ -481,7 +437,7 @@ function termify(text) {
 function pks(keys) {
     return newSetFromArray(keys);
 }
-var linkPlatformMapping = {
+const linkPlatformMapping = {
     download: pks(["desktop"]),
     love: pks(["win", "mac", "linux", "desktop"]),
     love2d: pks(["win", "mac", "linux", "desktop"]),
@@ -521,7 +477,7 @@ var linkPlatformMapping = {
     apk: pks(["mobile"]),
     ios: pks(["mobile"]),
 };
-var descriptionPlatformMapping = {
+const descriptionPlatformMapping = {
     exe: pks(["win", "desktop"]),
     love2d: pks(["win", "mac", "linux", "desktop"]),
     html5: pks(["web"]),
@@ -538,32 +494,27 @@ var descriptionPlatformMapping = {
     cardboard: pks(["vr"]),
 };
 function detectPlatforms(entry) {
-    var plats = new Set();
-    var descTerms = termify(entry.description);
-    var urlTerms = entry.links
-        .map(function (link) {
-        return termify(link.label)
-            .concat(termify(link.url));
-    })
-        .reduce(function (ta, tn) { return ta.concat(tn); }, []);
-    for (var _i = 0, urlTerms_1 = urlTerms; _i < urlTerms_1.length; _i++) {
-        var term = urlTerms_1[_i];
-        var lks = linkPlatformMapping[term];
+    const plats = new Set();
+    const descTerms = termify(entry.description);
+    const urlTerms = entry.links
+        .map(link => termify(link.label)
+        .concat(termify(link.url)))
+        .reduce((ta, tn) => ta.concat(tn), []);
+    for (const term of urlTerms) {
+        const lks = linkPlatformMapping[term];
         if (lks) {
             mergeSet(plats, lks);
         }
     }
-    for (var _a = 0, descTerms_1 = descTerms; _a < descTerms_1.length; _a++) {
-        var term = descTerms_1[_a];
-        var dks = descriptionPlatformMapping[term];
+    for (const term of descTerms) {
+        const dks = descriptionPlatformMapping[term];
         if (dks) {
             mergeSet(plats, dks);
         }
     }
     if (plats.size === 0 && entry.ld_issue >= 38) {
-        for (var _b = 0, descTerms_2 = descTerms; _b < descTerms_2.length; _b++) {
-            var term = descTerms_2[_b];
-            var dks = descriptionPlatformMapping[term];
+        for (const term of descTerms) {
+            const dks = descriptionPlatformMapping[term];
             if (dks) {
                 mergeSet(plats, dks);
             }
@@ -586,16 +537,16 @@ function detectPlatforms(entry) {
 }
 
 function entryDoc(issue, uid) {
-    return new Promise(function (resolve, reject) {
+    return new Promise((resolve, reject) => {
         jsdom.JSDOM.fromFile(entryPageFilePath(issue, uid))
-            .then(function (jsdom$$1) {
-            resolve(jsdom$$1.window.document);
-        }, function (err) {
+            .then((jsdom) => {
+            resolve(jsdom.window.document);
+        }, (err) => {
             reject(err);
         });
     });
 }
-var apiLinkTypeDescription = {
+const apiLinkTypeDescription = {
     42332: "Source code",
     42336: "HTML5 web",
     42337: "Windows",
@@ -658,21 +609,21 @@ var apiLinkTypeDescription = {
     42517: "Document",
 };
 function entryJSONDoc(issue, gid) {
-    return new Promise(function (resolve, reject) {
-        fs.readFile(entryPageFilePath(issue, gid), "utf8", function (err, data) {
+    return new Promise((resolve, reject) => {
+        fs.readFile(entryPageFilePath(issue, gid), "utf8", (err, data) => {
             if (err) {
                 reject(err);
             }
             else {
-                var entryJSON = JSON.parse(data);
+                const entryJSON = JSON.parse(data);
                 resolve(entryJSON);
             }
         });
     });
 }
 function userJSONDoc(issue, uid) {
-    return new Promise(function (resolve, reject) {
-        fs.readFile(userJSONFilePath(issue, uid), "utf8", function (err, data) {
+    return new Promise((resolve, reject) => {
+        fs.readFile(userJSONFilePath(issue, uid), "utf8", (err, data) => {
             if (err) {
                 reject(err);
             }
@@ -683,32 +634,31 @@ function userJSONDoc(issue, uid) {
     });
 }
 function loadCatalog(issue) {
-    return new Promise(function (resolve, reject) {
-        fs.readFile(listingPath(issue), "utf8", function (err, data) {
+    return new Promise((resolve, reject) => {
+        fs.readFile(listingPath(issue), "utf8", (err, data) => {
             if (err) {
                 reject(err);
             }
             else {
-                var listingJSON = JSON.parse(data);
+                const listingJSON = JSON.parse(data);
                 resolve(listingJSON);
             }
         });
     });
 }
 function extractRatings(table) {
-    var ratings = [];
+    const ratings = [];
     if (table) {
-        var trs = [].slice.call(table.querySelectorAll("tr"));
-        for (var _i = 0, trs_1 = trs; _i < trs_1.length; _i++) {
-            var row = trs_1[_i];
-            var tds = row.querySelectorAll("td");
+        const trs = [].slice.call(table.querySelectorAll("tr"));
+        for (const row of trs) {
+            const tds = row.querySelectorAll("td");
             if (tds.length !== 3) {
                 console.info("weird rating table found");
                 break;
             }
-            var rank = -1;
-            var rankString = tds[0].innerHTML.trim();
-            var simpleRank = rankString.match(/#(\d+)/);
+            let rank = -1;
+            const rankString = tds[0].innerHTML.trim();
+            const simpleRank = rankString.match(/#(\d+)/);
             if (simpleRank) {
                 rank = parseInt(simpleRank[1]);
             }
@@ -721,60 +671,60 @@ function extractRatings(table) {
             else if (rankString.indexOf("igold") > -1) {
                 rank = 1;
             }
-            var area = (tds[1].innerHTML.trim().toLowerCase().replace("(jam)", ""));
-            var score = parseFloat(tds[2].innerHTML.trim());
+            const area = (tds[1].innerHTML.trim().toLowerCase().replace("(jam)", ""));
+            const score = parseFloat(tds[2].innerHTML.trim());
             if (rank > -1 && area.length > 0 && !isNaN(score)) {
-                ratings.push({ area: area, rank: rank, score: score });
+                ratings.push({ area, rank, score });
             }
         }
     }
     return ratings;
 }
 function createEntry(relURI, issue, uid, thumbImg, doc) {
-    var ldBaseURL = "http://ludumdare.com/compo/";
-    var eventBaseURL = issueBaseURL(issue);
-    var base = doc.querySelector("#compo2");
+    const ldBaseURL = "http://ludumdare.com/compo/";
+    const eventBaseURL = issueBaseURL(issue);
+    const base = doc.querySelector("#compo2");
     if (!base) {
-        throw new Error("no base element in page of uid: " + uid);
+        throw new Error(`no base element in page of uid: ${uid}`);
     }
-    var titleElem = base.querySelector("h2");
-    var avatarImg = base.querySelector("img.avatar");
-    var authorLink = titleElem && titleElem.parentElement.querySelector("a");
-    var categoryText = (titleElem && titleElem.parentElement.querySelector("i").textContent) || "";
-    var authorName = (authorLink && authorLink.querySelector("strong").textContent) || "";
-    var screensArrayElem = base.querySelector(".shot-nav");
-    var screensArray = [].slice.call((screensArrayElem && screensArrayElem.querySelectorAll("img")) || []);
-    var linksArray = [].slice.call(base.querySelectorAll(".links a"));
-    var description = (screensArrayElem && screensArrayElem.nextSibling && screensArrayElem.nextSibling.textContent) || "";
-    var ratingTable = base.querySelector("table");
-    if ([titleElem, avatarImg, authorLink, categoryText, authorName, screensArrayElem].some(function (t) { return t == null; })) {
-        throw new Error("can't get all relevant elements from page source of uid " + uid);
+    const titleElem = base.querySelector("h2");
+    const avatarImg = base.querySelector("img.avatar");
+    const authorLink = titleElem && titleElem.parentElement.querySelector("a");
+    const categoryText = (titleElem && titleElem.parentElement.querySelector("i").textContent) || "";
+    const authorName = (authorLink && authorLink.querySelector("strong").textContent) || "";
+    const screensArrayElem = base.querySelector(".shot-nav");
+    const screensArray = [].slice.call((screensArrayElem && screensArrayElem.querySelectorAll("img")) || []);
+    const linksArray = [].slice.call(base.querySelectorAll(".links a"));
+    const description = (screensArrayElem && screensArrayElem.nextSibling && screensArrayElem.nextSibling.textContent) || "";
+    const ratingTable = base.querySelector("table");
+    if ([titleElem, avatarImg, authorLink, categoryText, authorName, screensArrayElem].some(t => t == null)) {
+        throw new Error(`can't get all relevant elements from page source of uid ${uid}`);
     }
-    var categoryStr = categoryText.split(" ")[0].toLowerCase().replace("competition", "compo");
-    var entry = {
+    const categoryStr = categoryText.split(" ")[0].toLowerCase().replace("competition", "compo");
+    const entry = {
         ld_issue: issue,
         title: titleElem.textContent || "<no title>",
         category: categoryStr.indexOf("jam") > -1 ? "jam" : "compo",
-        description: description,
+        description,
         thumbnail_url: thumbImg,
         entry_url: eventBaseURL + relURI,
         author: {
             name: authorName,
-            uid: uid,
+            uid,
             avatar_url: avatarImg.src,
             home_url: ldBaseURL + authorLink.getAttribute("href").substr(3)
         },
-        screens: screensArray.map(function (screen) {
-            var imgoc = screen.getAttribute("onclick");
-            var urls = { thumbnail_url: "", full_url: "" };
+        screens: screensArray.map(screen => {
+            const imgoc = screen.getAttribute("onclick");
+            const urls = { thumbnail_url: "", full_url: "" };
             if (imgoc) {
                 urls.thumbnail_url = screen.src.replace(/compo2\/\//g, "compo2/");
                 urls.full_url = imgoc.substring(imgoc.lastIndexOf("http://"), imgoc.indexOf('")'));
             }
             return urls;
         })
-            .filter(function (s) { return s.full_url.length > 0; }),
-        links: linksArray.map(function (link) {
+            .filter(s => s.full_url.length > 0),
+        links: linksArray.map(link => {
             return {
                 label: link.textContent || "",
                 url: link.getAttribute("href")
@@ -786,18 +736,17 @@ function createEntry(relURI, issue, uid, thumbImg, doc) {
     entry.platforms = arrayFromSet(detectPlatforms(entry));
     return entry;
 }
-function resolveLDJImage(imageRef, thumbSize) {
-    if (thumbSize === void 0) { thumbSize = "480x384"; }
-    var imageRelPath = imageRef.replace("///content", "").replace("///raw", "");
+function resolveLDJImage(imageRef, thumbSize = "480x384") {
+    const imageRelPath = imageRef.replace("///content", "").replace("///raw", "");
     return {
-        thumbnail_url: imageRelPath.length > 0 ? "https://static.jam.vg/content/" + imageRelPath + "." + thumbSize + ".fit.jpg" : "",
-        full_url: imageRelPath.length > 0 ? "https://static.jam.vg/raw/" + imageRelPath : ""
+        thumbnail_url: imageRelPath.length > 0 ? `https://static.jam.vg/content/${imageRelPath}.${thumbSize}.fit.jpg` : "",
+        full_url: imageRelPath.length > 0 ? `https://static.jam.vg/raw/${imageRelPath}` : ""
     };
 }
 function extractMDRefs(text) {
-    var refs = { links: [], images: [] };
-    var matcher = /\!?\[([^\]]*)\]\(([^\)]*)\)/g;
-    var links;
+    const refs = { links: [], images: [] };
+    const matcher = /\!?\[([^\]]*)\]\(([^\)]*)\)/g;
+    let links;
     while (links = matcher.exec(text)) {
         if (links[0].charAt(0) === "!") {
             refs.images.push(links[2]);
@@ -808,32 +757,32 @@ function extractMDRefs(text) {
     }
     return refs;
 }
-var deduper = new Set();
+const deduper = new Set();
 function createEntryJSON(issue, apiEntry, apiUser) {
-    var doc = apiEntry.node[0];
-    var author = apiUser.node[0];
-    var eventBaseURL = "https://ldjam.com";
+    const doc = apiEntry.node[0];
+    const author = apiUser.node[0];
+    const eventBaseURL = "https://ldjam.com";
     if (doc.subsubtype === "unfinished" || doc.parent !== issueFeedID(issue)) {
         return undefined;
     }
-    var uniqueRef = doc.name + author.id;
+    const uniqueRef = doc.name + author.id;
     if (deduper.has(uniqueRef)) {
-        console.info("skipped duplicate: " + uniqueRef);
+        console.info(`skipped duplicate: ${uniqueRef}`);
         return undefined;
     }
     deduper.add(uniqueRef);
-    var refs = extractMDRefs(doc.body);
-    var screens = refs.images.map(function (imgRef) { return resolveLDJImage(imgRef); });
-    var links = [
+    const refs = extractMDRefs(doc.body);
+    const screens = refs.images.map(imgRef => resolveLDJImage(imgRef));
+    const links = [
         { label: doc.meta["link-01-tag"], url: doc.meta["link-01"] },
         { label: doc.meta["link-02-tag"], url: doc.meta["link-02"] },
         { label: doc.meta["link-03-tag"], url: doc.meta["link-03"] },
         { label: doc.meta["link-04-tag"], url: doc.meta["link-04"] },
         { label: doc.meta["link-05-tag"], url: doc.meta["link-05"] },
     ]
-        .filter(function (l) { return l.url !== undefined && l.label !== undefined; })
-        .map(function (l) { l.label = apiLinkTypeDescription[l.label] || "Other"; return l; });
-    var entry = {
+        .filter(l => l.url !== undefined && l.label !== undefined)
+        .map(l => { l.label = apiLinkTypeDescription[l.label] || "Other"; return l; });
+    const entry = {
         ld_issue: issue,
         title: doc.name,
         category: doc.subsubtype,
@@ -846,31 +795,30 @@ function createEntryJSON(issue, apiEntry, apiUser) {
             avatar_url: resolveLDJImage(author.meta.avatar || "").full_url,
             home_url: eventBaseURL + author.path
         },
-        screens: screens,
-        links: links,
+        screens,
+        links,
         ratings: [],
         platforms: []
     };
     entry.platforms = arrayFromSet(detectPlatforms(entry));
     return entry;
 }
-var MAX_INFLIGHT = 10;
+const MAX_INFLIGHT = 10;
 function extractEntryFromPage(state, link, thumb) {
     if (state.issue <= 37) {
-        var uid_1 = parseInt(link.substr(link.indexOf("uid=") + 4));
-        return entryDoc(state.issue, uid_1)
-            .then(function (doc) {
-            return createEntry(link, state.issue, uid_1, thumb, doc);
+        const uid = parseInt(link.substr(link.indexOf("uid=") + 4));
+        return entryDoc(state.issue, uid)
+            .then(doc => {
+            return createEntry(link, state.issue, uid, thumb, doc);
         });
     }
     else {
-        var gid = parseInt(link.substr(link.lastIndexOf("/") + 1));
+        const gid = parseInt(link.substr(link.lastIndexOf("/") + 1));
         return entryJSONDoc(state.issue, gid)
-            .then(function (entry) {
-            return userJSONDoc(state.issue, entry.node[0].author).then(function (user) { return ({ entry: entry, user: user }); });
+            .then(entry => {
+            return userJSONDoc(state.issue, entry.node[0].author).then(user => ({ entry, user }));
         })
-            .then(function (_a) {
-            var entry = _a.entry, user = _a.user;
+            .then(({ entry, user }) => {
             return createEntryJSON(state.issue, entry, user);
         });
     }
@@ -879,26 +827,20 @@ function completed(state) {
     if (state.completionPromise) {
         return state.completionPromise;
     }
-    console.info("Extraction complete, writing " + state.entries.length + " entries to catalog file...");
-    var catalog = {
+    console.info(`Extraction complete, writing ${state.entries.length} entries to catalog file...`);
+    const catalog = {
         issue: state.issue,
         theme: IssueThemeNames[state.issue],
         stats: state.stats,
         entries: state.entries
     };
-    var catalogJSON = JSON.stringify(catalog);
-    state.completionPromise = new Promise(function (resolve, reject) {
-        fs.writeFile(entriesCatalogPath(state.issue), catalogJSON, function (err) {
-            if (err) {
-                console.info("Could not write catalog file: ", err);
-                reject(err);
-            }
-            else {
-                console.info("Done");
-                resolve();
-            }
+    const catalogJSON = JSON.stringify(catalog);
+    state.completionPromise =
+        fs.promises.writeFile(entriesCatalogPath(state.issue), catalogJSON)
+            .then(() => console.info("Done"), err => {
+            console.info("Could not write catalog file: ", err);
+            throw err;
         });
-    });
     return state.completionPromise;
 }
 function updateStats(stats, entry) {
@@ -909,8 +851,7 @@ function updateStats(stats, entry) {
     else {
         stats.jamEntries += 1;
     }
-    for (var _i = 0, _a = entry.ratings; _i < _a.length; _i++) {
-        var rating = _a[_i];
+    for (const rating of entry.ratings) {
         if (rating.area in stats.ratingDistribution) {
             stats.ratingDistribution[rating.area] += 1;
         }
@@ -920,7 +861,7 @@ function updateStats(stats, entry) {
     }
 }
 function tryNext(state) {
-    var checkDone = function () {
+    const checkDone = function () {
         if (state.done) {
             return true;
         }
@@ -931,10 +872,10 @@ function tryNext(state) {
         return completed(state);
     }
     if (state.source.links.length > 0 && state.inFlight.length < MAX_INFLIGHT) {
-        var link_1 = state.source.links.shift();
-        var thumb = state.source.thumbs.shift();
-        var unqueueSelf_1 = function (prom) {
-            var promIx = state.inFlight.indexOf(prom);
+        const link = state.source.links.shift();
+        const thumb = state.source.thumbs.shift();
+        const unqueueSelf = function (prom) {
+            const promIx = state.inFlight.indexOf(prom);
             if (promIx < 0) {
                 console.error("Can't find myself in the inFlight array!", state.inFlight, prom);
                 return Promise.reject("internal inconsistency error");
@@ -947,8 +888,8 @@ function tryNext(state) {
                 return Promise.resolve();
             }
         };
-        var p_1 = extractEntryFromPage(state, link_1, thumb)
-            .then(function (entry) {
+        const p = extractEntryFromPage(state, link, thumb)
+            .then(entry => {
             if (entry) {
                 state.entries.push(entry);
                 updateStats(state.stats, entry);
@@ -956,29 +897,29 @@ function tryNext(state) {
             else {
                 state.skippedCount += 1;
             }
-            var totalCount = state.source.links.length + state.entries.length + state.skippedCount;
-            var curCount = state.entries.length + state.skippedCount;
+            const totalCount = state.source.links.length + state.entries.length + state.skippedCount;
+            const curCount = state.entries.length + state.skippedCount;
             if (curCount % 10 === 0) {
                 console.info((100 * (curCount / totalCount)).toFixed(1) + "%");
             }
-            return unqueueSelf_1(p_1);
+            return unqueueSelf(p);
         })
-            .catch(function (err) {
-            console.info("ERROR for " + link_1 + ": ", err);
-            return unqueueSelf_1(p_1);
+            .catch(err => {
+            console.info(`ERROR for ${link}: `, err);
+            return unqueueSelf(p);
         });
-        state.inFlight.push(p_1);
+        state.inFlight.push(p);
     }
-    return timeoutPromise(1).then(function () { return tryNext(state); });
+    return timeoutPromise(1).then(() => tryNext(state));
 }
 function extractEntries(issue) {
     if (isNaN(issue) || issue < 15 || issue > 99) {
         return Promise.reject("issue must be (15 <= issue <= 99)");
     }
-    console.info("Extracting entry records for issue " + issue);
-    return loadCatalog(issue).then(function (catalogIndex) {
+    console.info(`Extracting entry records for issue ${issue}`);
+    return loadCatalog(issue).then(catalogIndex => {
         return tryNext({
-            issue: issue,
+            issue,
             done: false,
             inFlight: [],
             source: catalogIndex,
@@ -994,14 +935,14 @@ function extractEntries(issue) {
     });
 }
 
-var tasks = new Map();
+const tasks = new Map();
 function task(name, action) {
     tasks.set(name, action);
 }
 function runTask(name) {
-    var task = tasks.get(name);
+    const task = tasks.get(name);
     if (!task) {
-        console.info("unknown task: " + name);
+        console.info(`unknown task: ${name}`);
         return;
     }
     return task.apply(global, process.argv.slice(3));
@@ -1010,14 +951,14 @@ function finished() {
     console.info("All tasks done.");
 }
 function runt() {
-    var command = process.argv[2];
+    const command = process.argv[2];
     if (!command) {
-        var allTasks_1 = [];
-        tasks.forEach(function (_, name) { return allTasks_1.push(name); });
-        console.info("no task specified, available: " + allTasks_1);
+        const allTasks = [];
+        tasks.forEach((_, name) => allTasks.push(name));
+        console.info(`no task specified, available: ${allTasks}`);
     }
     else {
-        var result = runTask(command);
+        const result = runTask(command);
         if (result instanceof Promise) {
             result.then(finished);
         }
@@ -1027,13 +968,13 @@ function runt() {
     }
 }
 
-var MIN_ISSUE = 15;
-var MAX_ISSUE = 50;
+const MIN_ISSUE = 15;
+const MAX_ISSUE = 50;
 function getIssueRange(issueSA, issueSB) {
-    var issueFrom = issueSA === undefined ? 0 : parseInt(issueSA);
-    var issueTo = issueSB === undefined ? issueFrom : parseInt(issueSB);
+    const issueFrom = issueSA === undefined ? 0 : parseInt(issueSA);
+    const issueTo = issueSB === undefined ? issueFrom : parseInt(issueSB);
     if (isNaN(issueFrom) || issueFrom < MIN_ISSUE || issueFrom > MAX_ISSUE || issueTo < issueFrom || issueTo > MAX_ISSUE) {
-        console.info("usage: " + process.argv[2] + " <issueFrom: " + MIN_ISSUE + ".." + MAX_ISSUE + "> [<issueTo: " + MIN_ISSUE + ".." + MAX_ISSUE + ">]");
+        console.info(`usage: ${process.argv[2]} <issueFrom: ${MIN_ISSUE}..${MAX_ISSUE}> [<issueTo: ${MIN_ISSUE}..${MAX_ISSUE}>]`);
         return undefined;
     }
     return {
@@ -1042,19 +983,19 @@ function getIssueRange(issueSA, issueSB) {
     };
 }
 function rangedTaskPerIssue(f, t, sitFn) {
-    var range = getIssueRange(f, t);
+    const range = getIssueRange(f, t);
     if (range) {
-        var issue_1 = range.from - 1;
-        var next_1 = function () {
-            issue_1 += 1;
-            if (issue_1 <= range.to) {
-                return sitFn(issue_1).then(next_1);
+        let issue = range.from - 1;
+        const next = function () {
+            issue += 1;
+            if (issue <= range.to) {
+                return sitFn(issue).then(next);
             }
             else {
                 return Promise.resolve();
             }
         };
-        return next_1();
+        return next();
     }
     else {
         return Promise.resolve();
