@@ -49,10 +49,10 @@
 		text-decoration: none;
 
 		&.compo {
-			border-right: 8px solid $compoColor;
+			border-right: 8px solid var(--compoColor);
 		}
 		&.jam {
-			border-right: 8px solid $jamColor; 
+			border-right: 8px solid var(--jamColor);
 		}
 		&:hover {
 			border-right-width: 12px;
@@ -67,7 +67,6 @@
 	}
 
 	.thumb {
-		display: inline-block;
 		width: 122px;
 		height: 122px;
 		float: left;

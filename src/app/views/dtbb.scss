@@ -41,10 +41,11 @@ a {
 
 
 // variables
-$brandColor: #4880bd;
-$compoColor: #f79122;
-$jamColor: #ee5533;
-
+:root {
+	--brandColor: #4880bd;
+	--compoColor: #f79122;
+	--jamColor: #ee5533;
+}
 
 // views
 @import "gamesgrid/gamesgrid";

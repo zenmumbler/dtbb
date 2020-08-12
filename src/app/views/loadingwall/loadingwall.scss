@@ -18,7 +18,7 @@
 		left: 50vw;
 		margin-left: -220px;
 		background: linear-gradient(to bottom, #202022 0%, #171a22 100%);
-		border-right: 12px solid $brandColor;
+		border-right: 12px solid var(--brandColor);
 		color: white;
 		transition: opacity 0.5s ease-out;
 		opacity: 0;
@@ -43,7 +43,7 @@
 		position: absolute;
 		left: 0;
 		top: 0;
-		background-color: $compoColor;
+		background-color: var(--compoColor);
 		height: 8px;
 		width: 0;
 	}
