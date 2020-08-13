@@ -22,7 +22,7 @@
 			.sort((a, b) => b[0] - a[0]);
 	}
 
-	const issues = groupByYear(Array.from(Object.values(IssueData)));
+	const yearlyIssues = groupByYear(Array.from(Object.values(IssueData)));
 </script>
 
 <div id="controls">
@@ -40,12 +40,12 @@
 		</select>
 
 		<select bind:value={$issue} class="issue">
-			{#each issues as pair}
-			<optgroup label={""+pair[0]}>
-				{#each pair[1] as issin}
-					<option value={issin.issue}>LD {issin.issue} - {issin.theme}</option>	
-				{/each}
-			</optgroup>
+			{#each yearlyIssues as pair}
+				<optgroup label={String(pair[0])}>
+					{#each pair[1] as issin}
+						<option value={issin.issue}>LD {issin.issue} - {issin.theme}</option>	
+					{/each}
+				</optgroup>
 			{/each}
 		</select>
 
