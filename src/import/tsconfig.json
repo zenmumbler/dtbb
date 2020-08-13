@@ -1,10 +1,8 @@
 {
     "extends": "../tsconfig-base.json",
     "compilerOptions": {
-        "outDir": "../../build/import",
-        "lib": ["es2017", "dom"]
+        "lib": ["es2017", "dom"],
+        "allowSyntheticDefaultImports": true
     },
-    "references": [
-        { "path": "../lib" }
-    ]
+    "include": ["./*", "../lib/*"]
 }

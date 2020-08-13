@@ -5,9 +5,8 @@
     "strict": true,
 		"noImplicitReturns": true,
 		"noImplicitThis": true,
-		"forceConsistentCasingInFileNames": true,
 		"noFallthroughCasesInSwitch": true,
-		"noUnusedLocals": true,
+		"noUnusedLocals": false,
 		"noUnusedParameters": true,
   },
 

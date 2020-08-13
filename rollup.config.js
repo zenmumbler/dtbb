@@ -4,7 +4,8 @@ import commonjs from "@rollup/plugin-commonjs";
 import livereload from "rollup-plugin-livereload";
 import { terser } from "rollup-plugin-terser";
 import sveltePreprocess from "svelte-preprocess";
-import typescript from "@rollup/plugin-typescript";
+import tsc from "@rollup/plugin-typescript";
+import typescript from "typescript";
 
 const production = !process.env.ROLLUP_WATCH;
 
@@ -18,13 +19,13 @@ function serve() {
 	return {
 		writeBundle() {
 			if (server) return;
-			server = require('child_process').spawn('npm', ['run', 'start', '--', '--dev'], {
-				stdio: ['ignore', 'inherit', 'inherit'],
+			server = require("child_process").spawn("npm", ["run", "start", "--", "--dev"], {
+				stdio: ["ignore", "inherit", "inherit"],
 				shell: true
 			});
 
-			process.on('SIGTERM', toExit);
-			process.on('exit', toExit);
+			process.on("SIGTERM", toExit);
+			process.on("exit", toExit);
 		}
 	};
 }
@@ -32,28 +33,31 @@ function serve() {
 export default [
 	// import
 	{
-		input: "build/import/import.js",
-		output: [{
+		input: "src/import/import.ts",
+		output: {
 			file: "import/import.js",
 			format: "cjs",
-		}],
+		},
 		plugins: [
 			resolve(),
 			commonjs(),
+			tsc({ tsconfig: "src/import/tsconfig.json", typescript })
 		],
 		external: ["fs", "mkdirp", "got", "jsdom"]
 	},
 
 	// background indexer worker
 	{
-		input: "build/workers/task_indexer.js",
-		output: [{
+		input: "src/workers/task_indexer.ts",
+		output: {
 			file: "site/task_indexer.js",
 			format: "iife",
-		}],
+		},
 		plugins: [
-			resolve(),
+			resolve({ browser: true }),
 			commonjs(),
+			tsc({ tsconfig: "src/workers/tsconfig.json", typescript }),
+			production && terser()
 		]
 	},
 
@@ -61,7 +65,7 @@ export default [
 	{
 		input: "src/svapp/main.ts",
 		output: {
-			sourcemap: true,
+			sourcemap: !production,
 			format: "iife",
 			name: "dtbb",
 			file: "site/dtbb.js"
@@ -88,13 +92,13 @@ export default [
 				dedupe: ["svelte"]
 			}),
 			commonjs(),
-			typescript({ sourceMap: !production, tsconfig: "src/svapp/tsconfig.json" }),
+			tsc({ sourceMap: !production, tsconfig: "src/svapp/tsconfig.json", typescript }),
 	
 			// In dev mode, call `npm run start` once
 			// the bundle has been generated
 			!production && serve(),
 	
-			// Watch the `public` directory and refresh the
+			// Watch the `site` directory and refresh the
 			// browser on changes when not in production
 			!production && livereload("site"),
 	
