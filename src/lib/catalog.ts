@@ -62,49 +62,57 @@ export function maskForPlatformKeys(keys: PlatformKey[]) {
 
 // ----
 
-export const IssueThemeNames: { readonly [issue: number]: string } = {
-	15: "Caverns",
-	16: "Exploration",
+export interface IssueInfo {
+	issue: number;
+	year: number;
+	theme: string;
+	apiFeedID: number;
+}
 
-	17: "Islands",
-	18: "Enemies as Weapons",
-	19: "Discovery",
+export const IssueData: { readonly [issue: number]: IssueInfo } = {
+	15: { issue: 15, year: 2009, theme: "Caverns", apiFeedID: 0 },
+	16: { issue: 16, year: 2009, theme: "Exploration", apiFeedID: 0 },
 
-	20: "It’s Dangerous to go Alone! Take this!",
-	21: "Escape",
-	22: "Alone",
+	17: { issue: 17, year: 2010, theme: "Islands", apiFeedID: 0 },
+	18: { issue: 18, year: 2010, theme: "Enemies as Weapons", apiFeedID: 0 },
+	19: { issue: 19, year: 2010, theme: "Discovery", apiFeedID: 0 },
 
-	23: "Tiny World",
-	24: "Evolution",
-	25: "You are the Villain",
+	20: { issue: 20, year: 2011, theme: "It’s Dangerous to go Alone! Take this!", apiFeedID: 0 },
+	21: { issue: 21, year: 2011, theme: "Escape", apiFeedID: 0 },
+	22: { issue: 22, year: 2011, theme: "Alone", apiFeedID: 0 },
+	
+	23: { issue: 23, year: 2012, theme: "Tiny World", apiFeedID: 0 },
+	24: { issue: 24, year: 2012, theme: "Evolution", apiFeedID: 0 },
+	25: { issue: 25, year: 2012, theme: "You are the Villain", apiFeedID: 0 },
 
-	26: "Minimalism",
-	27: "10 Seconds",
-	28: "You Only Get One",
+	26: { issue: 26, year: 2013, theme: "Minimalism", apiFeedID: 0 },
+	27: { issue: 27, year: 2013, theme: "10 Seconds", apiFeedID: 0 },
+	28: { issue: 28, year: 2013, theme: "You Only Get One", apiFeedID: 0 },
 
-	29: "Beneath the Surface",
-	30: "Connected Worlds",
-	31: "Entire Game on One Screen",
+	29: { issue: 29, year: 2014, theme: "Beneath the Surface", apiFeedID: 0 },
+	30: { issue: 30, year: 2014, theme: "Connected Worlds", apiFeedID: 0 },
+	31: { issue: 31, year: 2014, theme: "Entire Game on One Screen", apiFeedID: 0 },
 
-	32: "An Unconventional Weapon",
-	33: "You are the Monster",
-	34: "Two Button Controls, Growing",
+	32: { issue: 32, year: 2015, theme: "An Unconventional Weapon", apiFeedID: 0 },
+	33: { issue: 33, year: 2015, theme: "You are the Monster", apiFeedID: 0 },
+	34: { issue: 34, year: 2015, theme: "Two Button Controls, Growing", apiFeedID: 0 },
 
-	35: "Shapeshift",
-	36: "Ancient Technology",
-	37: "One Room",
+	35: { issue: 35, year: 2016, theme: "Shapeshift", apiFeedID: 0 },
+	36: { issue: 36, year: 2016, theme: "Ancient Technology", apiFeedID: 0 },
+	37: { issue: 37, year: 2016, theme: "One Room", apiFeedID: 0 },
 
-	38: "A Small World",
-	39: "Running out of Power",
-	40: "The more you have, the worse it is",
+	38: { issue: 38, year: 2017, theme: "A Small World", apiFeedID: 9405 },
+	39: { issue: 39, year: 2017, theme: "Running out of Power", apiFeedID: 32802 },
+	40: { issue: 40, year: 2017, theme: "The more you have, the worse it is", apiFeedID: 49883 },
 
-	41: "Two Incompatible Genres",
-	42: "Running out of Space",
-	43: "Sacrifices must be made",
+	41: { issue: 41, year: 2018, theme: "Two Incompatible Genres", apiFeedID: 73256 },
+	42: { issue: 42, year: 2018, theme: "Running out of Space", apiFeedID: 97793 },
+	43: { issue: 43, year: 2018, theme: "Sacrifices must be made", apiFeedID: 120415 },
 
-	44: "Your life is currency",
-	45: "Start with nothing",
-	46: "Keep it alive"
+	44: { issue: 44, year: 2019, theme: "Your life is currency", apiFeedID: 139254 },
+	45: { issue: 45, year: 2019, theme: "Start with nothing", apiFeedID: 159347 },
+
+	46: { issue: 46, year: 2020, theme: "Keep it alive", apiFeedID: 176557 },
 };
 
 // ----
