@@ -1,23 +1,17 @@
 <script lang="ts">
-	import { category, platform, query, issue } from "./stores";
 	import Controls from "./Controls.svelte";
 	import LoadingWall from "./LoadingWall.svelte";
-	import { filteredSet, loading, loadingRatio } from "./catalogstore";
+	import { loading, loadingRatio } from "./catalogstore";
+	import GamesGrid from "./GamesGrid.svelte";
 
 </script>
 
 <div id="dtbb" class="no-select">
 	<Controls />
+	<GamesGrid />
 	{#if $loading}
 		<LoadingWall ratio={$loadingRatio} />
 	{/if}
-
-	<p>The current category is { $category }</p>
-	<p>The current platform is { $platform }</p>
-	<p>The current query is { $query }</p>
-	<p>The current issue is { $issue }</p>
-
-	<p>The current number of items filtered is { $filteredSet.size }</p>
 </div>
 
 <style>
