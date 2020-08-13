@@ -4,7 +4,7 @@
 import { loadTypedJSON } from "./fileutil";
 import { TextIndex } from "./textindex";
 import { Catalog, IndexedEntry, maskForPlatformKeys } from "./catalog";
-import { CatalogPersistence } from "./catalogpersistence";
+import type { CatalogPersistence } from "./catalogpersistence";
 import { IndexerAPI } from "./indexerapi";
 
 
