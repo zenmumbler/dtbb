@@ -61,9 +61,9 @@ export default [
 		]
 	},
 
-	// svelte app
+	// app
 	{
-		input: "src/svapp/main.ts",
+		input: "src/app/main.ts",
 		output: {
 			sourcemap: !production,
 			format: "iife",
@@ -92,7 +92,7 @@ export default [
 				dedupe: ["svelte"]
 			}),
 			commonjs(),
-			tsc({ sourceMap: !production, tsconfig: "src/svapp/tsconfig.json", typescript }),
+			tsc({ sourceMap: !production, tsconfig: "src/app/tsconfig.json", typescript }),
 	
 			// In dev mode, call `npm run start` once
 			// the bundle has been generated
