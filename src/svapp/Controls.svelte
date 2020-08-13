@@ -3,6 +3,7 @@
 	import { Platforms, IssueData } from "../lib/catalog";
 	import { platform, issue, query } from "./stores";
 	import CategoryFilter from "./CategoryFilter.svelte";
+	import { loading } from "./catalogstore";
 
 	const platforms = Array.from(Object.values(Platforms));
 	
@@ -30,16 +31,24 @@
 		<CategoryFilter />
 
 		<!-- svelte-ignore a11y-autofocus -->
-		<input type="text" bind:value={$query} id="terms" autofocus autocomplete="off" placeholder="Search Terms (2 char minimum)">
+		<input
+			type="text"
+			bind:value={$query}
+			id="terms"
+			autofocus
+			autocomplete="off"
+			placeholder="Search Terms (2 char minimum)"
+			disabled={$loading}
+		>
 
-		<select bind:value={$platform} class="platform">
+		<select bind:value={$platform} class="platform" disabled={$loading}>
 			<option value={0}>All Platforms</option>
 			{#each platforms as { mask, label }}
 				<option value={mask}>{label}</option>
 			{/each}
 		</select>
 
-		<select bind:value={$issue} class="issue">
+		<select bind:value={$issue} class="issue" disabled={$loading}>
 			{#each yearlyIssues as pair}
 				<optgroup label={String(pair[0])}>
 					{#each pair[1] as issin}
