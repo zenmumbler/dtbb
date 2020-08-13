@@ -1,4 +1,3 @@
-// @ts-check
 import svelte from "rollup-plugin-svelte";
 import resolve from "@rollup/plugin-node-resolve";
 import commonjs from "@rollup/plugin-commonjs";
@@ -51,20 +50,6 @@ export default [
 		output: [{
 			file: "site/task_indexer.js",
 			format: "iife",
-		}],
-		plugins: [
-			resolve(),
-			commonjs(),
-		]
-	},
-
-	// main app
-	{
-		input: "build/app/app.js",
-		output: [{
-			file: "site/dtbb.js",
-			format: "iife",
-			name: "dtbb"
 		}],
 		plugins: [
 			resolve(),
