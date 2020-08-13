@@ -28,16 +28,6 @@ a {
 	overflow: hidden;
 }
 
-#dtbb {
-	position: absolute;
-	left: 0;
-	right: 0;
-	top: 0;
-	bottom: 0;
-	min-width: 960px;
-	background-color: white;
-}
-
 :root {
 	--brandColor: #4880bd;
 	--compoColor: #f79122;
