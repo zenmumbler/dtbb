@@ -1,6 +1,13 @@
 node_modules
+
+# very large spider data
 import/spider_data/entry_pages/**/*.html
-# import/spider_data/entry_pages/*.zip
 import/spider_data/entry_pages/**/*.json
 site/data/thumbs
-build
+
+# build output
+site/dtbb.js
+site/dtbb.js.map
+site/dtbb.css
+site/task_indexer.js
+import/import.js
