@@ -1,4 +1,4 @@
-name: Deploy Site
+name: Build and deploy site
 
 on:
   push:
@@ -9,9 +9,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Get Code
+    - name: Get code
       uses: actions/checkout@v2
-    - name: Copy To S3
+    - name: Install node 14
+      uses: actions/setup-node@v1
+      with:
+        node-version: 14.x
+    - name: Install deps
+      run: npm ci
+    - name: Build using Rollup
+      run: npm run build
+    - name: Copy site dir to S3
       uses: jakejarvis/s3-sync-action@master
       with:
         args: --acl public-read --follow-symlinks
