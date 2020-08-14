@@ -15,10 +15,13 @@ jobs:
       uses: actions/setup-node@v1
       with:
         node-version: 14.x
-    - name: Install deps
-      run: npm install
+    - name: Install PNPM and install deps
+      uses: pnpm/action-setup@v1.2.0
+      with:
+        version: 5.5.1
+        run_install: true
     - name: Build using Rollup
-      run: npm run build
+      run: pnpm run build
     - name: Copy site dir to S3
       uses: jakejarvis/s3-sync-action@master
       with:

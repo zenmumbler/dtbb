@@ -23,6 +23,7 @@
 	$: virtualHeight = (gridOffsetY * 2) + virtualRows * (cellHeight + cellMargin);
 	$: firstViewRow = Math.floor(scrollPos / (cellHeight + cellMargin));
 	$: firstViewPos = firstViewRow * cols;
+
 	$: filteredEntries = arrayFromSet($filteredSet);
 	$: filteredCells = filteredEntries.slice(firstViewPos, firstViewPos + cellCount).map((id, index) => {
 		const cellPos = firstViewPos + index;
