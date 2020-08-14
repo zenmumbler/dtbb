@@ -22,16 +22,12 @@ Site features:
 Building
 --------
 
-If you want to try this locally then host the `site` directory using your manner of choice.
-I just have it symlinked as `/Library/WebServer/Documents/dtbb` on macOS. The repo includes
-the built js and css files so you can try it immediately.
+In the following, substitute `pnpm` with the package manager you use, I use pnpm.
 
-To modify things, you'll need to run `yarn` or `npm install` inside the main directory.
-All the code is written in [TypeScript][ts], which is a dependency of the package.
-
-Run `gulp site` to compile and bundle all site related code, including styles.<br>
-Run `gulp import` to compile and bundle the import script, see below for usage.<br>
-Run `gulp watch` to automatically build any and all files when you change them.
+1. Install dependencies: `pnpm install`
+2. To run for development and local testing: `pnpm run dev`
+   This will also start a local server with autoreload
+3. To build minified production code: `pnpm run build`
 
 
 Importing Data
@@ -87,9 +83,10 @@ an app this small, then that's why. To whit, I've made/done the following:
 
 - A full [node-based site scraper][scrape] that retrieves listings and single entry pages
   and extracts out the data from those pages (using jsdom) into JSON catalog files.
-- I researched and experimented with most web build systems out there and settled on a
+- (In 2016) I researched and experimented with most web build systems out there and settled on a
   gulp + rollup combination for code as it is straightforward and it produces clean and
   crud-free output. (total minified app code is only ~33KB)
+  In 2020 this was replaced with a [Rollup][rollup]-based build process.
 - A cell-reusing scrolling grid view to allow one to scroll through thousands of entries
   without the performance or memory penalties.
 - An on-the-fly fulltext search component that can search for ngrams of any length. The
@@ -101,17 +98,19 @@ an app this small, then that's why. To whit, I've made/done the following:
 - A nice [Promise-based typed workflow wrapper around IndexedDB][pdb]. This is used to store
   cached catalog and text index data allowing offline browsing of entries. (NEW) this
   is now a separate project and available as an [NPM package][pdbnpm].
-- In lieu of using a big templating engine, I made simple [watchable][ww] and
-  [watchablebinding][wb] types that encourage the same props-down, methods-up paradigm as
+- (In 2016) In lieu of using a big templating engine, I made simple watchable and
+  watchablebinding types that encourage the same props-down, methods-up paradigm as
   e.g. [Vue][vue]. The site State employs the same concepts that Vue uses, etc.
+  In 2020 I replaced this with a [Svelte][svelte] based site, which still yields ~33KB
+  code output.
+
 
 
 Disclaimer
 ----------
 
-The data in [the live site][dtbb] was scraped from the old and new Ludum Dare websites
-most recently in May 2017. DTBB has a full copy of all thumbnails and catalog data
-locally.
+The data in [the live site][dtbb] was scraped from the old and new Ludum Dare websites.
+DTBB has a full copy of all thumbnails and catalog data hosted on S3.
 
 The platform categorisation of entries is based on their download links and titles.
 I tried to be reasonably smart but there may be false positives.
@@ -134,3 +133,5 @@ Now go and [make, play and rate][ld] games.
 [cf]: https://www.cloudflare.com/
 [vue]: http://vuejs.org/
 [ts]: http://www.typescriptlang.org/
+[rollup]: https://rollupjs.org/
+[svelte]: https://svelte.dev/
