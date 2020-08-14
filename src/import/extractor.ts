@@ -4,8 +4,8 @@
 import * as fs from "fs";
 import { JSDOM } from "jsdom";
 
-import { EntryListing, Entry, Catalog, EntryRating, RatingArea, IssueStats, IssueThemeNames } from "../lib/catalog";
-import { listingPath, issueFeedID, issueBaseURL, entryPageFilePath, userJSONFilePath, entriesCatalogPath, timeoutPromise } from "./importutil";
+import { EntryListing, Entry, Catalog, EntryRating, RatingArea, IssueStats, IssueData } from "../lib/catalog";
+import { listingPath, issueBaseURL, entryPageFilePath, userJSONFilePath, entriesCatalogPath, timeoutPromise } from "./importutil";
 import { arrayFromSet } from "../lib/setutil";
 import { detectPlatforms } from "./detect_platform";
 
@@ -330,7 +330,7 @@ function createEntryJSON(issue: number, apiEntry: APIEntry, apiUser: APIUser) {
 	const author = apiUser.node[0];
 	const eventBaseURL = "https://ldjam.com";
 
-	if (doc.subsubtype === "unfinished" || doc.parent !== issueFeedID(issue)) {
+	if (doc.subsubtype === "unfinished" || doc.parent !== IssueData[issue].apiFeedID) {
 		return undefined;
 	}
 
@@ -433,7 +433,7 @@ function completed(state: ExtractState) {
 	console.info(`Extraction complete, writing ${state.entries.length} entries to catalog file...`);
 	const catalog: Catalog = {
 		issue: state.issue,
-		theme: IssueThemeNames[state.issue],
+		theme: IssueData[state.issue].theme,
 		stats: state.stats,
 		entries: state.entries
 	};

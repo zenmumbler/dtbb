@@ -1,10 +1,15 @@
 {
-    "extends": "../tsconfig-base.json",
-    "compilerOptions": {
-        "outDir": "../../build/app",
-        "lib": ["es2017", "dom"]
-    },
-    "references": [
-        { "path": "../lib" }
-    ]
+  "extends": "@tsconfig/svelte/tsconfig.json",
+
+  "compilerOptions": {
+    "strict": true,
+		"noImplicitReturns": true,
+		"noImplicitThis": true,
+		"noFallthroughCasesInSwitch": true,
+		"noUnusedLocals": false,
+		"noUnusedParameters": true,
+  },
+
+  "include": ["./**/*", "../lib/**/*"],
+  "exclude": ["node_modules/*"],
 }

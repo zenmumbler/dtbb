@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 	<meta charset="utf-8">
 	<title>Ludum Dare Games Browser</title>
@@ -7,120 +7,39 @@
 	<meta name="repo" content="https://github.com/zenmumbler/dtbb/">
 	<meta name="viewport" content="width=960">
 
+	<style>
+html, body {
+	height: 100%;
+	margin: 0;
+	padding: 0;
+}
+body, input {
+	font-family: sans-serif;
+}
+p {
+	margin: 0 0 1em 0;
+	padding: 0;
+}
+a {
+	color: currentColor;
+}
+.no-select {
+	-webkit-user-select: none;
+	user-select: none;
+}
+.no-text-wrap {
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	overflow: hidden;
+}
+:root {
+	--brandColor: #4880bd;
+	--compoColor: #f79122;
+	--jamColor: #ee5533;
+}
+	</style>
 	<link rel="stylesheet" href="dtbb.css">
-	<script src="dtbb.js"></script>
+	<script defer src="dtbb.js"></script>
 </head>
-<body>
-	<div id="dtbb" class="no-select">
-		<div id="controls">
-			<div class="filters">
-				<input type="radio" name="category" id="cat_all" checked value=""><label class="left" for="cat_all">Both</label><!--
-			 --><input type="radio" name="category" id="cat_compo" value="compo"><label for="cat_compo">Compo</label><!--
-			 --><input type="radio" name="category" id="cat_jam" value="jam"><label class="right" for="cat_jam">Jam</label>
-
-				<input tabindex="1" accesskey="f" type="text" id="terms" autofocus autocomplete="off" placeholder="Search Terms (2 char minimum)">
-
-				<select data-filter="platform" tabindex="2">
-					<option value="0">All Platforms</option>
-					<option value="1">Desktop</option>
-					<option value="2">Windows</option>
-					<option value="4">MacOS</option>
-					<option value="8">Linux</option>
-					<option value="16">Web</option>
-					<option value="32">Java</option>
-					<option value="64">VR</option>
-					<option value="128">Mobile</option>
-				</select>
-
-				<select data-filter="issue" tabindex="3">
-					<optgroup label="2020">
-1§						<option value="46">LD 46 - Keep it alive</option>
-					</optgroup>
-					<optgroup label="2019">
-						<option value="45">LD 45 - Start with nothing</option>
-						<option value="44">LD 44 - Your life is currency</option>
-					</optgroup>
-					<optgroup label="2018">
-						<option value="43">LD 43 - Sacrifices must be made</option>
-						<option value="42">LD 42 - Running out of Space</option>
-						<option value="41">LD 41 - Two Incompatible Genres</option>
-					</optgroup>
-					<optgroup label="2017">
-						<option value="40">LD 40 - The more you have, the worse it is</option>
-						<option value="39">LD 39 - Running out of Power</option>
-						<option value="38">LD 38 - A Small World</option>
-					</optgroup>
-					<optgroup label="2016">
-						<option value="37">LD 37 - One Room</option>
-						<option value="36">LD 36 - Ancient Technology</option>
-						<option value="35">LD 35 - Shapeshift</option>
-					</optgroup>
-					<optgroup label="2015">
-						<option value="34">LD 34 - Two Button Controls, Growing</option>
-						<option value="33">LD 33 - You are the Monster</option>
-						<option value="32">LD 32 - An Unconventional Weapon</option>
-					</optgroup>
-					<optgroup label="2014">
-						<option value="31">LD 31 - Entire Game on One Screen</option>
-						<option value="30">LD 30 - Connected Worlds</option>
-						<option value="29">LD 29 - Beneath the Surface</option>
-					</optgroup>
-					<optgroup label="2013">
-						<option value="28">LD 28 - You Only Get One</option>
-						<option value="27">LD 27 - 10 Seconds</option>
-						<option value="26">LD 26 - Minimalism</option>
-					</optgroup>
-					<optgroup label="2012">
-						<option value="25">LD 25 - You are the Villain</option>
-						<option value="24">LD 24 - Evolution</option>
-						<option value="23">LD 23 - Tiny World</option>
-					</optgroup>
-					<optgroup label="2011">
-						<option value="22">LD 22 - Alone</option>
-						<option value="21">LD 21 - Escape</option>
-						<option value="20">LD 20 - It’s Dangerous to go Alone! Take this!</option>
-					</optgroup>
-					<optgroup label="2010">
-						<option value="19">LD 19 - Discovery</option>
-						<option value="18">LD 18 - Enemies as Weapons</option>
-						<option value="17">LD 17 - Islands</option>
-					</optgroup>
-					<optgroup label="2009">
-						<option value="16">LD 16 - Exploration</option>
-						<option value="15">LD 15 - Caverns</option>
-					</optgroup>
-				</select>
-			</div>
-		</div>
-
-		<div id="smokedglass">
-			<div class="status">
-				<p>Loading…</p>
-				<div class="bar"><div class="progress"></div></div>
-			</div>
-		</div>
-
-		<div id="entriesholder">
-			<div class="entries">
-				<template id="entry">
-					<div class="entry" data-doc-id="0"><a href="#" target="_blank">
-						<div class="thumb"></div>
-						<h2 class="no-text-wrap"></h2>
-						<p class="author no-text-wrap">by <span></span></p>
-						<p class="pills no-text-wrap">
-							<span class="pill" data-mask="1">Desktop</span>
-							<span class="pill" data-mask="2">Win</span>
-							<span class="pill" data-mask="4">Mac</span>
-							<span class="pill" data-mask="8">Linux</span>
-							<span class="pill" data-mask="16">Web</span>
-							<span class="pill" data-mask="32">Java</span>
-							<span class="pill" data-mask="64">VR</span>
-							<span class="pill" data-mask="128">Mobile</span>
-						</p>
-					</a></div>
-				</template>
-			</div>
-		</div>
-	</div>
-</body>
+<body></body>
 </html>

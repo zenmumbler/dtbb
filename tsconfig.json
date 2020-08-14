@@ -1,9 +1,0 @@
-{
-	"files": [],
-	"include": [],
-	"references": [
-		{ "path": "src/app" },
-		{ "path": "src/workers" },
-		{ "path": "src/import" },
-	]
-}

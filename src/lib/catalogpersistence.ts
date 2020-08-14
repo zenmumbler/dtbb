@@ -3,8 +3,8 @@
 
 /// <reference path="../../node_modules/promised-db/typings.d.ts" />
 
-import { CatalogHeader, Catalog, IndexedEntry } from "./catalog";
-import { SerializedTextIndex } from "./textindex";
+import type { CatalogHeader, Catalog, IndexedEntry } from "./catalog";
+import type { SerializedTextIndex } from "./textindex";
 import PromisedDB from "promised-db";
 
 interface PersistedTextIndex {
