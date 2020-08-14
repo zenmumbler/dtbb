@@ -16,7 +16,7 @@ jobs:
       with:
         node-version: 14.x
     - name: Install deps
-      run: npm ci
+      run: npm install
     - name: Build using Rollup
       run: npm run build
     - name: Copy site dir to S3
