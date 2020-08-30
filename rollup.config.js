@@ -77,7 +77,7 @@ export default [
 				// we"ll extract any component CSS out into
 				// a separate file - better for performance
 				css: css => {
-					css.write("site/dtbb.css", false);
+					css.write("dtbb.css", false);
 				},
 				preprocess: sveltePreprocess(),
 			}),
