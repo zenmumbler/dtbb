@@ -3,7 +3,7 @@
 
 import type { CatalogHeader, Catalog, IndexedEntry } from "./catalog";
 import type { SerializedTextIndex } from "./textindex";
-import { PromisedDB, openDatabase, deleteDatabase } from "promised-db";
+import { PromisedDB, deleteDatabase } from "promised-db";
 
 interface PersistedTextIndex {
 	issue: number;
@@ -13,12 +13,12 @@ interface PersistedTextIndex {
 const DB_NAME = "dtbb";
 
 export class CatalogPersistence {
-	private db_: Promise<PromisedDB>;
+	private db_: PromisedDB;
 
 	constructor() {
-		this.db_ = openDatabase(DB_NAME, 1,
-			(db, _oldVersion, _newVersion) => {
-				console.info("Creating stores and indexes...", _oldVersion, _newVersion);
+		this.db_ = new PromisedDB(DB_NAME, [
+			(db) => {
+				console.info("Creating stores and indexes...");
 				const headers = db.createObjectStore("headers", { keyPath: "issue" });
 				const textindexes = db.createObjectStore("textindexes", { keyPath: "issue" });
 				const entries = db.createObjectStore("entries", { keyPath: "docID" });
@@ -27,10 +27,11 @@ export class CatalogPersistence {
 				headers.createIndex("issue", "issue", { unique: true });
 				textindexes.createIndex("issue", "issue", { unique: true });
 				entries.createIndex("issue", "ld_issue");
-			});
+			}
+		]);
 	}
 
-	async saveCatalog(catalog: Catalog, indEntries: IndexedEntry[], sti: SerializedTextIndex) {
+	saveCatalog(catalog: Catalog, indEntries: IndexedEntry[], sti: SerializedTextIndex) {
 		const header: CatalogHeader = {
 			issue: catalog.issue,
 			theme: catalog.theme,
@@ -38,7 +39,7 @@ export class CatalogPersistence {
 			savedAt: new Date()
 		};
 
-		return (await this.db_).transaction(["headers", "entries", "textindexes"], "readwrite",
+		return this.db_.transaction(["headers", "entries", "textindexes"], "readwrite",
 			(tr, { timeout }) => {
 				console.info(`Storing issue ${header.issue} with ${indEntries.length} entries and textindex`);
 				timeout(10000);
@@ -65,15 +66,15 @@ export class CatalogPersistence {
 			});
 	}
 
-	async saveCatalogTextIndex(issue: number, sti: SerializedTextIndex) {
+	saveCatalogTextIndex(issue: number, sti: SerializedTextIndex) {
 		const data: PersistedTextIndex = {
 			issue,
 			data: sti
 		};
 
-		return (await this.db_).transaction("textindexes", "readwrite",
-			(tr, {}) => {
-				const textindexes = tr.objectStore("textindexes");
+		return this.db_.transaction("textindexes", "readwrite",
+			(tx, {}) => {
+				const textindexes = tx.objectStore("textindexes");
 				textindexes.put(data);
 			})
 			.catch(error => {
@@ -82,23 +83,23 @@ export class CatalogPersistence {
 			});
 	}
 
-	async persistedIssues() {
-		return (await this.db_).transaction<CatalogHeader[]>("headers", "readonly",
-			(tr, { request }) => {
-				const issueIndex = tr.objectStore("headers").index("issue");
-				return request(issueIndex.getAll()); // while the key is "unique", a bug in Saf10 makes multiple indexes. Fixed in STP.
+	persistedIssues() {
+		return this.db_.transaction<CatalogHeader[]>("headers", "readonly",
+			(tx, { request }) => {
+				const issueIndex = tx.objectStore("headers").index("issue");
+				return request(issueIndex.getAll());
 			})
 			.catch(() => [] as CatalogHeader[]);
 	}
 
-	async loadCatalog(issue: number) {
-		return (await this.db_).transaction(["headers", "entries", "textindexes"], "readonly",
-			(tr, {request, timeout}) => {
+	loadCatalog(issue: number) {
+		return this.db_.transaction(["headers", "entries", "textindexes"], "readonly",
+			(tx, {request, timeout}) => {
 				timeout(5000);
-				const headerP = request<CatalogHeader>(tr.objectStore("headers").get(issue));
-				const issueIndex = tr.objectStore("entries").index("issue");
+				const headerP = request<CatalogHeader>(tx.objectStore("headers").get(issue));
+				const issueIndex = tx.objectStore("entries").index("issue");
 				const entriesP = request<IndexedEntry[]>(issueIndex.getAll(issue));
-				const ptiP = request(tr.objectStore("textindexes").get(issue));
+				const ptiP = request(tx.objectStore("textindexes").get(issue));
 
 				return Promise.all([headerP, entriesP, ptiP])
 					.then((result) => {
@@ -112,19 +113,18 @@ export class CatalogPersistence {
 			});
 	}
 
-	async destroyCatalog(issue: number) {
-		const db = await this.db_;
-		return db.transaction(["entries"], "readonly",
-			(tr, {request}) => {
-				const issueIndex = tr.objectStore("entries").index("issue");
+	destroyCatalog(issue: number) {
+		return this.db_.transaction(["entries"], "readonly",
+			(tx, {request}) => {
+				const issueIndex = tx.objectStore("entries").index("issue");
 				return request<number[]>(issueIndex.getAllKeys(issue));
 			})
 			.then(entryKeys => {
-				return db.transaction(["headers", "entries", "textindexes"], "readwrite",
-					(tr, {}) => {
-						const headers = tr.objectStore("headers");
-						const entries = tr.objectStore("entries");
-						const indexes = tr.objectStore("textindexes");
+				return this.db_.transaction(["headers", "entries", "textindexes"], "readwrite",
+					(tx, {}) => {
+						const headers = tx.objectStore("headers");
+						const entries = tx.objectStore("entries");
+						const indexes = tx.objectStore("textindexes");
 
 						if (entryKeys.length > 0) {
 							const range = IDBKeyRange.bound(entryKeys[0], entryKeys[entryKeys.length - 1]);
@@ -137,12 +137,12 @@ export class CatalogPersistence {
 			});
 	}
 
-	async purgeAllData() {
-		return (await this.db_).transaction(["headers", "entries", "textindexes"], "readwrite",
-			(tr, {}) => {
-				const headers = tr.objectStore("headers");
-				const entries = tr.objectStore("entries");
-				const indexes = tr.objectStore("textindexes");
+	purgeAllData() {
+		return this.db_.transaction(["headers", "entries", "textindexes"], "readwrite",
+			(tx, {}) => {
+				const headers = tx.objectStore("headers");
+				const entries = tx.objectStore("entries");
+				const indexes = tx.objectStore("textindexes");
 
 				headers.clear();
 				entries.clear();
@@ -150,8 +150,8 @@ export class CatalogPersistence {
 			});
 	}
 
-	async deleteDatabase() {
-		(await this.db_).close();
+	deleteDatabase() {
+		this.db_.close();
 		return deleteDatabase(DB_NAME);
 	}
 }
