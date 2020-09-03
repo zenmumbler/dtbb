@@ -2,7 +2,6 @@
 // (c) 2016-Present by @zenmumbler
 
 import { writable, derived } from "svelte/store";
-import { loadTypedJSON } from "../lib/fileutil";
 import { CatalogHeader, IndexedEntry, Platforms, Manifest } from "../lib/catalog";
 import { CatalogPersistence } from "../lib/catalogpersistence";
 import { CatalogIndexer } from "../lib/catalogindexer";
@@ -38,8 +37,9 @@ const indexer = new CatalogIndexer(persister, isMobile ? "local" : "worker");
 let plasticSurge = new TextIndex();
 
 // catalog manifest file
-let manifest = loadTypedJSON<Manifest>("data/manifest.json")
-	.then(mdata => {
+let manifest = fetch("data/manifest.json")
+	.then(response => response.json())
+	.then((mdata: Manifest) => {
 		mdata.issues = mdata.issues.map(mentry => {
 			mentry.updatedAt = new Date(Date.parse((mentry.updatedAt as any) as string)); // convert ISO string from JSON into Date
 			return mentry;

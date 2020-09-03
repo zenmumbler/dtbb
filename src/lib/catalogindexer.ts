@@ -1,7 +1,6 @@
 // catalogindexer.ts - part of DTBB (https://github.com/zenmumbler/dtbb)
 // (c) 2016-Present by @zenmumbler
 
-import { loadTypedJSON } from "./fileutil";
 import { TextIndex } from "./textindex";
 import { Catalog, IndexedEntry, maskForPlatformKeys } from "./catalog";
 import type { CatalogPersistence } from "./catalogpersistence";
@@ -94,9 +93,11 @@ export class CatalogIndexer {
 			const urlPrefix = (location.pathname.indexOf("/workers") > -1) ? "../" : "";
 			const entriesURL = `${urlPrefix}data/ld${issue}_entries.json?d={Date.now()}`;
 
-			return loadTypedJSON<Catalog>(entriesURL).then(catalog => {
-				return this.acceptCatalogData(catalog);
-			});
+			return fetch(entriesURL)
+				.then(response => response.json())
+				.then((catalog: Catalog) => {
+					return this.acceptCatalogData(catalog);
+				});
 		}
 	}
 
