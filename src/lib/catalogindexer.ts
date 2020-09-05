@@ -90,10 +90,7 @@ export class CatalogIndexer {
 			});
 		}
 		else {
-			const urlPrefix = (location.pathname.indexOf("/workers") > -1) ? "../" : "";
-			const entriesURL = `${urlPrefix}data/ld${issue}_entries.json?d={Date.now()}`;
-
-			return fetch(entriesURL)
+			return fetch(`data/ld${issue}_entries.json`)
 				.then(response => response.json())
 				.then((catalog: Catalog) => {
 					return this.acceptCatalogData(catalog);
