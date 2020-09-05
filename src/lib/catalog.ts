@@ -144,9 +144,16 @@ export interface Author {
 	home_url: string;
 }
 
-export function localThumbURL(issue: number, ldThumbURL: string) {
+export function mediaURL(relPath: string) {
+	if (location.hostname === "localhost") {
+		return `data/${relPath}`;
+	}
+	return `https://f003.backblazeb2.com/file/dtbbmedia/${relPath}`;
+}
+
+export function mediaThumbURL(issue: number, ldThumbURL: string) {
 	const fileName = ldThumbURL.split("/").splice(-1);
-	return `data/thumbs/${issue}/${fileName}`;
+	return mediaURL(`thumbs/${issue}/${fileName}`);
 }
 
 export interface Entry {

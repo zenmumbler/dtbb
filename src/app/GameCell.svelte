@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { IndexedEntry } from "../lib/catalog";
-	import { localThumbURL, Platforms } from "../lib/catalog";
+	import { mediaThumbURL, Platforms } from "../lib/catalog";
 
 	export let entry: IndexedEntry;
 	export let posX: number;
@@ -17,7 +17,7 @@
 	class:jam={entry.category==="jam"}
 	target="_blank"
 >
-	<div class="thumb" style="background-image: url({ localThumbURL(entry.ld_issue, entry.thumbnail_url) })"></div>
+	<div class="thumb" style="background-image: url({ mediaThumbURL(entry.ld_issue, entry.thumbnail_url) })"></div>
 	<h2 class="no-text-wrap">{ entry.title }</h2>
 	<p class="author no-text-wrap">by <span>{ entry.author.name }</span></p>
 	<p class="pills no-text-wrap">
