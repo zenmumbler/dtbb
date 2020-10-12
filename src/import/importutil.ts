@@ -53,7 +53,7 @@ export function issueIndexPageURL(issue: number, offset: number, limit: number) 
 	}
 	else {
 		const feed = IssueData[issue].apiFeedID;
-		return `${issueBaseURL(issue)}feed/${feed}/grade-01-result+reverse+parent/item/game/compo+jam?offset=${offset}&limit=${limit}`;
+		return `${issueBaseURL(issue)}feed/${feed}/smart+reverse+parent/item/game/compo+jam?offset=${offset}&limit=${limit}`;
 	}
 }
 
