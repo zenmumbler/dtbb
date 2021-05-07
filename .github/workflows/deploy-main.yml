@@ -11,14 +11,14 @@ jobs:
     steps:
     - name: Get code
       uses: actions/checkout@v2
-    - name: Install node 14
+    - name: Install node 16
       uses: actions/setup-node@v1
       with:
-        node-version: 14.x
+        node-version: 16.x
     - name: Install PNPM and install deps
-      uses: pnpm/action-setup@v1.2.0
+      uses: pnpm/action-setup@v2.0.1
       with:
-        version: 5.5.1
+        version: 6.2.3
         run_install: true
     - name: Build using Rollup
       run: pnpm run build
