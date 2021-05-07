@@ -114,6 +114,8 @@ export const IssueData: { readonly [issue: number]: IssueInfo } = {
 
 	46: { issue: 46, year: 2020, theme: "Keep it alive", apiFeedID: 176557 },
 	47: { issue: 47, year: 2020, theme: "Stuck in a loop", apiFeedID: 212256 },
+
+	48: { issue: 48, year: 2021, theme: "Deeper and deeper", apiFeedID: 233335 },
 };
 
 // ----
