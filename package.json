@@ -26,7 +26,7 @@
     "@tsconfig/svelte": "^1.0.10",
     "@types/jsdom": "^16.2.10",
     "@types/mkdirp": "^1.0.1",
-    "got": "^11.8.2",
+    "got": "^11.8.5",
     "jsdom": "^16.5.3",
     "mkdirp": "^1.0.4",
     "rollup": "^2.47.0",
